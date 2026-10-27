@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16
+    container_name: knowverse-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: knowverse
+    ports:
+      - "5432:5432"
+    volumes:
+      - knowverse_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  knowverse_pg:

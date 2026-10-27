@@ -1,0 +1,16 @@
+
+ RUN  v3.2.4 /home/claude/knowverse
+
+ ✓ tests/practice-growth.test.ts (12 tests) 3830ms
+   ✓ SQL 练习受限沙箱 > 长查询超时  3025ms
+ ✓ tests/materials-collab.test.ts (11 tests) 1141ms
+   ✓ 增强功能 > 并发申请最后一个共学名额：恰好一人成功，不超员  438ms
+ ✓ tests/chat-agent.test.ts (14 tests) 1028ms
+   ✓ 真实模式（本地模拟服务） > 超时：消息标记为失败并显示错误，不返回模拟内容；重试后成功  359ms
+ ✓ tests/history.test.ts (10 tests) 447ms
+
+ Test Files  4 passed (4)
+      Tests  47 passed (47)
+   Start at  23:14:56
+   Duration  20.58s (transform 558ms, setup 18ms, collect 3.22s, tests 6.45s, environment 1ms, prepare 390ms)
+

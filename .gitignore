@@ -1,0 +1,18 @@
+node_modules
+.next
+.env
+storage/uploads
+*.tsbuildinfo
+next-env.d.ts
+test-results
+
+# 本地缓存和配置
+.npm-cache/
+.env.*
+!.env.example
+docker-compose.local.yml
+*.log
+
+# 项目打包备份
+/knowverse-v2.zip
+/knowverse-v2-screenshots.zip
