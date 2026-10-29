@@ -499,3 +499,28 @@
 
 - 上一轮遗留的「只抽查了近景、没逐阶段比对」已补：`/dev/flowers` 的 4 品种 × 5 阶段网格截图 `b1c-flowers-stages-after-merge.jpg`，合并后各阶段叶子齐全、位置正常。
 - 仍未验证：没有真实 GPU 帧时间；`InstancedMesh` 改造尚未开始。
+
+## 断点续作（会话结束时状态，2026-10-30 00:50）
+
+> 本轮会话上下文用尽，未做新的代码改动；此处只留可恢复的现场，避免半截改动。
+
+### 现场
+
+- 分支 `feature/b-visual`，HEAD `c188582`，工作区干净；`tsc --noEmit` 通过；单测 34/34；开发站 `http://127.0.0.1:3000`（`/space` 需先 `POST /api/auth/demo {"account":"demo"}`）。
+- 近期实测结论：100 株 1,131 draw / 587k tri（合并叶片后，原 1,320）；10 株 465 draw；瓶颈仍是 draw call。
+
+### 下一步（按优先级，接口/数据都还没动）
+
+1. **跨株实例化**（最高价值）：`src/components/world/Flower3D.tsx` 里每株的接触阴影 `contactGeo()`、土壤丘、`GardenWorld.tsx` 的拾取圆柱（`hitMat`）改成 `InstancedMesh`（每类 1 draw）。预计 100 株再降 200–300 draw。注意：拾取圆柱改实例化后要重做点击映射（`instanceId → plantId`），改完必须跑 `/dev/garden?n=100&perf=1` 复测 draw 并点一朵花确认能选中。
+2. **花圃弹层「定位」**：`SpaceApp.tsx` 的 `GardenHUD` 里点花圃标题 → 把相机转到该花圃（需要给 `GardenWorld` 加一个聚焦目标 prop，参考现有 `focusPoint` 逻辑，约 `src/components/world/GardenWorld.tsx` 相机段）。
+3. **底部抽屉自适应**：`globals.css` 的 `@media (max-width: 860px) .focus { height: 72dvh }` 改为按内容 + 键盘安全区。
+
+### 验证脚本（仓库外 `.dsh-tools/`，重启后若丢失可按此重写）
+
+- `shoot.py --url <url> --out <png> [--login] [--wait ms] [--do-file steps.json] [--pre-js "localStorage.setItem(...)"] [--reload] [--reduced]`，步骤支持 wait/shot/click/fill/drag/wheel/key/eval/move。
+- `touch.py`：390×844、`has_touch`、CDP 两指事件；步骤支持 tap/tdrag/pinch/tstart/tmove/tend/eval/shot。
+- 压测：`/dev/garden?n=100&g=3&perf=1` 读 `--text "#perf-hud"`。
+
+### 仍未验证（不要在报告里标通过）
+
+- 真实 GPU 的帧时间与 B5 的 60 秒内存稳定性；真机触屏（iOS/微信）；`backdrop-filter` 在低端机的成本；「另有 K 株待扩容」文案没有真实 >28 株数据触发过。
