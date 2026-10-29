@@ -377,3 +377,48 @@
 1. 第五轮 UI：居中浮窗、Esc 与焦点归还、三档尺寸检查；
 2. 旋转到星球背面时星空与地表交界处的观感；
 3. 触屏双指缩放的真机复测（第七轮遗留）。
+
+## 第十一轮：居中浮窗与浮窗语义（第五轮起步，2026-10-30 00:05）
+
+### 改前
+
+- 专注类面板（对话 / 练习 / 历史 / 成长时间轴 / 资料 / 学习卡 / 星系）是右侧 820px 侧栏（`.focus { right: 24px; left: auto }`），星球被挤到左边一条；
+- **没有 Esc 关闭、没有焦点管理**（打开后焦点不在窗内）、Tab 能跑到窗外的星球与导航、没有滚动锁；
+- 面板是不透明 `--paper`，背后星球完全看不见。
+
+### 改动
+
+1. `.focus` 改为**水平居中**（`left: 0; right: 0; margin: 0 auto`），宽 `min(880px, 100vw - 48px)`，上下留出导航与 26px；内部 `.focus-body` 本来就有 `overflow-y: auto`。`<=860px` 沿用既有的底部抽屉规则（`height: 72dvh; bottom: 60px`），未改。
+2. **真背景虚化**：`.focus` 背景改半透明纸面 + `backdrop-filter: blur(18px) saturate(1.08)`（对 WebGL canvas 生效，实测 `getComputedStyle` 返回 `blur(18px) saturate(1.08)`，截图里窗内是**被模糊的当前星球**，不是固定截图）；`@supports not` 时退回不透明 `var(--paper)`。
+3. 新增 `useDialog()`（`src/components/space/useDialog.ts`）：
+   - Esc 关闭；
+   - 打开时焦点进窗（第一个可聚焦元素，否则窗体本身）；
+   - 关闭后焦点还给触发元素；**触发元素在同一次 commit 里被卸载时**（打开专注浮窗会隐藏花园 HUD）退回到 `fallbackSelector`（当前分区导航按钮 / 设置齿轮）。为此在 `focusin` 时记录「最近获得焦点的元素」——否则 effect 跑起来时 `activeElement` 已经掉回 `body`，这条是第一版实现里实测失败后补的；
+   - Tab / Shift+Tab 在窗内循环；
+   - 打开期间 `body.overflow = hidden`，关闭还原。
+4. `.focus` 与设置 `.modal` 补 `role="dialog" aria-modal="true" tabIndex={-1}`。
+
+### 验证（Chromium + SwiftShader，demo 账号）
+
+- 1440×900：`b5-focus-centered.jpg` —— 窗 880×800（x=280、左右各留 280px 露出星球），窗内背景能看到被模糊的玻璃房立柱与暖光；
+- 768×1024：`b5-focus-768.jpg` —— 窗 720×737，`scrollWidth == innerWidth == 768`；
+- 390×844：`b5-focus-390.jpg` —— 342 宽底部抽屉，内容内部滚动，与底部导航不重叠；
+- 语义实测（Playwright 键盘与 eval）：
+  - 打开：`body.style.overflow = "hidden"`、`focusInside = true`；
+  - Tab ×11：焦点始终留在 `.focus` 内（`tab-inside`）；
+  - Esc：`.focus` 关闭、`overflow` 还原、焦点落到当前分区导航按钮（触发按钮已卸载，走 fallback）；
+  - 设置弹窗：打开后焦点在窗内；Esc 关闭后焦点回到「设置」按钮（`aria-label=设置`）。
+- `tsc --noEmit` 通过；单测 34/34（未改布局与数据，回归通过）。
+
+### 未做 / 风险
+
+- 只给「专注浮窗」和「设置弹窗」做了语义；**植物档案侧卡（`.side-card`）没有 Esc、也不锁 Tab**——它属于轻量侧栏，改天再单独处理。
+- 底部抽屉 72dvh 是既有规则，**没有按内容自适应**，也没考虑键盘弹出时的安全区。
+- 毛玻璃是固定 18px，**没有低端机降级开关**，`backdrop-filter` 的实际帧率成本未测（无目标 FPS 数据，不当已通过）。
+- 关闭面板后花园仍是默认视角（最终截图），但没有做「关闭前后相机参数逐帧对比」，只确认没有明显跳变。
+
+### 下一轮建议
+
+1. 植物档案侧卡的 Esc 与焦点归还（不锁 Tab）；
+2. 底部抽屉高度按内容自适应 + 安全区，键盘弹出时不遮输入框；
+3. 低动效 / 低端机下关掉 `backdrop-filter` 的开关。

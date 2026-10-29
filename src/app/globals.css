@@ -363,9 +363,16 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .is-focus .world-wrap { inset: 0; width: auto; border-radius: 0; box-shadow: none; background: transparent; }
 .world-mini-caption { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; z-index: 3; }
 .world-mini-caption .title { color: var(--cream); font-size: 16px; text-shadow: 0 1px 8px rgba(63, 54, 87, 0.45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.focus { position: absolute; z-index: 5; top: calc(var(--nav-h) + 12px); bottom: 24px; right: 24px; left: auto; width: min(820px, calc(100vw - 48px));
-  border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; animation: kv-rise .35s var(--ease);
-  border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(30, 24, 50, 0.42), 0 2px 10px rgba(30, 24, 50, 0.18); }
+.focus { position: absolute; z-index: 5; top: calc(var(--nav-h) + 14px); bottom: 26px; left: 0; right: 0; margin: 0 auto;
+  width: min(880px, calc(100vw - 48px)); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; animation: kv-rise .35s var(--ease);
+  border: 1px solid var(--line);
+  background: rgba(255, 247, 232, 0.86);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08); backdrop-filter: blur(18px) saturate(1.08);
+  box-shadow: 0 30px 90px rgba(30, 24, 50, 0.42), 0 2px 10px rgba(30, 24, 50, 0.18); }
+/* 浏览器/显卡不支持毛玻璃时，退回不透明纸面，保证文字可读 */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .focus { background: var(--paper); }
+}
 @keyframes kv-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .focus-head { display: flex; align-items: center; gap: 14px; padding: 12px 22px; border-bottom: 1px solid var(--line); min-height: 60px; }
 .focus-head .back { display: inline-flex; }

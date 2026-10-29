@@ -19,6 +19,7 @@ import { layoutBeds, type WorldPlant } from "@/components/world/bedLayout";
 import type { Pose } from "@/components/world/Characters3D";
 import { STAGE_NAME, type StageKey } from "@/lib/flora";
 import { Ctx, type GrowthEvent, type PanelKey, type PanelState, type Space } from "./context";
+import { useDialog } from "./useDialog";
 import { ChatPanel } from "./panels/ChatPanel";
 import { HistoryPanel } from "./panels/HistoryPanel";
 import { DossierPanel } from "./panels/DossierPanel";
@@ -218,6 +219,14 @@ export function SpaceApp() {
   const scenePlants = useMemo(() => (space?.plants ?? []).map((p) => ({ ...p, stage: override?.[p.id] ?? p.stage, gardenIndex: space!.gardens.findIndex((g) => g.id === p.gardenId) })), [space, override]);
   const sceneGardens = useMemo(() => (space?.gardens ?? []).map((g) => ({ name: g.name })), [space]);
 
+  // 浮窗语义：Esc 关闭、焦点进出、Tab 不出窗（只对需要专注的浮窗与设置弹窗生效）
+  const closePanel = useCallback(() => open({ panel: null }), [open]);
+  const focusWinRef = useRef<HTMLElement | null>(null);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
+  const focusWinOpen = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
+  useDialog(focusWinOpen, focusWinRef, closePanel, 'nav.sections button[aria-current="page"]');
+  useDialog(panel.panel === "settings", settingsRef, closePanel, 'button[aria-label="设置"]');
+
   if (loadErr && !space) return <main className="intro"><div className="auth-card paper"><h2>星球暂时没有回应</h2><p className="err">{loadErr}</p><button className="btn btn-primary" onClick={() => reload()}>重试</button></div></main>;
   if (!space) return <main className="intro"><div className="intro-copy"><GuideOrb size={56} thinking /><p className="muted">正在靠近你的星球…</p></div></main>;
 
@@ -299,7 +308,7 @@ export function SpaceApp() {
         )}
 
         {focus && panel.panel && (
-          <main className="focus paper" aria-label={TITLES[panel.panel]}>
+          <main className="focus paper" aria-label={TITLES[panel.panel]} role="dialog" aria-modal="true" ref={focusWinRef} tabIndex={-1}>
             <div className="focus-head">
               <button className="btn btn-soft btn-sm back" onClick={() => open({ panel: null })} aria-label="回到花园">← 花园</button>
               {sec.subs ? (
@@ -325,7 +334,7 @@ export function SpaceApp() {
 
         {panel.panel === "settings" && (
           <div className="modal-scrim" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) open({ panel: null }); }}>
-            <div className="modal paper" role="dialog" aria-modal="true" aria-label="设置">
+            <div className="modal paper" role="dialog" aria-modal="true" aria-label="设置" ref={settingsRef} tabIndex={-1}>
               <div className="panel-head"><h2>设置</h2><button className="btn btn-quiet btn-icon" aria-label="关闭设置" onClick={() => open({ panel: null })}>✕</button></div>
               <SettingsPanel />
             </div>
