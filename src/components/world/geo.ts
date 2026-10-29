@@ -125,7 +125,7 @@ type Surf = {
   color: (s: number, t: number) => THREE.Color;
 };
 function surface(p: Surf) {
-  const segU = p.segU ?? 10, segV = p.segV ?? 9;
+  const segU = p.segU ?? 13, segV = p.segV ?? 11;
   const pos: number[] = [], col: number[] = [], idx: number[] = [];
   for (let v = 0; v <= segV; v++) {
     const t = v / segV, w = p.width * p.profile(t);

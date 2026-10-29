@@ -58,7 +58,7 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
   const r2 = petalGeo({ len: 0.07, width: 0.086, cup: 0.96, curl: -0.1, base, mid: c.petal, tip: c.light });
   const r3 = petalGeo({ len: 0.078, width: 0.094, cup: 0.74, curl: -0.16, base, mid: c.petal, tip: c.light, round: 0.66 });
   const sep = leafGeo("almond", 0.05, 0.016, 0.4);
-  const budP = petalGeo({ len: 0.05, width: 0.06, cup: 1.8, curl: 0.02, base: c.deep, mid: c.petal, tip: c.petal, round: 1 });
+  const budP = petalGeo({ len: 0.058, width: 0.046, cup: 2.4, curl: 0.035, base: c.deep, mid: c.petal, tip: c.light, round: 0.82 });
   if (bud) {
     return (
       <group>
@@ -68,7 +68,7 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
           </group>
         ))}
         <mesh geometry={sphereGeo(0.018, 12, 9)} material={matte(C.leafDeep)} position={[0, 0.012, 0]} scale={[1, 0.85, 1]} castShadow />
-        <MergedPetals specs={[0, 1, 2, 3, 4, 5].map((i) => ({ geo: budP, az: (i / 6) * Math.PI * 2 + i * 0.12, tilt: 0.14, r: 0.01, tw: 0.08 }))} deps={`bud-${c.petal}`} />
+        <MergedPetals specs={[0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ geo: budP, az: (i / 8) * Math.PI * 2 + i * 0.09, tilt: 0.07, r: 0.007, tw: 0.12 }))} deps={`bud-${c.petal}`} />
       </group>
     );
   }
