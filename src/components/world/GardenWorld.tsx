@@ -551,6 +551,22 @@ export function GardenWorld(props: WorldProps) {
   const lastDecorMove = useRef(0);
   const zoom = useRef(1);
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
+  // 触屏：多指跟踪。双指间距用于缩放；单指环绕仍走 press 基准
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d0: number; z0: number } | null>(null);
+  const applyZoom = (next: number) => { zoom.current = Math.max(0.75, Math.min(2.2, next)); };
+  const endPointer = (id: number) => {
+    pointers.current.delete(id);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 1) {
+      // 两指变一指：把剩下的手指当作新的环绕基准，避免视角跳变
+      const rest = Array.from(pointers.current.values())[0];
+      press.current = { x: rest.x, y: rest.y, yaw: drag.current.yaw, tilt: drag.current.tilt };
+    } else {
+      press.current = null;
+      decorDrag.current = null;
+    }
+  };
   const lastAct = useRef(performance.now());
   const setHover = (k: string | null) => { setHoverState(k); document.body.style.cursor = k ? "pointer" : ""; };
   const resetView = () => { drag.current = { yaw: 0, tilt: 0 }; zoom.current = 1; };
@@ -596,9 +612,34 @@ export function GardenWorld(props: WorldProps) {
   const label = labelKey ? props.hoverLabel?.(labelKey) ?? null : null;
 
   return (
-    <div className="world" style={{ position: "absolute", inset: 0, touchAction: "pan-y" }}
-      onPointerDown={(e) => { lastAct.current = performance.now(); if (props.mode !== "garden" || decorDrag.current) return; press.current = { x: e.clientX, y: e.clientY, ...drag.current }; }}
+    <div className="world" style={{ position: "absolute", inset: 0, touchAction: "none" }}
+      onPointerDown={(e) => {
+        lastAct.current = performance.now();
+        if (props.mode !== "garden" || decorDrag.current) return;
+        pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.current.size >= 2) {
+          // 双指：切到缩放，清掉单指环绕基准，否则第二指落下时视角会跳
+          press.current = null;
+          const [a, b] = Array.from(pointers.current.values());
+          const d0 = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d0 > 8) pinch.current = { d0, z0: zoom.current };
+          return;
+        }
+        press.current = { x: e.clientX, y: e.clientY, ...drag.current };
+      }}
       onPointerMove={(e) => {
+        if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const pz = pinch.current;
+        if (pz && pointers.current.size >= 2) {
+          const [a, b] = Array.from(pointers.current.values());
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d > 4) {
+            lastAct.current = performance.now();
+            // 双指张开 → 间距变大 → 相机距离缩小 → 拉近
+            applyZoom(pz.z0 * (pz.d0 / d));
+          }
+          return;
+        }
         if (decorDrag.current) return;
         const p = press.current; if (!p) return;
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
@@ -610,9 +651,10 @@ export function GardenWorld(props: WorldProps) {
       onWheel={(e) => {
         if (props.mode !== "garden") return;
         lastAct.current = performance.now();
-        zoom.current = Math.max(0.75, Math.min(2.2, zoom.current + Math.sign(e.deltaY) * 0.07));
+        applyZoom(zoom.current + Math.sign(e.deltaY) * 0.07);
       }}
-      onPointerUp={() => { press.current = null; decorDrag.current = null; }} onPointerLeave={() => { press.current = null; decorDrag.current = null; }}>
+      onPointerUp={(e) => endPointer(e.pointerId)} onPointerCancel={(e) => endPointer(e.pointerId)}
+      onPointerLeave={(e) => endPointer(e.pointerId)}>
       <GLBoundary onFail={props.onFail}>
         <Canvas shadows dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.75]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
