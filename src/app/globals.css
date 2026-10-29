@@ -136,6 +136,11 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
 .load-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--sage-ink); transition: width .25s var(--ease); }
 .load-bar.full > i { background: var(--rose-ink); }
 
+/* 参观模式提示 */
+.visit-note { position: absolute; z-index: 6; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: rgba(255, 247, 232, 0.94); color: var(--ink); padding: 9px 18px; border-radius: 999px;
+  box-shadow: var(--shadow-soft); font-size: 13.5px; white-space: nowrap; }
+
 /* ───── 纸张 ───── */
 .paper { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
 .paper-soft { background: rgba(255, 247, 232, 0.9); color: var(--ink); box-shadow: var(--shadow-soft); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }

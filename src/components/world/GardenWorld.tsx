@@ -32,6 +32,7 @@ export type WorldProps = {
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
+  readOnly?: boolean;
   onFail: () => void;
 };
 
@@ -461,7 +462,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         {(props.decor ?? []).map((d, i) => (
           <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
             <group scale={d.scale}
-              onPointerDown={(e) => { if (props.mode !== "garden") return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
+              onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
               <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} />
             </group>
           </OnCap>
