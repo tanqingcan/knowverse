@@ -10,7 +10,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, bladeGeo, rand } from "./geo";
+import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand } from "./geo";
 import { Flower3D } from "./Flower3D";
 import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Observatory, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
@@ -147,17 +147,7 @@ function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, children }: { x: number; 
 
 function Grass({ items }: { items: ReturnType<typeof scatter> }) {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const geo = useMemo(() => {
-    // 圆润的草丛：几片宽而短、略向外弯的叶片
-    const parts: number[] = [];
-    for (let i = 0; i < 5; i++) {
-      const h = 0.028 + (i % 3) * 0.008;
-      const b = bladeGeo(h, 0.007).clone().rotateZ((i - 2) * 0.28).rotateY(i * 1.3).translate(Math.sin(i * 1.3) * 0.006, 0, Math.cos(i * 1.3) * 0.006).toNonIndexed();
-      parts.push(...(b.attributes.position.array as Float32Array));
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(parts, 3)); g.computeVertexNormals();
-    return g;
-  }, []);
+  const geo = useMemo(() => grassTuftGeo(), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 1, color: "#ffffff" }), []);
   useEffect(() => {
     const m = ref.current; if (!m) return;

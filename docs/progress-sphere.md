@@ -172,3 +172,50 @@
 - 第三轮：花圃容量溢出 NaN 修复、>7 花圃螺旋、28 例布局单测；
 - 第四轮：玫瑰细分 13×11、紧实花苞（前后图）；
 - 未验证：触屏手势/双指缩放、100 株压力场景的 draw/FPS、温室/旅人/草丛（本轮未做）。
+
+## 第六轮：B1 三项收尾（温室玻璃 / 旅人坐姿 / 草丛圆润，2026-10-29 20:25）
+
+### 现场
+
+- 分支 `feature/b-visual`，从 HEAD `6019a7b` 起步；开发站 `http://127.0.0.1:3000` 在跑。
+- 新增开发预览页 `/dev/props`（`?asset=greenhouse|bench|grass&view=front|side|top|iso|close|back`）：固定机位、同一套光照，改前/改后同机位对比；沿用 `/dev/flowers`、`/dev/models` 的 dev 页约定（生产环境默认 404）。
+
+### 改动
+
+| # | 内容 | 文件 |
+|---|---|---|
+| 1 | **温室**：补两片山墙（三角）玻璃 —— 原来屋脊两端是空的，侧视/顶视能直接看穿；玻璃材质本就是 `DoubleSide`，问题不是背面剔除。同时把玻璃做得可辨认：`opacity 0.26→0.60`、玻璃色 `#E6F0F5→#D9EAF0`、`roughness 0.15→0.12` | `Props3D.tsx`、`geo.ts` |
+| 2 | **旅人坐姿**：实测外套球底在坐面上方约 1mm，并不穿模；真正插进座面的是**大腿**（圆柱半径 ≈1.6cm、中心 0.0725，坐面 0.070 → 陷入约 13mm）。大腿组 `y 0.058→0.068`、前倾 `-1.35→-1.5 rad`，大腿贴坐面、脚悬在座沿外 | `Characters3D.tsx` |
+| 3 | **草丛**：`bladeGeo` 增加径向段数与弯度参数；合并逻辑抽到 `grassTuftGeo()`，改为 **8 片 × 8 段**、顶端弯度 `0.42→0.55`，`Grass` 只调用一次（仍是单次实例化） | `geo.ts`、`GardenWorld.tsx` |
+| 4 | 草丛几何单测：分段/片数/包围盒/缓存 | `tests/unit/geo.test.ts` |
+
+### 验证
+
+- `tsc --noEmit` 通过；`vitest --config vitest.unit.config.ts` **34/34**（28 布局 + 6 草丛）。
+- 温室三视 + 斜视：`docs/screenshots/ui/b1-greenhouse-{front,side,top,iso}.jpg` —— 三视玻璃都在（山墙补面 + 冷色调），屋脊木梁沿长边（W=0.5），椽子横跨短边，方向一致。
+- 旅人：`docs/screenshots/ui/b1-bench-{front,side,close}.jpg` —— 大腿落在坐面上，靴子悬在座沿前，特写无穿插。
+- 草丛：`docs/screenshots/ui/b1-grass-{before,after}.jpg` —— 5 片/6 段 → 8 片/8 段，叶簇更满、折面更细。
+- 真实场景（`/space` 演示账号，同一机位改前/改后）：`b1-space-greenhouse-{before,after}.jpg`、`b1-space-bench-{before,after}.jpg`。
+
+### 性能（`/dev/garden?perf=1`，headless SwiftShader）
+
+- **464 draw / 396k tri**（第四轮之后第一次复测；第二轮的基线是 470 draw / 293k tri）。
+- 草丛每丛 `5×24 = 120` → `8×32 = 256` 三角，720 丛约 **+98k tri**；扣掉这部分其余场景约 298k，与 293k 基线 + 第四轮花瓣细分（13×11，当时未复测）的增量吻合；draw calls 不变（草丛仍是一次实例化绘制）。
+- headless 的 fps 采样依旧不可信（HUD 显示 2 fps），只看 draw/tri。
+
+### 未做 / 风险
+
+- 玻璃仍是透明材质：**纯顶视**时能看到玻璃的淡蓝色调、但仍可透视室内（真实玻璃也是如此）；本轮用「补山墙 + 冷色调 + 不透明度 0.60」让三视都能辨认出玻璃面，没有改成不透明。
+- 草丛三角面增加约 33%；要压回预算可去掉叶片底端盖（每片省 8 三角）或给外圈草用 6 段。
+- 触屏双指缩放仍未在真机/触屏模拟下验证（沿用第五轮结论）。
+
+### 事故（第三次，同一类）
+
+- 为快速试参数，用 PowerShell `(Get-Content …).Replace(…) | Set-Content` 改 `geo.ts`：PS 5.1 按 ANSI 读 UTF-8 → 中文注释变 mojibake。已 `git checkout` 恢复，并用编辑工具重做全部改动。
+- 结论重申：**源码只用编辑工具改**；shell 只做 git / 构建 / 测试 / 截图。截图与对比脚本放在仓库外 `.dsh-tools/`，不污染仓库。
+
+### 下一轮建议
+
+1. 触屏手势（双指缩放、防误触）在真机或 CDP 触屏模拟下验证；
+2. 温室加竖向窗棂，让玻璃在亮背景下更易读（本轮只调材质）；
+3. 100 株压力场景的真实 draw/FPS 与「花圃分页/分景」。

@@ -81,6 +81,13 @@ export function Cottage({ lights = 1 }: { lights?: number }) {
 export function Greenhouse({ lights = 1 }: { lights?: number }) {
   const W = 0.5, D = 0.34, H = 0.24, R = 0.13;
   const beam = matte(C.woodLight);
+  // 山墙三角玻璃：屋脊两端各补一片，避免侧视/顶视时直接看穿屋顶
+  const gable = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute([-D / 2, 0, 0, D / 2, 0, 0, 0, R, 0], 3));
+    g.computeVertexNormals();
+    return g;
+  }, [D, R]);
   const posts: [number, number][] = [[-W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, D / 2], [W / 2, D / 2]];
   const roofLen = Math.hypot(D / 2, R);
   const roofAng = Math.atan2(R, D / 2);
@@ -100,6 +107,8 @@ export function Greenhouse({ lights = 1 }: { lights?: number }) {
       {[-1, 1].map((sd) => <mesh key={`w${sd}`} material={glassMat()} position={[0, 0.05 + H / 2, (sd * D) / 2]}><planeGeometry args={[W, H]} /></mesh>)}
       {[-1, 1].map((sd) => <mesh key={`s${sd}`} material={glassMat()} position={[(sd * W) / 2, 0.05 + H / 2, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[D, H]} /></mesh>)}
       {[-1, 1].map((sd) => <mesh key={`r${sd}`} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng, 0, 0]}><planeGeometry args={[W, roofLen]} /></mesh>)}
+      {/* 山墙（三角）玻璃 */}
+      {[-1, 1].map((sd) => <mesh key={`g${sd}`} geometry={gable} material={glassMat()} position={[(sd * W) / 2, 0.05 + H, 0]} rotation={[0, (sd * Math.PI) / 2, 0]} />)}
       {/* 室内：书桌、书本、绿植、暖灯 */}
       <mesh geometry={rbox(0.26, 0.02, 0.14, 0.006)} material={matte(C.wood)} position={[0.03, 0.15, 0]} castShadow />
       {[-0.1, 0.13].map((x) => <mesh key={x} geometry={rbox(0.016, 0.1, 0.016, 0.004)} material={matte(C.woodDeep)} position={[x, 0.1, 0]} />)}

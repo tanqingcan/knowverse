@@ -14,7 +14,7 @@ export type Pose = "idle" | "read" | "tend" | "think" | "celebrate";
 
 const COAT = "#8FA3C2", COAT_D = "#7186A8", SKIN = "#F4D7C3", HAIR = "#4E3F5E", HAT = "#DDB56D", SCARF = "#E4A1AA", BOOT = "#5B4A63";
 
-/** 旅人模型。sitting=true 时臀部位于局部原点上方 0.075（长椅坐面高度） */
+/** 旅人模型。sitting=true 时臀部位于局部原点上方 0.03（外套球底 ≈ 长椅坐面 0.064+0.006） */
 export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const head = useRef<THREE.Group>(null);
@@ -54,7 +54,7 @@ export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
   });
 
   const legs = useMemo(() => [-1, 1].map((sd) => (
-    <group key={sd} position={[sd * 0.022, sitting ? 0.058 : 0.05, sitting ? 0.01 : 0]} rotation={[sitting ? -1.35 : 0, 0, 0]}>
+    <group key={sd} position={[sd * 0.022, sitting ? 0.068 : 0.05, sitting ? 0.008 : 0]} rotation={[sitting ? -1.5 : 0, 0, 0]}>
       <mesh geometry={cylGeo(0.012, 0.013, 0.05, 8)} material={matte(COAT_D)} position={[0, -0.025, 0]} castShadow />
       <mesh geometry={sphereGeo(0.017, 10, 8)} material={matte(BOOT)} position={[0, -0.05, 0.008]} scale={[1, 0.75, 1.35]} castShadow />
     </group>
