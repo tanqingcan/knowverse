@@ -14,7 +14,8 @@ import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, bladeGeo, rand } fr
 import { Flower3D } from "./Flower3D";
 import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
-import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, pathCurve, scatter, SPOTS, TREES, type BedLayout, type WorldPlant } from "./layout";
+import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
+import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
 import type { DecorPlacement } from "@/lib/decor";
@@ -40,6 +41,9 @@ export type WorldProps = {
 const ELEV = (38 * Math.PI) / 180;
 const EYE_DIR = new THREE.Vector3(0, Math.sin(ELEV), Math.cos(ELEV));
 const LOOK = new THREE.Vector3(0, PLANET_R - 0.12, 0.02);
+/** 世界绕 X 的俯仰范围：负值看赤道、正值看北极 */
+const TILT_MIN = -0.34;
+const TILT_MAX = 0.62;
 
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
 
@@ -261,9 +265,10 @@ function Sparks({ points, start }: { points: THREE.Vector3[]; start: number }) {
 }
 
 /* ───────── 镜头、拖动、入场 ───────── */
-function Rig({ mode, reduced, focusPoint, drag, intro, onIntroDone, worldRef }: {
+function Rig({ mode, reduced, focusPoint, drag, zoom, intro, onIntroDone, worldRef }: {
   mode: "garden" | "focus"; reduced: boolean; focusPoint: THREE.Vector3 | null;
-  drag: React.MutableRefObject<{ yaw: number; tilt: number }>; intro: "long" | "short" | "none"; onIntroDone?: () => void;
+  drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>;
+  intro: "long" | "short" | "none"; onIntroDone?: () => void;
   worldRef: React.RefObject<THREE.Group | null>;
 }) {
   const { camera, size } = useThree();
@@ -301,7 +306,7 @@ function Rig({ mode, reduced, focusPoint, drag, intro, onIntroDone, worldRef }: 
     const e = 1 - Math.pow(1 - introK, 3);
     const elev = ELEV + (1 - e) * 0.32 + (aspect < 0.8 ? 0.2 : 0);
     const dir = new THREE.Vector3(0, Math.sin(elev), Math.cos(elev));
-    const wantD = d * (1 + (1 - e) * 1.1);
+    const wantD = d * Math.max(0.75, Math.min(1.5, zoom.current)) * (1 + (1 - e) * 1.1);
     const k = reduced || dist.current === 0 ? 1 : done.current ? Math.min(1, dt * 3) : 1;
     dist.current += (wantD - dist.current) * k;
     look.current.lerp(tgt, k);
@@ -350,15 +355,16 @@ function PerfProbe() {
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
   const anchors = useRef(new Map<string, THREE.Object3D>());
   const register = useMemo(() => (k: string, o: THREE.Object3D | null) => { if (o) anchors.current.set(k, o); else anchors.current.delete(k); }, []);
   const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
   const plantMap = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
-  const grass = useMemo(() => scatter(beds, 380), [beds]);
-  const blooms = useMemo(() => scatter(beds, 140, 29), [beds]);
+  // 内圈（花园）保持原来的密度；外圈铺满整个可见球面，转到侧面/背面也有草
+  const grass = useMemo(() => [...scatter(beds, 380, 11, 2.35), ...scatter(beds, 340, 23, 4.05, 2.4)], [beds]);
+  const blooms = useMemo(() => [...scatter(beds, 140, 29, 2.35), ...scatter(beds, 120, 31, 4.05, 2.4)], [beds]);
   const terrain = useMemo(() => paintTerrain(beds), [beds]);
   const planetGeo = useMemo(() => planetGeometry(), []);
   const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);
@@ -432,7 +438,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <ambientLight intensity={0.12} />
       <KeyLight />
       <directionalLight color="#A9BBD2" intensity={0.55} position={[6, 3, -3]} />
-      <Rig mode={props.mode} reduced={reduced} focusPoint={focusPoint} drag={props.drag} intro={props.intro ?? "none"} worldRef={world}
+      <Rig mode={props.mode} reduced={reduced} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
         onIntroDone={() => { setIntroDone(true); props.onIntroDone?.(); }} />
       <LabelTracker anchors={anchors} labelKey={hover ?? (selectedId ? `plant:${selectedId}` : null)} el={props.labelEl} />
 
@@ -483,6 +489,13 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
         {TREES.map((t, i) => (
           <OnCap key={i} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={(t as any).tint} /> : <Bush seed={t.seed} />}</OnCap>
+        ))}
+        {/* 外圈野生景观：环绕整颗星球 */}
+        {WILD.map((t, i) => (
+          <OnCap key={`w${i}`} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={t.tint} /> : <Bush seed={t.seed} />}</OnCap>
+        ))}
+        {WILD_ROCKS.map((r, i) => (
+          <OnCap key={`r${i}`} x={r.x} z={r.z}><group scale={1.3}><DecorStone /></group></OnCap>
         ))}
         {/* 玩家摆放的装饰（原型：localStorage；后续接 A 的 /api/decor） */}
         {(props.decor ?? []).map((d, i) => (
@@ -539,24 +552,68 @@ export function GardenWorld(props: WorldProps) {
   const drag = useRef({ yaw: 0, tilt: 0 });
   const decorDrag = useRef<string | null>(null);
   const lastDecorMove = useRef(0);
+  const zoom = useRef(1);
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
+  const lastAct = useRef(performance.now());
   const setHover = (k: string | null) => { setHoverState(k); document.body.style.cursor = k ? "pointer" : ""; };
-  useEffect(() => { drag.current = { yaw: 0, tilt: 0 }; props.onDragged?.(false); // eslint-disable-next-line react-hooks/exhaustive-deps
+  const resetView = () => { drag.current = { yaw: 0, tilt: 0 }; zoom.current = 1; };
+  useEffect(() => { resetView(); props.onDragged?.(false); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.recenterKey]);
+  // 键盘：←/→ 环绕、↑/↓ 俯仰、+/- 缩放、R 复位
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (props.mode !== "garden") return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      const { yaw, tilt } = drag.current;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") drag.current = { yaw: yaw - 0.12, tilt };
+      else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") drag.current = { yaw: yaw + 0.12, tilt };
+      else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") drag.current = { yaw, tilt: Math.min(TILT_MAX, tilt + 0.08) };
+      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") drag.current = { yaw, tilt: Math.max(TILT_MIN, tilt - 0.08) };
+      else if (e.key === "+" || e.key === "=") zoom.current = Math.max(0.75, zoom.current - 0.1);
+      else if (e.key === "-" || e.key === "_") zoom.current = Math.min(1.5, zoom.current + 0.1);
+      else if (e.key === "r" || e.key === "R" || e.key === "0") resetView();
+      else return;
+      lastAct.current = performance.now();
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.mode]);
+  // 空闲缓慢自转：3 秒无操作后开始；按下/滚轮/按键立即暂停；低动效禁用
+  useEffect(() => {
+    const mark = () => { lastAct.current = performance.now(); };
+    window.addEventListener("pointerdown", mark);
+    window.addEventListener("wheel", mark, { passive: true });
+    const t = window.setInterval(() => {
+      if (props.mode !== "garden" || props.reduced || props.readOnly) return;
+      if (press.current || decorDrag.current) return;
+      if (performance.now() - lastAct.current < 3000) return;
+      drag.current = { yaw: drag.current.yaw + 0.0035, tilt: drag.current.tilt };
+    }, 100);
+    return () => { window.removeEventListener("pointerdown", mark); window.removeEventListener("wheel", mark); window.clearInterval(t); };
+  }, [props.mode, props.reduced, props.readOnly]);
   useEffect(() => () => { document.body.style.cursor = ""; }, []);
   const labelKey = hover ?? (props.selectedId ? `plant:${props.selectedId}` : null);
   const label = labelKey ? props.hoverLabel?.(labelKey) ?? null : null;
 
   return (
     <div className="world" style={{ position: "absolute", inset: 0, touchAction: "pan-y" }}
-      onPointerDown={(e) => { if (props.mode !== "garden" || decorDrag.current) return; press.current = { x: e.clientX, y: e.clientY, ...drag.current }; }}
+      onPointerDown={(e) => { lastAct.current = performance.now(); if (props.mode !== "garden" || decorDrag.current) return; press.current = { x: e.clientX, y: e.clientY, ...drag.current }; }}
       onPointerMove={(e) => {
         if (decorDrag.current) return;
         const p = press.current; if (!p) return;
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         if (Math.abs(dx) + Math.abs(dy) < 6) return;
-        drag.current = { yaw: Math.max(-0.6, Math.min(0.6, p.yaw + dx * 0.004)), tilt: Math.max(-0.08, Math.min(0.12, p.tilt + dy * 0.0012)) };
-        props.onDragged?.(Math.abs(drag.current.yaw) > 0.05 || Math.abs(drag.current.tilt) > 0.03);
+        lastAct.current = performance.now();
+        drag.current = { yaw: p.yaw + dx * 0.005, tilt: Math.max(TILT_MIN, Math.min(TILT_MAX, p.tilt + dy * 0.0016)) };
+        props.onDragged?.(Math.abs(dx) > 6 || Math.abs(dy) > 6);
+      }}
+      onWheel={(e) => {
+        if (props.mode !== "garden") return;
+        lastAct.current = performance.now();
+        zoom.current = Math.max(0.75, Math.min(1.5, zoom.current + Math.sign(e.deltaY) * 0.07));
       }}
       onPointerUp={() => { press.current = null; decorDrag.current = null; }} onPointerLeave={() => { press.current = null; decorDrag.current = null; }}>
       <GLBoundary onFail={props.onFail}>
@@ -566,10 +623,13 @@ export function GardenWorld(props: WorldProps) {
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
             {props.perf && <PerfProbe />}
-            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
+            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
           </Suspense>
         </Canvas>
       </GLBoundary>
+      {props.mode === "garden" && !props.readOnly && (
+        <button className="view-reset" type="button" onClick={resetView} aria-label="回到默认视角">⟲ 视角</button>
+      )}
       {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
     </div>

@@ -100,20 +100,48 @@ export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[]): B
   });
 }
 
-/** 草丛与小石头：避开花圃、建筑与小路 */
-export function scatter(beds: BedLayout[], count = 520, seed = 11) {
+/** 外圈野生景观：绕球一圈的树丛与石头，转到侧面/背面也有景 */
+type WildItem = { x: number; z: number; kind: "tree" | "bush"; seed: number; tint?: string };
+export const WILD: WildItem[] = [
+  ...Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2 + 0.3;
+    const d = 2.9 + (i % 3) * 0.32;
+    return {
+      x: Math.sin(a) * d, z: Math.cos(a) * d,
+      kind: i % 3 === 0 ? ("tree" as const) : ("bush" as const),
+      seed: 31 + i,
+      tint: ["#EBB2BB", "#F2C9B6", "#E4A1AA"][i % 3],
+    };
+  }),
+  // 背面中纬度的几丛，避免转到背后只有草
+  { x: 1.54, z: -1.84, kind: "tree", seed: 71, tint: "#EBB2BB" },
+  { x: 0.65, z: -2.42, kind: "bush", seed: 72 },
+  { x: -0.82, z: -2.26, kind: "tree", seed: 73, tint: "#E4A1AA" },
+  { x: -1.77, z: -1.77, kind: "bush", seed: 74 },
+];
+export const WILD_ROCKS = Array.from({ length: 10 }, (_, i) => {
+  const a = (i / 10) * Math.PI * 2 + 0.9;
+  const d = 3.1 + (i % 2) * 0.4;
+  return { x: Math.sin(a) * d, z: Math.cos(a) * d, seed: 51 + i };
+});
+
+/** 草丛与小石头：避开花圃、建筑与小路；可指定环带（minR/maxR）铺满整个可见球面 */
+export function scatter(beds: BedLayout[], count = 520, seed = 11, maxR = 2.35, minR = 0) {
   let s = seed;
   const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
   const blocked: { x: number; z: number; r: number }[] = [
     ...beds.map((b) => ({ x: b.x, z: b.z, r: b.r + 0.07 })),
     { ...SPOTS.cottage, r: 0.45 }, { ...SPOTS.greenhouse, r: 0.42 }, { ...SPOTS.bench, r: 0.16 }, { ...SPOTS.sign, r: 0.06 },
     ...TREES.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.18 : 0.12 })),
+    ...WILD.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.22 : 0.16 })),
+    ...WILD_ROCKS.map((t) => ({ x: t.x, z: t.z, r: 0.12 })),
   ];
   const pathPts = [...pathCurve(MEMORY_PATH).getSpacedPoints(30), ...pathCurve(GREEN_PATH).getSpacedPoints(20)];
   const out: { x: number; z: number; s: number; tone: number; yaw: number }[] = [];
   let guard = 0;
+  const ring = maxR * maxR - minR * minR;
   while (out.length < count && guard++ < count * 8) {
-    const r = Math.sqrt(rnd()) * 2.35, a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd() * ring + minR * minR), a = rnd() * Math.PI * 2;
     const x = Math.sin(a) * r, z = Math.cos(a) * r;
     if (blocked.some((b) => Math.hypot(x - b.x, z - b.z) < b.r)) continue;
     if (pathPts.some((p) => Math.hypot(x - p.x, z - p.z) < 0.09)) continue;
