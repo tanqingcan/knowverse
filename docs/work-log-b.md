@@ -112,6 +112,13 @@
 - **成长渐变**：用现有 `Flower3D` 的 `open` + 顶点 shader grow 参数，不引入带骨骼动画模型。
 - **装饰系统**：先等 A 确认 `decor_items` / `planet_decor` 两张表与 `/api/decor` 契约，再动前端。
 
+## W1.6 · 植物入场生长动画（2026-10-29）
+
+- `GardenWorld.tsx` 的 `PlantNode`：入场按 `hashId(p.id) % 320ms` 错峰，0.9s 内从 0.22 长到 1（ease-out + 轻微过冲）；`prefers-reduced-motion` 下直接 1。
+- 与原有「成长庆祝」`fx` 分支不冲突：`fx` 时仍按 `before/after` 缩放与 `open` 展开。
+- 验证：`tsc` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
+- 待本机看：进 `/space` 时 13 株植物依次长出。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

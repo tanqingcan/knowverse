@@ -44,12 +44,21 @@ function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, s
   onSelect?: (id: string) => void; setHover: (k: string | null) => void; register: (k: string, o: THREE.Object3D | null) => void;
 }) {
   const g = useRef<THREE.Group>(null);
+  const born = useRef<number | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("after");
   const [open, setOpen] = useState(1);
   const lastOpen = useRef(1);
   useEffect(() => { if (fx && !reduced) { setPhase("before"); setOpen(fx.to === "bloom" ? 0.08 : 1); } else { setPhase("after"); setOpen(1); } }, [fx, reduced]);
   useFrame(() => {
-    if (!fx || reduced || !g.current) { if (g.current) g.current.scale.setScalar(1); return; }
+    const now = performance.now();
+    // 入场「生长」：约 0.9s 从小长到满，按 id 错峰
+    if (born.current === null) born.current = now + (hashId(p.id) % 320);
+    const m = reduced ? 1 : Math.min(1, Math.max(0, (now - born.current) / 900));
+    const me = 1 - Math.pow(1 - m, 3);
+    if (!fx || reduced || !g.current) {
+      if (g.current) g.current.scale.setScalar(reduced ? 1 : 0.22 + 0.78 * me + Math.sin(m * Math.PI) * 0.06);
+      return;
+    }
     const t = (performance.now() - fx.start) / 1000;
     if (t < 1.5) { if (phase !== "before") setPhase("before"); g.current.scale.setScalar(1 - Math.max(0, t - 1.2) * 1.2); return; }
     if (phase !== "after") setPhase("after");
