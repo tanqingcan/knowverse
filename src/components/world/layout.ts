@@ -36,12 +36,15 @@ export const SPOTS = {
   lamp: { x: 0.98, z: -0.02 },
   sign: { x: 0.42, z: 0.86, yaw: -14 },
   lampSpot: { x: 0.62, z: -0.34 },        // 星灯默认停在书屋门前（对话入口）
+  observatory: { x: -0.75, z: -2.15, yaw: 18 }, // 背面观星台（环绕探索目标）
 };
 
 /** 回忆小径：主花圃 → 长椅旁 → 星灯书屋门口 */
 export const MEMORY_PATH: [number, number][] = [[0.08, -0.12], [0.18, -0.4], [0.36, -0.5], [0.52, -0.6], [0.66, -0.68]];
 /** 去温室的小路 */
 export const GREEN_PATH: [number, number][] = [[-0.22, -0.08], [-0.42, -0.3], [-0.6, -0.48], [-0.74, -0.6]];
+/** 去背面观星台的星径：从温室后侧绕到背面 */
+export const STAR_PATH: [number, number][] = [[-0.74, -0.6], [-1.0, -1.1], [-1.05, -1.6], [-0.92, -1.95], [-0.75, -2.15]];
 
 export function pathCurve(points: [number, number][]) {
   return new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, "centripetal");

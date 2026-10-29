@@ -235,7 +235,7 @@ export function SpaceApp() {
     if (h === "cottage") openPanelKey("chat");
     else if (h === "greenhouse") open({ panel: "materials" });
     else if (h === "path") open({ panel: "history" });
-    else if (h === "galaxy") open({ panel: "galaxy" });
+    else if (h === "galaxy" || h === "observatory") open({ panel: "galaxy" });
   };
   const hoverLabel = (k: string) => {
     if (k.startsWith("plant:")) {

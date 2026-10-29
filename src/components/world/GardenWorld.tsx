@@ -12,16 +12,16 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import * as THREE from "three";
 import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, bladeGeo, rand } from "./geo";
 import { Flower3D } from "./Flower3D";
-import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Sign, SteppingStone } from "./Props3D";
+import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Observatory, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
-import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
+import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
 import type { DecorPlacement } from "@/lib/decor";
 import { DecorItem } from "./DecorItem";
 
-export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy";
+export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy" | "observatory";
 export type Celebration = { plantId: string; fromStage: StageKey; toStage: StageKey; key: number } | null;
 
 export type WorldProps = {
@@ -219,6 +219,7 @@ function Wildflowers({ items }: { items: ReturnType<typeof scatter> }) {
 function MemoryPath({ setHover, onHotspot }: { setHover: (k: string | null) => void; onHotspot?: (h: Hotspot) => void }) {
   const stones = useMemo(() => pathCurve(MEMORY_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), []);
   const g2 = useMemo(() => pathCurve(GREEN_PATH).getSpacedPoints(6).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.7 + rand(i, 9) * 0.3, i: i + 20 })), []);
+  const g3 = useMemo(() => pathCurve(STAR_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 11) * 0.28, i: i + 40 })), []);
   return (
     <>
       {stones.map((s) => (
@@ -230,6 +231,7 @@ function MemoryPath({ setHover, onHotspot }: { setHover: (k: string | null) => v
         </OnCap>
       ))}
       {g2.map((s) => <OnCap key={s.i} x={s.x} z={s.z}><SteppingStone s={s.s} seed={s.i} /></OnCap>)}
+      {g3.map((s) => <OnCap key={s.i} x={s.x} z={s.z}><SteppingStone s={s.s} seed={s.i} /></OnCap>)}
     </>
   );
 }
@@ -306,7 +308,7 @@ function Rig({ mode, reduced, focusPoint, drag, zoom, intro, onIntroDone, worldR
     const e = 1 - Math.pow(1 - introK, 3);
     const elev = ELEV + (1 - e) * 0.32 + (aspect < 0.8 ? 0.2 : 0);
     const dir = new THREE.Vector3(0, Math.sin(elev), Math.cos(elev));
-    const wantD = d * Math.max(0.75, Math.min(1.5, zoom.current)) * (1 + (1 - e) * 1.1);
+    const wantD = d * Math.max(0.75, Math.min(2.2, zoom.current)) * (1 + (1 - e) * 1.1);
     const k = reduced || dist.current === 0 ? 1 : done.current ? Math.min(1, dt * 3) : 1;
     dist.current += (wantD - dist.current) * k;
     look.current.lerp(tgt, k);
@@ -486,6 +488,11 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <OnCap x={0.38} z={-0.48}><group ref={(o) => register("path", o)} position={[0, 0.12, 0]} /></OnCap>
         <OnCap x={SPOTS.bench.x} z={SPOTS.bench.z} yaw={SPOTS.bench.yaw}><Bench /></OnCap>
         <OnCap x={SPOTS.lamp.x} z={SPOTS.lamp.z}><Lamp lights={L} /></OnCap>
+        <OnCap x={SPOTS.observatory.x} z={SPOTS.observatory.z} yaw={SPOTS.observatory.yaw}>
+          <Observatory lights={L} />
+          <group ref={(o) => register("observatory", o)} position={[0, 0.3, 0]} />
+          <Hit name="observatory" r={0.3} h={0.36} setHover={setHover} onHotspot={props.onHotspot} />
+        </OnCap>
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
         {TREES.map((t, i) => (
           <OnCap key={i} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={(t as any).tint} /> : <Bush seed={t.seed} />}</OnCap>
@@ -571,7 +578,7 @@ export function GardenWorld(props: WorldProps) {
       else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") drag.current = { yaw, tilt: Math.min(TILT_MAX, tilt + 0.08) };
       else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") drag.current = { yaw, tilt: Math.max(TILT_MIN, tilt - 0.08) };
       else if (e.key === "+" || e.key === "=") zoom.current = Math.max(0.75, zoom.current - 0.1);
-      else if (e.key === "-" || e.key === "_") zoom.current = Math.min(1.5, zoom.current + 0.1);
+      else if (e.key === "-" || e.key === "_") zoom.current = Math.min(2.2, zoom.current + 0.1);
       else if (e.key === "r" || e.key === "R" || e.key === "0") resetView();
       else return;
       lastAct.current = performance.now();
@@ -613,7 +620,7 @@ export function GardenWorld(props: WorldProps) {
       onWheel={(e) => {
         if (props.mode !== "garden") return;
         lastAct.current = performance.now();
-        zoom.current = Math.max(0.75, Math.min(1.5, zoom.current + Math.sign(e.deltaY) * 0.07));
+        zoom.current = Math.max(0.75, Math.min(2.2, zoom.current + Math.sign(e.deltaY) * 0.07));
       }}
       onPointerUp={() => { press.current = null; decorDrag.current = null; }} onPointerLeave={() => { press.current = null; decorDrag.current = null; }}>
       <GLBoundary onFail={props.onFail}>

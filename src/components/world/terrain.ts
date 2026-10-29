@@ -4,7 +4,7 @@
  */
 import * as THREE from "three";
 import { PLANET_R } from "./geo";
-import { capToWorldXZ, pathCurve, MEMORY_PATH, GREEN_PATH, SPOTS, type BedLayout } from "./layout";
+import { capToWorldXZ, pathCurve, MEMORY_PATH, GREEN_PATH, STAR_PATH, SPOTS, type BedLayout } from "./layout";
 
 const S = 1024;
 function toPx(x: number, z: number) {
@@ -59,6 +59,7 @@ export function paintTerrain(beds: BedLayout[]) {
   ring(SPOTS.cottage.x, SPOTS.cottage.z, 0.55, "#D8CBA8", 0.55);
   ring(SPOTS.greenhouse.x, SPOTS.greenhouse.z, 0.52, "#D8CBA8", 0.5);
   ring(SPOTS.bench.x, SPOTS.bench.z, 0.22, "#D8CBA8", 0.5);
+  ring(SPOTS.observatory.x, SPOTS.observatory.z, 0.44, "#D8CBA8", 0.5);
 
   // 沙色小路（软边 + 碎石点）
   const drawPath = (pts: [number, number][], width: number) => {
@@ -75,6 +76,7 @@ export function paintTerrain(beds: BedLayout[]) {
   };
   drawPath(MEMORY_PATH, 0.15);
   drawPath(GREEN_PATH, 0.11);
+  drawPath(STAR_PATH, 0.1);
   g.globalAlpha = 1;
 
   const t = new THREE.CanvasTexture(cv);

@@ -4,7 +4,7 @@
  * 石板小径、灌木、开花小树、草丛（实例化）、云海、远处的共学星球。
  * 本地坐标：y 为地表法线，+z 朝向镜头。
  */
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { C, matte, glassMat, glowMat, rbox, cylGeo, coneGeo, sphereGeo, torusGeo, grainTexture, signTexture, haloTexture, contactGeo, contactMat, bladeGeo, rand } from "./geo";
@@ -249,6 +249,27 @@ export function CloudRing({ R }: { R: number }) {
     return { p: [Math.sin(a) * rr, y, Math.cos(a) * rr] as [number, number, number], s: 0.32 + rand(i, 4) * 0.34, c: i % 4 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EDE3F2" : "#FFF7EE" };
   }), [R]);
   return <group>{puffs.map((p, i) => <mesh key={i} geometry={sphereGeo(1, 16, 12)} material={matte(p.c, { rough: 1 })} position={p.p} scale={[p.s * 1.3, p.s * 0.8, p.s]} />)}</group>;
+}
+
+/** 观星台：石台 + 低圆顶 + 望远镜 + 门口暖灯，放在星球背面，环绕时有可去的地方 */
+export function Observatory({ lights = 1 }: { lights?: number }) {
+  const dome = useMemo(() => new THREE.SphereGeometry(0.15, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), []);
+  const stone = matte("#BDB6C9", { map: grainTexture("#C4BDD1", "#8E88A6", 128, 180) });
+  return (
+    <group>
+      <Contact r={0.3} />
+      <mesh geometry={cylGeo(0.28, 0.3, 0.05, 22)} material={stone} position={[0, 0.025, 0]} receiveShadow castShadow />
+      <mesh geometry={cylGeo(0.2, 0.22, 0.07, 18)} material={matte("#D8CFC0")} position={[0, 0.085, 0]} castShadow />
+      <mesh geometry={dome} material={matte("#C9C2D6", { rough: 0.85 })} position={[0, 0.12, 0]} castShadow />
+      <group position={[0, 0.19, 0]} rotation={[-0.55, 0.5, 0]}>
+        <mesh geometry={cylGeo(0.018, 0.026, 0.24, 10)} material={matte("#C9A25E", { rough: 0.6 })} position={[0, 0.1, 0]} castShadow />
+        <mesh geometry={cylGeo(0.03, 0.03, 0.02, 10)} material={matte("#8C6A3F")} position={[0, 0.21, 0]} />
+      </group>
+      <mesh geometry={sphereGeo(0.016, 8, 6)} material={glowMat("#FFDFA8", 0.6 + 1.2 * lights)} position={[0.19, 0.07, 0.1]} />
+      <Halo size={0.3} opacity={0.45 * lights} position={[0.19, 0.1, 0.1]} />
+      <pointLight color="#FFD49A" intensity={0.5 * lights} distance={0.8} decay={2} position={[0.19, 0.12, 0.1]} />
+    </group>
+  );
 }
 
 /** 远处的共学星球（低细节） */
