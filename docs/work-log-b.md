@@ -135,6 +135,13 @@
 - 验证：`tsc` 通过；`/`、`/dev/garden`、`/welcome` 200。
 - 说明：现在存本机浏览器；接 A 的 `/api/decor` 后改成接口即可，并开放「参观别人的星球」。
 
+## W1.9 · 装饰 3D 拖拽（2026-10-29）
+
+- `GardenWorld`：按住装饰（`onPointerDown`）进入拖拽；在星球表面 `onPointerMove` 用 `pointToCap` 把交点换算成球冠 (x,z)，80ms 节流回写；拖拽期间抑制镜头拖拽，松手 / 离开清空。
+- `SpaceApp` 传入 `onDecorMove`，直接写回 `useDecor`（localStorage）。
+- 验证：`tsc` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
+- 待本机确认：拖拽手感、与镜头拖拽是否冲突。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

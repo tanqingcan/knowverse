@@ -30,6 +30,7 @@ export type WorldProps = {
   signText: string; signSub?: string; recenterKey: number; onDragged?: (b: boolean) => void;
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
   decor?: DecorPlacement[];
+  onDecorMove?: (id: string, x: number, z: number) => void;
   onFail: () => void;
 };
 
@@ -38,6 +39,15 @@ const EYE_DIR = new THREE.Vector3(0, Math.sin(ELEV), Math.cos(ELEV));
 const LOOK = new THREE.Vector3(0, PLANET_R - 0.12, 0.02);
 
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
+
+/** 世界坐标点 → 球冠平面坐标 (x,z)，与 capToAzPolar 互逆 */
+function pointToCap(p: THREE.Vector3) {
+  const r = p.length() || 1;
+  const polar = Math.acos(Math.max(-1, Math.min(1, p.y / r)));
+  const d = polar * PLANET_R;
+  const az = Math.atan2(p.x, p.z);
+  return { x: Math.sin(az) * d, z: Math.cos(az) * d };
+}
 
 /* ───────── 花圃里的一株植物（含成长动画） ───────── */
 function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, setHover, register }: {
@@ -302,7 +312,7 @@ function LabelTracker({ anchors, labelKey, el }: { anchors: React.MutableRefObje
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
   const anchors = useRef(new Map<string, THREE.Object3D>());
@@ -400,7 +410,15 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <group position={[-2.2, -1.4, -16]}><DistantPlanet color="#9CAFC5" size={0.16} ring={false} /></group>
 
       <group ref={world}>
-        <mesh geometry={planetGeo} material={planetMat} receiveShadow />
+        <mesh geometry={planetGeo} material={planetMat} receiveShadow
+          onPointerMove={(e) => {
+            if (!props.decorDrag.current || props.mode !== "garden") return;
+            const now = performance.now();
+            if (now - props.lastDecorMove.current < 80) return;
+            props.lastDecorMove.current = now;
+            const c = pointToCap(e.point);
+            props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
+          }} />
         <CloudRing R={PLANET_R} />
         <Grass items={grass} />
         <Wildflowers items={blooms} />
@@ -431,7 +449,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         {/* 玩家摆放的装饰（原型：localStorage；后续接 A 的 /api/decor） */}
         {(props.decor ?? []).map((d, i) => (
           <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
-            <group scale={d.scale}>
+            <group scale={d.scale}
+              onPointerDown={(e) => { if (props.mode !== "garden") return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
               {d.kind === "lamp" ? <Lamp lights={L} /> : d.kind === "bush" ? <Bush seed={i + 1} /> : <BlossomTree seed={i + 1} />}
             </group>
           </OnCap>
@@ -480,6 +499,8 @@ export function GardenWorld(props: WorldProps) {
   const [hover, setHoverState] = useState<string | null>(null);
   const labelEl = useRef<HTMLDivElement>(null);
   const drag = useRef({ yaw: 0, tilt: 0 });
+  const decorDrag = useRef<string | null>(null);
+  const lastDecorMove = useRef(0);
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
   const setHover = (k: string | null) => { setHoverState(k); document.body.style.cursor = k ? "pointer" : ""; };
   useEffect(() => { drag.current = { yaw: 0, tilt: 0 }; props.onDragged?.(false); // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -490,22 +511,23 @@ export function GardenWorld(props: WorldProps) {
 
   return (
     <div className="world" style={{ position: "absolute", inset: 0, touchAction: "pan-y" }}
-      onPointerDown={(e) => { if (props.mode !== "garden") return; press.current = { x: e.clientX, y: e.clientY, ...drag.current }; }}
+      onPointerDown={(e) => { if (props.mode !== "garden" || decorDrag.current) return; press.current = { x: e.clientX, y: e.clientY, ...drag.current }; }}
       onPointerMove={(e) => {
+        if (decorDrag.current) return;
         const p = press.current; if (!p) return;
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         if (Math.abs(dx) + Math.abs(dy) < 6) return;
         drag.current = { yaw: Math.max(-0.6, Math.min(0.6, p.yaw + dx * 0.004)), tilt: Math.max(-0.08, Math.min(0.12, p.tilt + dy * 0.0012)) };
         props.onDragged?.(Math.abs(drag.current.yaw) > 0.05 || Math.abs(drag.current.tilt) > 0.03);
       }}
-      onPointerUp={() => { press.current = null; }} onPointerLeave={() => { press.current = null; }}>
+      onPointerUp={() => { press.current = null; decorDrag.current = null; }} onPointerLeave={() => { press.current = null; decorDrag.current = null; }}>
       <GLBoundary onFail={props.onFail}>
         <Canvas shadows dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.75]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
           onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
-            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} />
+            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
           </Suspense>
         </Canvas>
       </GLBoundary>

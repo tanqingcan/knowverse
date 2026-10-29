@@ -258,6 +258,7 @@ export function SpaceApp() {
               mode={focus ? "focus" : "garden"} reduced={reduced} celebrate={celebrate} pose={pose} lampState={lampState}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
               recenterKey={recenterKey} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
+              onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
