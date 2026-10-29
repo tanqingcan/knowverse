@@ -59,9 +59,14 @@ function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, s
   const g = useRef<THREE.Group>(null);
   const born = useRef<number | null>(null);
   const [phase, setPhase] = useState<"before" | "after">("after");
-  const [open, setOpen] = useState(1);
-  const lastOpen = useRef(1);
-  useEffect(() => { if (fx && !reduced) { setPhase("before"); setOpen(fx.to === "bloom" ? 0.08 : 1); } else { setPhase("after"); setOpen(1); } }, [fx, reduced]);
+  const bloomAtMount = p.stage === "bloom";
+  const [open, setOpen] = useState(bloomAtMount ? 0.1 : 1);
+  const lastOpen = useRef(bloomAtMount ? 0.1 : 1);
+  const firstFx = useRef(true);
+  useEffect(() => {
+    if (firstFx.current) { firstFx.current = false; return; } // 入场展开交给 useFrame
+    if (fx && !reduced) { setPhase("before"); setOpen(fx.to === "bloom" ? 0.08 : 1); } else { setPhase("after"); setOpen(1); }
+  }, [fx, reduced]);
   useFrame(() => {
     const now = performance.now();
     // 入场「生长」：约 0.9s 从小长到满，按 id 错峰
@@ -70,6 +75,11 @@ function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, s
     const me = 1 - Math.pow(1 - m, 3);
     if (!fx || reduced || !g.current) {
       if (g.current) g.current.scale.setScalar(reduced ? 1 : 0.22 + 0.78 * me + Math.sin(m * Math.PI) * 0.06);
+      // 入场「花瓣展开」：同一条时间轴，从 0.1 张到 1
+      if (!reduced && bloomAtMount) {
+        const o = Math.min(1, 0.1 + 0.9 * me);
+        if (Math.abs(o - lastOpen.current) > 0.04) { lastOpen.current = o; setOpen(o); }
+      }
       return;
     }
     const t = (performance.now() - fx.start) / 1000;
