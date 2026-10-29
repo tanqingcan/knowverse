@@ -66,12 +66,14 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
 .sky, .kv-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
   --s1: #25204a; --s2: #37305f; --s3: #4d4478; --s4: #6f6696; --s5: #857ba6;
   --s6: #9cafc5; --s7: #c2c0cf; --s8: #e7c3b8; --s9: #f2c9b6; --s10: #fff1df;
-  --glow-warm: rgba(255, 214, 168, 0.75); --glow-cool: rgba(196, 186, 255, 0.35); --aurora: rgba(164, 214, 205, 0.18);
+  --glow-warm: rgba(255, 214, 168, 0.75); --glow-cool: rgba(196, 186, 255, 0.35); --aurora: rgba(164, 214, 205, 0.3);
   background:
     /* 地平线暖光（夕阳） */
     radial-gradient(70% 55% at 72% 96%, var(--glow-warm), transparent 70%),
     /* 右上冷光 */
     radial-gradient(55% 40% at 18% 6%, var(--glow-cool), transparent 70%),
+    /* 银河带 */
+    radial-gradient(140% 22% at 42% 22%, rgba(190, 180, 255, 0.10), transparent 72%),
     /* 极光带 */
     radial-gradient(120% 30% at 50% 34%, var(--aurora), transparent 70%),
     /* 基础渐变：深空 → 暮紫 → 雾蓝 → 浅桃 → 奶油 */
@@ -104,8 +106,11 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
     radial-gradient(1.6px 1.6px at 128px 44px, rgba(255,247,232,.8), transparent 60%),
     radial-gradient(1px 1px at 168px 128px, rgba(255,247,232,.55), transparent 60%),
     radial-gradient(1.3px 1.3px at 96px 10px, rgba(255,247,232,.65), transparent 60%),
-    radial-gradient(1px 1px at 30px 150px, rgba(255,247,232,.5), transparent 60%);
-  background-size: 200px 170px; background-repeat: repeat; opacity: .55;
+    radial-gradient(1px 1px at 30px 150px, rgba(255,247,232,.5), transparent 60%),
+    radial-gradient(1.2px 1.2px at 150px 80px, rgba(255,247,232,.7), transparent 60%),
+    radial-gradient(1px 1px at 60px 60px, rgba(255,247,232,.6), transparent 60%),
+    radial-gradient(1.4px 1.4px at 110px 140px, rgba(255,247,232,.65), transparent 60%);
+  background-size: 200px 170px; background-repeat: repeat; opacity: .72;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
   mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
   animation: skytwinkle 6s ease-in-out infinite alternate;
