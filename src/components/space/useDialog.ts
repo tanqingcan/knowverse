@@ -15,7 +15,29 @@ if (typeof document !== "undefined") {
 }
 
 /**
- * 浮窗的可访问性语义：Esc 关闭、打开时把焦点移进窗内、关闭后还给原来的触发元素
+ * 轻量侧栏（植物档案）的键盘语义：只做 Esc 关闭 + 关闭后焦点归还，
+ * 不锁滚动、不锁 Tab —— 侧栏旁边还要能继续点星球上的花与拖动镜头。
+ */
+export function useEscapeClose(active: boolean, onClose: () => void, fallbackSelector?: string) {
+  useEffect(() => {
+    if (!active) return;
+    const prev = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement
+      : lastFocusEl;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (prev && prev.isConnected) prev.focus({ preventScroll: true });
+      else if (fallbackSelector) document.querySelector<HTMLElement>(fallbackSelector)?.focus({ preventScroll: true });
+    };
+  }, [active, onClose, fallbackSelector]);
+}
+
+/**
+ * 专注浮窗 / 设置弹窗的可访问性语义：Esc 关闭、打开时把焦点移进窗内、关闭后还给原来的触发元素
  * （触发元素已被卸载时退回到 `fallbackSelector`）、Tab / Shift+Tab 在窗内循环、
  * 打开期间锁页面滚动。
  *

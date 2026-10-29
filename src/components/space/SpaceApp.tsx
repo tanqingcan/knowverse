@@ -19,7 +19,7 @@ import { layoutBeds, type WorldPlant } from "@/components/world/bedLayout";
 import type { Pose } from "@/components/world/Characters3D";
 import { STAGE_NAME, type StageKey } from "@/lib/flora";
 import { Ctx, type GrowthEvent, type PanelKey, type PanelState, type Space } from "./context";
-import { useDialog } from "./useDialog";
+import { useDialog, useEscapeClose } from "./useDialog";
 import { ChatPanel } from "./panels/ChatPanel";
 import { HistoryPanel } from "./panels/HistoryPanel";
 import { DossierPanel } from "./panels/DossierPanel";
@@ -226,6 +226,8 @@ export function SpaceApp() {
   const focusWinOpen = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
   useDialog(focusWinOpen, focusWinRef, closePanel, 'nav.sections button[aria-current="page"]');
   useDialog(panel.panel === "settings", settingsRef, closePanel, 'button[aria-label="设置"]');
+  // 植物档案是轻量侧栏：只补 Esc 关闭与焦点归还，不锁 Tab、不锁滚动
+  useEscapeClose(panel.panel === "dossier", closePanel, '.tool-wrap .tool');
 
   if (loadErr && !space) return <main className="intro"><div className="auth-card paper"><h2>星球暂时没有回应</h2><p className="err">{loadErr}</p><button className="btn btn-primary" onClick={() => reload()}>重试</button></div></main>;
   if (!space) return <main className="intro"><div className="intro-copy"><GuideOrb size={56} thinking /><p className="muted">正在靠近你的星球…</p></div></main>;
