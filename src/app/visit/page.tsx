@@ -21,11 +21,11 @@ const PLANTS: WorldPlant[] = [
 ];
 
 const DECOR: DecorPlacement[] = [
-  { id: "vd1", kind: "tree", x: 1.95, z: 0.82, rot: 0, scale: 1 },
-  { id: "vd2", kind: "chair", x: -1.95, z: 0.9, rot: 30, scale: 1 },
-  { id: "vd3", kind: "flower3", x: -1.2, z: 1.6, rot: 0, scale: 1, color: "#ff5fa2" },
-  { id: "vd4", kind: "flower2", x: -1.45, z: 1.2, rot: 0, scale: 1, color: "#ffd15f" },
-  { id: "vd5", kind: "lamp", x: 1.2, z: 1.7, rot: 0, scale: 1 },
+  { id: "vd1", kind: "tree", x: 1.45, z: 0.5, rot: 0, scale: 1 },
+  { id: "vd2", kind: "chair", x: -1.35, z: 0.55, rot: 30, scale: 1 },
+  { id: "vd3", kind: "flower3", x: -1.0, z: 1.1, rot: 0, scale: 1, color: "#ff5fa2" },
+  { id: "vd4", kind: "flower2", x: -1.22, z: 0.92, rot: 0, scale: 1, color: "#ffd15f" },
+  { id: "vd5", kind: "lamp", x: 1.0, z: 1.0, rot: 0, scale: 1 },
 ];
 
 export default function VisitPage() {
