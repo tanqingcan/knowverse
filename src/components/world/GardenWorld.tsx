@@ -130,9 +130,15 @@ function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, Wor
 }
 
 /* ───────── 地表上的物体 ───────── */
-function OnCap({ x, z, yaw = 0, lift = 0, children }: { x: number; z: number; yaw?: number; lift?: number; children: React.ReactNode }) {
+function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, children }: { x: number; z: number; yaw?: number; lift?: number; upright?: number; children: React.ReactNode }) {
   const f = useMemo(() => capFrame(x, z, yaw, lift), [x, z, yaw, lift]);
-  return <group position={f.pos} quaternion={f.quat}>{children}</group>;
+  const q = useMemo(() => {
+    if (!upright) return f.quat;
+    // 家具保持竖直：把「贴合球面」的四元数向「只绕世界 Y 偏航」插值
+    const up = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (yaw * Math.PI) / 180);
+    return f.quat.clone().slerp(up, Math.min(1, Math.max(0, upright)));
+  }, [f.quat, yaw, upright]);
+  return <group position={f.pos} quaternion={q}>{children}</group>;
 }
 
 function Grass({ items }: { items: ReturnType<typeof scatter> }) {
@@ -480,7 +486,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         ))}
         {/* 玩家摆放的装饰（原型：localStorage；后续接 A 的 /api/decor） */}
         {(props.decor ?? []).map((d, i) => (
-          <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
+          <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" ? 1 : 0}>
             <group scale={d.scale}
               onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
               <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} />
