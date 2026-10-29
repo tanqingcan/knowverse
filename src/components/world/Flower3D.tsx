@@ -40,15 +40,27 @@ function MergedPetals({ specs, deps }: { specs: PetalSpec[]; deps: string }) {
   return <mesh geometry={merged} material={vcol("petal")} castShadow />;
 }
 
-function Leaf({ kind, len, w, at, yaw, tilt, bend = 0.25 }: { kind: any; len: number; w: number; at: THREE.Vector3; yaw: number; tilt: number; bend?: number }) {
-  return (
-    <group position={at} rotation={[0, yaw, 0]}>
-      <mesh geometry={leafGeo(kind, len, w, bend)} material={vcol("leaf")} rotation={[tilt, 0, 0]} castShadow />
-    </group>
-  );
+type LeafSpec = { kind: string; len: number; w: number; at: [number, number, number]; yaw: number; tilt: number; bend?: number };
+
+/** 多片叶子合并成一个 mesh（同材质、同顶点色），每株从 2–6 次 draw 降到 1 次 */
+function MergedLeaves({ specs, deps }: { specs: LeafSpec[]; deps: string }) {
+  const merged = useMemo(() => {
+    const parts = specs.map((s) => {
+      const m = new THREE.Matrix4()
+        .multiply(new THREE.Matrix4().makeTranslation(s.at[0], s.at[1], s.at[2]))
+        .multiply(new THREE.Matrix4().makeRotationY(s.yaw))
+        .multiply(new THREE.Matrix4().makeRotationX(s.tilt));
+      return leafGeo(s.kind as any, s.len, s.w, s.bend ?? 0.25).clone().applyMatrix4(m);
+    });
+    return mergeGeometries(parts, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deps]);
+  return <mesh geometry={merged} material={vcol("leaf")} castShadow />;
 }
 
 function mid(a: string, b: string) { return "#" + new THREE.Color(a).lerp(new THREE.Color(b), 0.55).getHexString(); }
+
+
 
 function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: number; bud: boolean }) {
   const k = bud ? 0 : open;
@@ -206,35 +218,37 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
         <group>
           <mesh geometry={sphereGeo(0.034, 16, 10)} material={matte(C.soil)} scale={[1, 0.3, 1]} receiveShadow />
           <mesh geometry={stemGeo(0.07, bend * 0.6, 0.008)} material={matte(C.stem)} castShadow />
-          <Leaf kind="round" len={0.04} w={0.034} at={stemCurvePoint(0.07, bend * 0.6, 1)} yaw={0} tilt={1.15} bend={0.15} />
-          <Leaf kind="round" len={0.04} w={0.034} at={stemCurvePoint(0.07, bend * 0.6, 1)} yaw={Math.PI} tilt={1.15} bend={0.15} />
+          <MergedLeaves deps="sprout" specs={[
+            { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: 0, tilt: 1.15, bend: 0.15 },
+            { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: Math.PI, tilt: 1.15, bend: 0.15 },
+          ]} />
         </group>
       );
     }
     const h = stage === "leaf" ? H * 0.55 : stage === "bud" ? H * 0.82 : H;
     const top = stemCurvePoint(h, bend, 1);
-    const leaves: React.ReactNode[] = [];
+    const leaves: LeafSpec[] = [];
     if (species === "iris") {
-      for (let i = 0; i < 4; i++) leaves.push(<Leaf key={i} kind="sword" len={h * (0.75 + 0.15 * (i % 2))} w={0.026} at={new THREE.Vector3(0, 0, 0)} yaw={(i / 4) * Math.PI * 2 + 0.4} tilt={0.18 + (i % 2) * 0.12} bend={0.08} />);
+      for (let i = 0; i < 4; i++) leaves.push({ kind: "sword", len: h * (0.75 + 0.15 * (i % 2)), w: 0.026, at: [0, 0, 0], yaw: (i / 4) * Math.PI * 2 + 0.4, tilt: 0.18 + (i % 2) * 0.12, bend: 0.08 });
     } else if (species === "lily") {
-      leaves.push(<Leaf key="a" kind="broad" len={0.15} w={0.06} at={new THREE.Vector3(0, 0, 0)} yaw={0.4} tilt={0.22} bend={0.2} />);
-      leaves.push(<Leaf key="b" kind="broad" len={0.13} w={0.055} at={new THREE.Vector3(0, 0, 0)} yaw={0.4 + Math.PI} tilt={0.28} bend={0.22} />);
+      leaves.push({ kind: "broad", len: 0.15, w: 0.06, at: [0, 0, 0], yaw: 0.4, tilt: 0.22, bend: 0.2 });
+      leaves.push({ kind: "broad", len: 0.13, w: 0.055, at: [0, 0, 0], yaw: 0.4 + Math.PI, tilt: 0.28, bend: 0.22 });
     } else {
       const n = stage === "leaf" ? 3 : 5;
       for (let i = 0; i < n; i++) {
         const t = 0.25 + (i / n) * 0.55;
-        leaves.push(<Leaf key={i} kind={species === "sunflower" ? "heart" : "almond"} len={species === "sunflower" ? 0.085 : 0.058} w={species === "sunflower" ? 0.068 : 0.036}
-          at={stemCurvePoint(h, bend, t)} yaw={i * 2.4} tilt={1.05} bend={0.3} />);
+        leaves.push({ kind: species === "sunflower" ? "heart" : "almond", len: species === "sunflower" ? 0.085 : 0.058, w: species === "sunflower" ? 0.068 : 0.036,
+          at: stemCurvePoint(h, bend, t).toArray(), yaw: i * 2.4, tilt: 1.05, bend: 0.3 });
       }
     }
+    if (species !== "lily" && stage === "leaf") leaves.push({ kind: "almond", len: 0.03, w: 0.018, at: top.toArray(), yaw: 0.5, tilt: 0.3 });
     return (
       <group>
         <mesh geometry={sphereGeo(0.032, 14, 8)} material={matte(C.soilDeep)} scale={[1, 0.22, 1]} receiveShadow />
         {species !== "lily" && <mesh geometry={stemGeo(h, bend, species === "sunflower" ? 0.011 : 0.007)} material={matte(C.stem)} castShadow />}
-        {leaves}
+        {leaves.length > 0 && <MergedLeaves specs={leaves} deps={`${species}-${stage}-${seed}`} />}
         {species === "lily" && stage !== "leaf" && <LilySpray c={c} open={open} bud={stage === "bud"} seed={seed} />}
         {species === "lily" && stage === "leaf" && <mesh geometry={stemGeo(0.09, 0.01, 0.006)} material={matte(C.stem)} />}
-        {species !== "lily" && stage === "leaf" && <Leaf kind="almond" len={0.03} w={0.018} at={top} yaw={0.5} tilt={0.3} />}
         {species !== "lily" && (stage === "bud" || stage === "bloom") && (
           <group position={top}>
             {species === "rose" && <RoseHead c={c} open={open} bud={stage === "bud"} />}
