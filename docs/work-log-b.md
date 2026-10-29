@@ -149,6 +149,14 @@
 - `GardenWorld` 按 kind 渲染；设置面板自动出现新按钮。
 - 验证：`tsc` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
 
+## W1.11 · 外部素材加载管线（2026-10-29）
+
+- 新增 `src/lib/models.ts` 注册表（默认空）、`src/components/world/Model.tsx`（`useLoader(GLTFLoader)` + Suspense + 错误边界回退）、`src/components/world/DecorItem.tsx`（有登记用 GLB，否则程序化）。
+- `GardenWorld` 装饰渲染改为 `<DecorItem>`。
+- 新增 `docs/assets-integration.md`：下载 → 放 `public/assets/models/` → 登记 `MODEL_REGISTRY` → 自动替换 / 回退。
+- 验证：`tsc --noEmit` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
+- 未验证：真实 GLB 加载（沙箱无素材 / 无浏览器）。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

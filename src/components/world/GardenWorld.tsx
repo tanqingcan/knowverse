@@ -18,7 +18,7 @@ import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, pathCurve,
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
 import type { DecorPlacement } from "@/lib/decor";
-import { DecorPot, DecorStone, DecorFence } from "./Decor3D";
+import { DecorItem } from "./DecorItem";
 
 export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy";
 export type Celebration = { plantId: string; fromStage: StageKey; toStage: StageKey; key: number } | null;
@@ -452,12 +452,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
             <group scale={d.scale}
               onPointerDown={(e) => { if (props.mode !== "garden") return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
-              {d.kind === "lamp" ? <Lamp lights={L} />
-                : d.kind === "bush" ? <Bush seed={i + 1} />
-                : d.kind === "tree" ? <BlossomTree seed={i + 1} />
-                : d.kind === "pot" ? <DecorPot />
-                : d.kind === "stone" ? <DecorStone />
-                : <DecorFence />}
+              <DecorItem kind={d.kind} seed={i + 1} lights={L} />
             </group>
           </OnCap>
         ))}
