@@ -7,7 +7,8 @@
  */
 export type ModelDef = {
   url: string;      // /assets/models/xxx.glb
-  height?: number;  // 目标高度（场景单位），默认 0.3
+  height?: number;  // 目标尺寸（场景单位），默认 0.3
+  fit?: "height" | "max"; // 按高度（默认）还是按最大边长归一化
   rot?: number;     // 绕 Y 旋转（弧度）
 };
 
@@ -18,4 +19,7 @@ export const MODEL_REGISTRY: Partial<Record<string, ModelDef>> = {
   flower:  { url: "/assets/models/flower-a.glb",      height: 0.3 },
   flower2: { url: "/assets/models/flower-tulip.glb",  height: 0.28 },
   flower3: { url: "/assets/models/flower-daisy.glb",  height: 0.24 },
+  lamp:    { url: "/assets/models/lamp.glb",          height: 0.4 },
+  fence:   { url: "/assets/models/fence.glb",         height: 0.55, fit: "max" },
+  rock:    { url: "/assets/models/rock.glb",          height: 0.2, fit: "max" },
 };

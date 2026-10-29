@@ -10,11 +10,11 @@ const entries = Object.entries(MODEL_REGISTRY);
 export default function DevModelsPage() {
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#9CAFC5,#F2C9B6)" }}>
-      <Canvas shadows camera={{ position: [2.0, 1.3, 2.0], fov: 45 }}>
+      <Canvas shadows camera={{ position: [3.4, 2.1, 3.4], fov: 45 }}>
         <ambientLight intensity={0.9} />
         <directionalLight position={[3, 5, 3]} intensity={2} castShadow />
         {entries.map(([key, def], i) => (
-          <group key={key} position={[(i - (entries.length - 1) / 2) * 0.7, 0, 0]}>
+          <group key={key} position={[(i - (entries.length - 1) / 2) * 0.46, 0, 0]}>
             <mesh position={[0, -0.02, 0]} receiveShadow>
               <cylinderGeometry args={[0.14, 0.14, 0.04, 24]} />
               <meshStandardMaterial color="#8fa587" />

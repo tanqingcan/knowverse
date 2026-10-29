@@ -23,10 +23,11 @@ function GlbModel({ def, tint }: { def: ModelDef; tint?: string }) {
   const { s, y } = useMemo(() => {
     scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(scene);
-    const h = box.getSize(new THREE.Vector3()).y || 1;
-    const sc = (def.height ?? 0.3) / h;
+    const size = box.getSize(new THREE.Vector3());
+    const measure = def.fit === "max" ? Math.max(size.x, size.y, size.z) : size.y;
+    const sc = (def.height ?? 0.3) / (measure || 1);
     return { s: sc, y: -box.min.y * sc };
-  }, [scene, def.height]);
+  }, [scene, def.height, def.fit]);
   return <primitive object={scene} scale={s} position={[0, y, 0]} rotation={[0, def.rot ?? 0, 0]} />;
 }
 
