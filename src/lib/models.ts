@@ -15,7 +15,7 @@ export type ModelDef = {
 /** 已下载并登记的模型（CC0 / CC-BY，见 public/assets/CREDITS.md） */
 export const MODEL_REGISTRY: Partial<Record<string, ModelDef>> = {
   tree:    { url: "/assets/models/tree-a.glb",        height: 0.55 },
-  chair:   { url: "/assets/models/chair-a.glb",       height: 0.22 },
+  chair:   { url: "/assets/models/bench.glb",         height: 0.5, fit: "max" },
   flower:  { url: "/assets/models/flower-a.glb",      height: 0.3 },
   flower2: { url: "/assets/models/flower-tulip.glb",  height: 0.28 },
   flower3: { url: "/assets/models/flower-daisy.glb",  height: 0.24 },
