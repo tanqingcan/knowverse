@@ -15,6 +15,7 @@ import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
 import { GuideOrb } from "@/components/art/Props";
 import type { Celebration, Hotspot } from "@/components/world/GardenWorld";
+import { layoutBeds, type WorldPlant } from "@/components/world/bedLayout";
 import type { Pose } from "@/components/world/Characters3D";
 import { STAGE_NAME, type StageKey } from "@/lib/flora";
 import { Ctx, type GrowthEvent, type PanelKey, type PanelState, type Space } from "./context";
@@ -394,10 +395,22 @@ function ModeNotice({ space }: { space: Space }) {
 function GardenHUD({ narrow, dragged, onRecenter, selectedPlant, replayLabel, hidden }: { narrow: boolean; dragged: boolean; onRecenter: () => void; selectedPlant: string | null; replayLabel: string | null; hidden: boolean }) {
   const { space, open } = React.useContext(Ctx)!;
   const [bedsOpen, setBedsOpen] = useState(false);
+  const [bedQuery, setBedQuery] = useState("");
   const [sugOpen, setSugOpen] = useState(true);
   const ev = useTimeline();
   const lastChange = (ev ?? []).find((e) => e.eventType === "stage_changed");
   const sug = useMemo(() => suggestion(space), [space]);
+  // 每个花圃在 3D 里的环位有限：摆不下的株数必须让用户看见，不能静默消失
+  const beds = useMemo(() => layoutBeds(
+    space.gardens.map((g) => ({ name: g.name })),
+    space.plants.map((p) => ({
+      id: p.id, conceptName: p.conceptName, species: p.species, color: p.color, stage: p.stage,
+      isNatal: p.isNatal, gardenIndex: space.gardens.findIndex((g) => g.id === p.gardenId),
+    } satisfies WorldPlant)),
+  ), [space]);
+  const kw = bedQuery.trim().toLowerCase();
+  const hit = (p: { conceptName: string; nickname?: string | null }) =>
+    !kw || p.conceptName.toLowerCase().includes(kw) || (p.nickname ?? "").toLowerCase().includes(kw);
   const lastConv = space.user.lastConversationId;
   useEffect(() => { if (!bedsOpen) return; const f = (e: KeyboardEvent) => { if (e.key === "Escape") setBedsOpen(false); }; window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f); }, [bedsOpen]);
 
@@ -432,23 +445,44 @@ function GardenHUD({ narrow, dragged, onRecenter, selectedPlant, replayLabel, hi
           {dragged && <button className="tool tool-plain" onClick={onRecenter}>回到花园视角</button>}
         </div>
         {bedsOpen && (
-          <div className="beds-pop paper" role="menu" aria-label="花圃与植物">
-            {space.gardens.map((g) => (
-              <div key={g.id} className="bed-group">
-                <div className="label">{g.name}</div>
-                {space.plants.filter((p) => p.gardenId === g.id).map((p) => (
-                  <button key={p.id} role="menuitem" className="plant-row" aria-current={selectedPlant === p.id} onClick={() => { open({ panel: "dossier", plantId: p.id }); setBedsOpen(false); }}>
-                    <span className="mini"><FlowerSvg uid={`hud-${p.id.slice(0, 8)}`} species={p.species} color={p.color} stage={p.stage} size={26} crop /></span>
-                    <span className="name">{p.nickname ? `「${p.nickname}」` : ""}{p.conceptName}{p.isNatal ? " · 本命花" : ""}</span>
-                    {p.reviewDue && <span className="review-pill">待复习</span>}
-                    <span className="stage-label">{STAGE_NAME[p.stage]}</span>
-                  </button>
-                ))}
+          <div className="beds-pop paper" aria-label="花圃与植物">
+            <div className="beds-search">
+              <input value={bedQuery} onChange={(e) => setBedQuery(e.target.value)} placeholder="找一株花：知识点或昵称" aria-label="搜索花圃里的植物" type="search" />
+            </div>
+            {space.plants.length === 0 && (
+              <div className="bed-empty">
+                这个星球还没有花。去<button className="link" onClick={() => { setBedsOpen(false); open({ panel: "materials" }); }}>资料温室</button>挑一份资料，就能种下第一株。
               </div>
-            ))}
+            )}
+            {space.gardens.map((g, gi) => {
+              const all = space.plants.filter((p) => p.gardenId === g.id);
+              const list = all.filter(hit);
+              const bed = beds[gi];
+              return (
+                <div key={g.id} className="bed-group">
+                  <div className="label">
+                    <span>{g.name}</span>
+                    <em>{all.length} 株</em>
+                    {bed && bed.overflow > 0 && (
+                      <span className="overflow">星球上摆下 {bed.plants.length} 株，另有 {bed.overflow} 株待扩容</span>
+                    )}
+                  </div>
+                  {all.length === 0 && <div className="bed-empty">还没有花</div>}
+                  {all.length > 0 && list.length === 0 && <div className="bed-empty">没有匹配「{bedQuery.trim()}」的花</div>}
+                  {list.map((p) => (
+                    <button key={p.id} className="plant-row" aria-current={selectedPlant === p.id} onClick={() => { open({ panel: "dossier", plantId: p.id }); setBedsOpen(false); }}>
+                      <span className="mini"><FlowerSvg uid={`hud-${p.id.slice(0, 8)}`} species={p.species} color={p.color} stage={p.stage} size={26} crop /></span>
+                      <span className="name">{p.nickname ? `「${p.nickname}」` : ""}{p.conceptName}{p.isNatal ? " · 本命花" : ""}</span>
+                      {p.reviewDue && <span className="review-pill">待复习</span>}
+                      <span className="stage-label">{STAGE_NAME[p.stage]}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
             {space.goals.length > 0 && (
               <div className="bed-group">
-                <div className="label">探索路线</div>
+                <div className="label"><span>探索路线</span></div>
                 {space.goals.map((g) => <div key={g.id} className="small" style={{ padding: "2px 8px" }}>{g.title}：{g.route.map((r) => r.name).join(" → ")}</div>)}
               </div>
             )}
