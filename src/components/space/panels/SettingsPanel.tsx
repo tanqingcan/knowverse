@@ -55,7 +55,13 @@ export function SettingsPanel() {
           })}
           {decorStore.decor.length > 0 && <button className="btn btn-quiet btn-sm" onClick={() => decorStore.reset()}>清空</button>}
         </div>
-        <p className="small muted">负荷 {decorLoad} / {DECOR_LOAD_CAP}（每件装饰有负荷，太满会掉帧）</p>
+        <div className={`load-bar ${decorLoad >= DECOR_LOAD_CAP ? "full" : ""}`} role="img" aria-label={`装饰负荷 ${decorLoad} / ${DECOR_LOAD_CAP}`}>
+          <i style={{ width: `${Math.min(100, (decorLoad / DECOR_LOAD_CAP) * 100)}%` }} />
+        </div>
+        <p className="small muted">
+          负荷 {decorLoad} / {DECOR_LOAD_CAP}
+          {decorLoad >= DECOR_LOAD_CAP ? "（这个星球太满啦）" : "（每件装饰有负荷，太满会掉帧）"}
+        </p>
         {decorStore.decor.length === 0 && <p className="small muted">还没有装饰。加一盏路灯或一棵小树，你的星球就和别人不一样了。</p>}
         {decorStore.decor.map((d) => (
           <div key={d.id} className="row small" style={{ marginTop: 6, flexWrap: "wrap", gap: 4, alignItems: "center" }}>

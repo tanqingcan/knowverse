@@ -131,6 +131,11 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
   opacity: .05; mix-blend-mode: multiply;
 }
 
+/* 装饰负荷条 */
+.load-bar { height: 6px; border-radius: 999px; background: rgba(63, 54, 87, 0.12); overflow: hidden; margin: 8px 0 4px; }
+.load-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--sage-ink); transition: width .25s var(--ease); }
+.load-bar.full > i { background: var(--rose-ink); }
+
 /* ───── 纸张 ───── */
 .paper { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
 .paper-soft { background: rgba(255, 247, 232, 0.9); color: var(--ink); box-shadow: var(--shadow-soft); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
