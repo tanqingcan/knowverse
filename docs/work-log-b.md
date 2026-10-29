@@ -87,6 +87,31 @@
 2. 先 B7（小、独立、解锁截图）→ 再 B1（3D 逐项，每项一次提交）
 3. 每完成一项：截图 → 更新本日志 → 提交
 
+## W1.5 · 视觉方向调研 + 天空重做（2026-10-29）
+
+### 新增文档 / 脚本
+
+| 文件 | 内容 |
+|---|---|
+| `docs/visual-references.md` | 对标案例（Sky: CotL、尘歌壶、动森、Palia、Sims 建造、Duolingo/Habitica/Forest）+ 素材来源（Quaternius / Kenney / Poly Pizza / Poly Haven，CC0 优先）+ **复杂度预算**（花 ≤800 面、树 ≤2000、椅 ≤500、旅人 ≤2500、单星球 ≤50000）+ 「成长渐变用 shader，不找成长动画模型」 |
+| `docs/decor-system.md` | 装饰目录 + 星球装饰实例的数据模型草案、API 契约（交 A）、自由摆放交互、差异化设计（空间/主题/组合/解锁/社区）、负荷机制 |
+| `scripts/fetch-assets.ps1` | 素材下载清单（本机运行；沙箱内出网被禁），含记录模板 |
+
+### 天空重做（`src/app/globals.css` 的 `.sky`）
+
+- 基础渐变：深空 `#25204a` → 暮紫 → 雾蓝 → 浅桃 → 奶油，10 个色标，比原来的 6 段更有深度。
+- 叠加：地平线暖光、右上冷光、极光带。
+- `::before` 平铺星点（向下渐隐，`prefers-reduced-motion` 下停止闪烁）。
+- `::after` SVG 颗粒（feTurbulence）消色带。
+- 验证：`tsc` 通过；`/`、`/dev/garden` 200；编译后 `layout.css` 含 `skytwinkle` / `feTurbulence` / `25204a`。
+- 待你本机看效果：`/`（开场）、`/space`（花园）、`/welcome`。
+
+### 结论（给下一步）
+
+- **素材**：本机跑 `scripts/fetch-assets.ps1` 下载；优先 Kenney / Quaternius（低模、CC0）。
+- **成长渐变**：用现有 `Flower3D` 的 `open` + 顶点 shader grow 参数，不引入带骨骼动画模型。
+- **装饰系统**：先等 A 确认 `decor_items` / `planet_decor` 两张表与 `/api/decor` 契约，再动前端。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

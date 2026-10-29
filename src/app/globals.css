@@ -62,11 +62,42 @@ h2 { font-size: 19px; margin: 0 0 8px; }
 h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weight: 600; letter-spacing: 0; }
 
 /* ───── 天空 ───── */
-.sky, .kv-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+.sky, .kv-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
   background:
-    radial-gradient(ellipse 60% 40% at 78% 8%, rgba(255, 247, 232, 0.16), transparent 70%),
-    radial-gradient(ellipse 90% 45% at 50% 62%, rgba(242, 201, 182, 0.55), transparent 72%),
-    linear-gradient(180deg, #6f6696 0%, #857ba6 18%, #9cafc5 46%, #e7c3b8 72%, #f2c9b6 84%, #fff1df 100%); }
+    /* 地平线暖光（夕阳） */
+    radial-gradient(70% 55% at 72% 96%, rgba(255, 214, 168, 0.75), rgba(255, 214, 168, 0) 70%),
+    /* 右上冷光 */
+    radial-gradient(55% 40% at 18% 6%, rgba(196, 186, 255, 0.35), transparent 70%),
+    /* 极光带 */
+    radial-gradient(120% 30% at 50% 34%, rgba(164, 214, 205, 0.18), transparent 70%),
+    /* 基础渐变：深空 → 暮紫 → 雾蓝 → 浅桃 → 奶油 */
+    linear-gradient(180deg,
+      #25204a 0%, #37305f 10%, #4d4478 20%, #6f6696 34%,
+      #857ba6 46%, #9cafc5 58%, #c2c0cf 68%, #e7c3b8 80%,
+      #f2c9b6 90%, #fff1df 100%); }
+/* 星点：上层平铺，向下渐隐 */
+.sky::before, .kv-sky::before {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255,247,232,.9), transparent 60%),
+    radial-gradient(1px 1px at 74px 96px, rgba(255,247,232,.7), transparent 60%),
+    radial-gradient(1.6px 1.6px at 128px 44px, rgba(255,247,232,.8), transparent 60%),
+    radial-gradient(1px 1px at 168px 128px, rgba(255,247,232,.55), transparent 60%),
+    radial-gradient(1.3px 1.3px at 96px 10px, rgba(255,247,232,.65), transparent 60%),
+    radial-gradient(1px 1px at 30px 150px, rgba(255,247,232,.5), transparent 60%);
+  background-size: 200px 170px; background-repeat: repeat; opacity: .55;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
+  animation: skytwinkle 6s ease-in-out infinite alternate;
+}
+/* 颗粒：消掉渐变的色带 */
+.sky::after, .kv-sky::after {
+  content: ""; position: absolute; inset: -20%; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: .10; mix-blend-mode: overlay;
+}
+@keyframes skytwinkle { from { opacity: .4; } to { opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .sky::before, .kv-sky::before { animation: none; } }
 .kv-sky { position: fixed; }
 .kv-sky canvas { width: 100%; height: 100%; display: block; opacity: 0.6; }
 
