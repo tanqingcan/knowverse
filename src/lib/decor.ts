@@ -75,6 +75,37 @@ export function removeDecor(list: DecorPlacement[], id: string): DecorPlacement[
   return list.filter((d) => d.id !== id);
 }
 
+export type DecorPreset = { key: string; label: string; items: { kind: DecorKind; dx: number; dz: number; rot?: number }[] };
+
+/** 一键布置：小范围组合，落在同一个预设点附近 */
+export const DECOR_PRESETS: DecorPreset[] = [
+  { key: "tea", label: "茶座", items: [
+    { kind: "chair", dx: 0, dz: 0 },
+    { kind: "chair", dx: 0.24, dz: -0.12, rot: 200 },
+    { kind: "stone", dx: -0.16, dz: 0.18 },
+  ] },
+  { key: "bloom", label: "花境", items: [
+    { kind: "flower", dx: -0.2, dz: 0.08 },
+    { kind: "flower2", dx: 0.06, dz: 0.16 },
+    { kind: "flower3", dx: 0.26, dz: 0 },
+    { kind: "stone", dx: 0, dz: -0.2 },
+  ] },
+  { key: "lamp", label: "灯径", items: [
+    { kind: "lamp", dx: -0.3, dz: 0 },
+    { kind: "lamp", dx: 0.3, dz: 0 },
+    { kind: "fence", dx: 0, dz: -0.26, rot: 90 },
+  ] },
+];
+
+export function presetLoad(p: DecorPreset): number {
+  return +p.items.reduce((s, it) => s + loadOf(it.kind), 0).toFixed(1);
+}
+
+export function addPreset(list: DecorPlacement[], p: DecorPreset): DecorPlacement[] {
+  const base = nextSpot(list);
+  return [...list, ...p.items.map((it) => ({ id: uid(), kind: it.kind, x: base.x + it.dx, z: base.z + it.dz, rot: it.rot ?? 0, scale: 1 }))];
+}
+
 /** 订阅装饰列表：localStorage + 自定义事件（跨组件同步） */
 export function useDecor() {
   const [list, setList] = useState<DecorPlacement[]>([]);
@@ -92,6 +123,7 @@ export function useDecor() {
   return {
     decor: list,
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
+    applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
     remove: (id: string) => commit(removeDecor(list, id)),
     reset: () => commit([]),

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSpace } from "../context";
 import { SKY_THEMES, setSkyTheme, useSkyTheme } from "@/lib/sky";
-import { DECOR_CATALOG, DECOR_LOAD_CAP, loadOf, totalLoad, useDecor } from "@/lib/decor";
+import { DECOR_CATALOG, DECOR_LOAD_CAP, DECOR_PRESETS, loadOf, presetLoad, totalLoad, useDecor } from "@/lib/decor";
 
 const PERM: Record<string, string> = { read_own: "只读本人数据", propose: "只提建议", write_rules: "后端规则写入（模型不可直接调用）" };
 
@@ -45,6 +45,15 @@ export function SettingsPanel() {
       </div>
       <div className="section card">
         <h3>星球装饰</h3>
+        <div className="row" style={{ flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+          {DECOR_PRESETS.map((p) => {
+            const full = decorLoad + presetLoad(p) > DECOR_LOAD_CAP;
+            return (
+              <button key={p.key} className="btn btn-soft btn-sm" disabled={full} title={full ? "这个星球太满啦" : "一键布置"}
+                onClick={() => decorStore.applyPreset(p)}>· {p.label}</button>
+            );
+          })}
+        </div>
         <div className="row" style={{ flexWrap: "wrap", gap: 4 }}>
           {DECOR_CATALOG.map((c) => {
             const full = decorLoad + loadOf(c.kind) > DECOR_LOAD_CAP;
