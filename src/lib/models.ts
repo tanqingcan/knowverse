@@ -7,15 +7,13 @@
  */
 export type ModelDef = {
   url: string;      // /assets/models/xxx.glb
-  scale?: number;   // 统一缩放
-  y?: number;       // 贴地偏移
+  height?: number;  // 目标高度（场景单位），默认 0.3
   rot?: number;     // 绕 Y 旋转（弧度）
 };
 
-/** 默认空：不改变现有画面；登记后生效 */
+/** 已下载并登记的模型（CC0 / CC-BY，见 public/assets/CREDITS.md） */
 export const MODEL_REGISTRY: Partial<Record<string, ModelDef>> = {
-  // 例：
-  // lamp:  { url: "/assets/models/lamp.glb",  scale: 0.6 },
-  // tree:  { url: "/assets/models/tree.glb",  scale: 0.5, y: 0 },
-  // flower:{ url: "/assets/models/flower.glb", scale: 0.4 },
+  tree:   { url: "/assets/models/tree-a.glb",   height: 0.55 },
+  chair:  { url: "/assets/models/chair-a.glb",  height: 0.22 },
+  flower: { url: "/assets/models/flower-a.glb", height: 0.3 },
 };

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Lamp, Bush, BlossomTree } from "./Props3D";
+import { Lamp, Bush, BlossomTree, Bench } from "./Props3D";
 import { DecorPot, DecorStone, DecorFence } from "./Decor3D";
 import { Model } from "./Model";
 import { MODEL_REGISTRY } from "@/lib/models";
@@ -14,6 +14,8 @@ function Procedural({ kind, seed, lights }: { kind: DecorKind; seed: number; lig
     case "pot": return <DecorPot />;
     case "stone": return <DecorStone />;
     case "fence": return <DecorFence />;
+    case "chair": return <Bench />;
+    case "flower": return <DecorPot />;
   }
 }
 

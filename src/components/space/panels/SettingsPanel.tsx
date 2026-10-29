@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSpace } from "../context";
 import { SKY_THEMES, setSkyTheme, useSkyTheme } from "@/lib/sky";
-import { DECOR_CATALOG, useDecor } from "@/lib/decor";
+import { DECOR_CATALOG, DECOR_LOAD_CAP, loadOf, totalLoad, useDecor } from "@/lib/decor";
 
 const PERM: Record<string, string> = { read_own: "只读本人数据", propose: "只提建议", write_rules: "后端规则写入（模型不可直接调用）" };
 
@@ -12,6 +12,7 @@ export function SettingsPanel() {
   const { space, reload, toast } = useSpace();
   const skyTheme = useSkyTheme();
   const decorStore = useDecor();
+  const decorLoad = totalLoad(decorStore.decor);
   const [tools, setTools] = useState<any[]>([]);
   useEffect(() => { api<any[]>("/api/agent/tools").then(setTools).catch(() => {}); }, []);
   const set = async (p: any) => { try { await api("/api/me/preferences", { body: p }); await reload(); } catch (e: any) { toast(e.message, "error"); } };
@@ -45,11 +46,16 @@ export function SettingsPanel() {
       <div className="section card">
         <h3>星球装饰</h3>
         <div className="row" style={{ flexWrap: "wrap", gap: 4 }}>
-          {DECOR_CATALOG.map((c) => (
-            <button key={c.kind} className="btn btn-ghost btn-sm" onClick={() => decorStore.add(c.kind)}>＋ {c.label}</button>
-          ))}
+          {DECOR_CATALOG.map((c) => {
+            const full = decorLoad + loadOf(c.kind) > DECOR_LOAD_CAP;
+            return (
+              <button key={c.kind} className="btn btn-ghost btn-sm" disabled={full} title={full ? "这个星球太满啦" : undefined}
+                onClick={() => decorStore.add(c.kind)}>＋ {c.label}</button>
+            );
+          })}
           {decorStore.decor.length > 0 && <button className="btn btn-quiet btn-sm" onClick={() => decorStore.reset()}>清空</button>}
         </div>
+        <p className="small muted">负荷 {decorLoad} / {DECOR_LOAD_CAP}（每件装饰有负荷，太满会掉帧）</p>
         {decorStore.decor.length === 0 && <p className="small muted">还没有装饰。加一盏路灯或一棵小树，你的星球就和别人不一样了。</p>}
         {decorStore.decor.map((d) => (
           <div key={d.id} className="row small" style={{ marginTop: 6, flexWrap: "wrap", gap: 4, alignItems: "center" }}>

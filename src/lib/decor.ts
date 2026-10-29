@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 
-export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence";
+export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower";
 export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number };
 
 export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] = [
@@ -15,7 +15,18 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] =
   { kind: "pot", label: "花盆", load: 0.2 },
   { kind: "stone", label: "石堆", load: 0.1 },
   { kind: "fence", label: "木栅栏", load: 0.2 },
+  { kind: "chair", label: "长椅", load: 0.4 },
+  { kind: "flower", label: "花丛", load: 0.3 },
 ];
+
+/** 单星球装饰负荷上限（load 总和） */
+export const DECOR_LOAD_CAP = 50;
+export function loadOf(kind: DecorKind): number {
+  return DECOR_CATALOG.find((c) => c.kind === kind)?.load ?? 0.2;
+}
+export function totalLoad(list: DecorPlacement[]): number {
+  return +list.reduce((s, d) => s + loadOf(d.kind), 0).toFixed(1);
+}
 
 /** 预设落点（球冠平面坐标，避开主花圃与建筑） */
 const PRESET: { x: number; z: number }[] = [

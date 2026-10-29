@@ -157,6 +157,27 @@
 - 验证：`tsc --noEmit` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
 - 未验证：真实 GLB 加载（沙箱无素材 / 无浏览器）。
 
+## W1.12 · 全屏花园 + 素材落地（2026-10-29）
+
+### 布局（按你的反馈）
+
+- 花园**始终全屏**：`.is-focus .world-wrap` 不再缩成左侧小窗，世界铺满整个屏幕。
+- 信息面板改为**右侧浮窗**（宽 820px、强阴影、圆角），移动端为 72dvh 底部抽屉；移除旧的缩略图 caption。
+
+### 素材（Poly Pizza，已下载到 `public/assets/models/`，共 565 KB）
+
+| 文件 | 模型 | 许可 | 三角面 |
+|---|---|---|---|
+| `flower-a.glb` | Flowers · Quaternius | CC0 | 1,360 |
+| `chair-a.glb` | Chair · Quaternius | CC0 | 216 |
+| `tree-a.glb` | Tree · Marc Solà | CC-BY 3.0 | 932 |
+| `traveler-a.glb` | Character Base · madtrollstudio | CC-BY 3.0 | 1,508 |
+
+- `models.ts` 登记 `tree` / `chair` / `flower`；`Model.tsx` 按目标高度**自动缩放并贴地**（各模型单位差异很大）。
+- 装饰目录扩到 8 种（加长椅、花丛）；新增**负荷上限 50**，超出时禁用添加。
+- 新增 `scripts/glb-info.mjs`（打印 GLB 包围盒/面数）与 `public/assets/CREDITS.md`（署名）。
+- 验证：`tsc` 通过；`/`、`/dev/garden`、`/assets/models/tree-a.glb` 均 200。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

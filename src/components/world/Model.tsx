@@ -1,14 +1,22 @@
 "use client";
 import React, { Suspense, useMemo } from "react";
+import * as THREE from "three";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ModelDef } from "@/lib/models";
 
-/** 播放一个 GLB；加载失败时由 ModelBoundary 回退到程序化模型 */
+/** 播放一个 GLB：按目标高度自动缩放并贴地；失败时由 ModelBoundary 回退 */
 function GlbModel({ def }: { def: ModelDef }) {
   const gltf = useLoader(GLTFLoader, def.url);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf]);
-  return <primitive object={scene} scale={def.scale ?? 1} position={[0, def.y ?? 0, 0]} rotation={[0, def.rot ?? 0, 0]} />;
+  const { s, y } = useMemo(() => {
+    scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(scene);
+    const h = box.getSize(new THREE.Vector3()).y || 1;
+    const sc = (def.height ?? 0.3) / h;
+    return { s: sc, y: -box.min.y * sc };
+  }, [scene, def.height]);
+  return <primitive object={scene} scale={s} position={[0, y, 0]} rotation={[0, def.rot ?? 0, 0]} />;
 }
 
 class ModelBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { failed: boolean }> {
