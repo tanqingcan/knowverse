@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { api, ApiError } from "@/lib/api";
+import { Sky } from "@/components/ui/Sky";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false });
 
@@ -44,7 +45,7 @@ export function Landing() {
 
   return (
     <main className={`intro ${reduced ? "reduced-motion" : ""}`}>
-      <div className="sky" aria-hidden="true" />
+      <Sky />
       {phase !== "question" && phase !== "auth" && (
         <button className="btn btn-ghost btn-sm skip" onClick={() => setPhase("question")}>跳过开场</button>
       )}

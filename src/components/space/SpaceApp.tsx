@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
+import { Sky } from "@/components/ui/Sky";
 import { FlowerSvg } from "@/components/art/Flower";
 import { GuideOrb } from "@/components/art/Props";
 import type { Celebration, Hotspot } from "@/components/world/GardenWorld";
@@ -245,7 +246,7 @@ export function SpaceApp() {
   return (
     <Ctx.Provider value={ctx}>
       <div className={`app ${focus ? "is-focus" : "is-garden"} ${reduced ? "reduced-motion" : ""} ${showIntro ? "is-intro" : ""}`}>
-        <div className="sky" aria-hidden="true" />
+        <Sky />
 
         {/* 花园场景：同一个画布在两种模式间改变大小，不重新加载 */}
         <section className="world-wrap" aria-label={`${space.planet?.name ?? "我的星球"}：${space.plants.length} 株植物`}>

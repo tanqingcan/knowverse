@@ -63,18 +63,37 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
 
 /* ───── 天空 ───── */
 .sky, .kv-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  --s1: #25204a; --s2: #37305f; --s3: #4d4478; --s4: #6f6696; --s5: #857ba6;
+  --s6: #9cafc5; --s7: #c2c0cf; --s8: #e7c3b8; --s9: #f2c9b6; --s10: #fff1df;
+  --glow-warm: rgba(255, 214, 168, 0.75); --glow-cool: rgba(196, 186, 255, 0.35); --aurora: rgba(164, 214, 205, 0.18);
   background:
     /* 地平线暖光（夕阳） */
-    radial-gradient(70% 55% at 72% 96%, rgba(255, 214, 168, 0.75), rgba(255, 214, 168, 0) 70%),
+    radial-gradient(70% 55% at 72% 96%, var(--glow-warm), transparent 70%),
     /* 右上冷光 */
-    radial-gradient(55% 40% at 18% 6%, rgba(196, 186, 255, 0.35), transparent 70%),
+    radial-gradient(55% 40% at 18% 6%, var(--glow-cool), transparent 70%),
     /* 极光带 */
-    radial-gradient(120% 30% at 50% 34%, rgba(164, 214, 205, 0.18), transparent 70%),
+    radial-gradient(120% 30% at 50% 34%, var(--aurora), transparent 70%),
     /* 基础渐变：深空 → 暮紫 → 雾蓝 → 浅桃 → 奶油 */
     linear-gradient(180deg,
-      #25204a 0%, #37305f 10%, #4d4478 20%, #6f6696 34%,
-      #857ba6 46%, #9cafc5 58%, #c2c0cf 68%, #e7c3b8 80%,
-      #f2c9b6 90%, #fff1df 100%); }
+      var(--s1) 0%, var(--s2) 10%, var(--s3) 20%, var(--s4) 34%,
+      var(--s5) 46%, var(--s6) 58%, var(--s7) 68%, var(--s8) 80%,
+      var(--s9) 90%, var(--s10) 100%); }
+/* 天空主题：暮色（默认） / 星夜 / 晨雾 / 极光 */
+.sky.theme-night, .kv-sky.theme-night {
+  --s1: #070716; --s2: #0d0c24; --s3: #141233; --s4: #1c1946; --s5: #262157;
+  --s6: #332c6b; --s7: #3f3578; --s8: #4f4185; --s9: #5f4d8e; --s10: #6f5a96;
+  --glow-warm: rgba(255, 230, 180, 0.25); --glow-cool: rgba(150, 170, 255, 0.45); --aurora: rgba(120, 200, 220, 0.12);
+}
+.sky.theme-mist, .kv-sky.theme-mist {
+  --s1: #8fa0b8; --s2: #9aaec2; --s3: #a9bacb; --s4: #b8c6d4; --s5: #c4d0da;
+  --s6: #cfd8df; --s7: #d9e0e4; --s8: #e3e7e6; --s9: #eceee9; --s10: #f4f5ef;
+  --glow-warm: rgba(255, 240, 210, 0.45); --glow-cool: rgba(200, 230, 240, 0.35); --aurora: rgba(200, 230, 220, 0.2);
+}
+.sky.theme-aurora, .kv-sky.theme-aurora {
+  --s1: #06121e; --s2: #0a1a2a; --s3: #0f2438; --s4: #16314a; --s5: #1e3f5c;
+  --s6: #2a506d; --s7: #356079; --s8: #416f83; --s9: #4f7d86; --s10: #5f8a85;
+  --glow-warm: rgba(120, 255, 200, 0.18); --glow-cool: rgba(120, 180, 255, 0.4); --aurora: rgba(90, 255, 190, 0.28);
+}
 /* 星点：上层平铺，向下渐隐 */
 .sky::before, .kv-sky::before {
   content: ""; position: absolute; inset: 0;

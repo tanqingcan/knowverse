@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSpace } from "../context";
+import { SKY_THEMES, setSkyTheme, useSkyTheme } from "@/lib/sky";
 
 const PERM: Record<string, string> = { read_own: "只读本人数据", propose: "只提建议", write_rules: "后端规则写入（模型不可直接调用）" };
 
 export function SettingsPanel() {
   const { space, reload, toast } = useSpace();
+  const skyTheme = useSkyTheme();
   const [tools, setTools] = useState<any[]>([]);
   useEffect(() => { api<any[]>("/api/agent/tools").then(setTools).catch(() => {}); }, []);
   const set = async (p: any) => { try { await api("/api/me/preferences", { body: p }); await reload(); } catch (e: any) { toast(e.message, "error"); } };
@@ -26,6 +28,17 @@ export function SettingsPanel() {
             {["Asia/Taipei", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"].map((z) => <option key={z} value={z}>{z}</option>)}
           </select>
         </label>
+      </div>
+      <div className="section card">
+        <h3>天空</h3>
+        <div className="row">
+          {SKY_THEMES.map((t) => (
+            <button key={t.key} className={`chip ${skyTheme === t.key ? "mist" : ""}`} style={{ cursor: "pointer" }} onClick={() => setSkyTheme(t.key)} title={t.hint}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <p className="small muted">天空主题目前存在本机浏览器；跨设备同步需要后端加字段（A 的 `users.sky_theme`）。</p>
       </div>
       <div className="section card">
         <h3>大模型</h3>

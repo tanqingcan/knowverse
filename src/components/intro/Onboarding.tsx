@@ -13,6 +13,7 @@ import { FlowerSvg } from "@/components/art/Flower";
 import { GuideOrb } from "@/components/art/Props";
 import { api, ApiError } from "@/lib/api";
 import { PALETTE, SPECIES } from "@/lib/flora";
+import { Sky } from "@/components/ui/Sky";
 
 type Subject = { id: string; name: string; code: string; isPublic: boolean };
 type Proposal = { conceptId: string; name: string; why: string; order: number };
@@ -83,7 +84,7 @@ export function Onboarding({ user, subjects: initialSubjects }: { user: { displa
   const reduced = user.reducedMotion || osReduced;
   return (
     <main className={`onb ${reduced ? "reduced-motion" : ""}`}>
-      <div className="sky" aria-hidden="true" />
+      <Sky />
       <section className="onb-stage" aria-label="星球预览">
         <StaticGarden plants={scenePlants.map((p) => ({ ...p, gardenIndex: 0 }))} gardens={[{ name: "" }]} pose="idle" reduced={reduced}
           signText={scenePlants.find((p) => p.isNatal) ? (nickname || scenePlants.find((p) => p.isNatal)!.conceptName) : ""} />

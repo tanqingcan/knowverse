@@ -119,6 +119,14 @@
 - 验证：`tsc` 通过；`/`、`/dev/garden`、`/dev/flowers` 200。
 - 待本机看：进 `/space` 时 13 株植物依次长出。
 
+## W1.7 · 天空主题（2026-10-29）
+
+- `.sky` 改为 CSS 变量驱动，新增 `theme-night`（星夜）、`theme-mist`（晨雾）、`theme-aurora`（极光）；默认 `theme-dusk` 沿用暮色。
+- 新增 `src/lib/sky.ts`（主题类型、localStorage、`useSkyTheme` 订阅）与 `src/components/ui/Sky.tsx`；Landing / Onboarding / SpaceApp 三处天空统一换成 `<Sky />`。
+- `SettingsPanel` 增加「天空」一行 4 个主题切换。
+- 验证：`tsc` 通过；`/`、`/welcome`、`/dev/garden` 200；编译后 layout.css 含 `theme-night` / `theme-aurora` / `--s1`。
+- 待办：跨设备持久化需 A 在 `users` 加 `sky_theme`（或 `planet_settings`）。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）
