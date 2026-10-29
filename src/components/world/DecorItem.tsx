@@ -15,7 +15,9 @@ function Procedural({ kind, seed, lights }: { kind: DecorKind; seed: number; lig
     case "stone": return <DecorStone />;
     case "fence": return <DecorFence />;
     case "chair": return <Bench />;
-    case "flower": return <DecorPot />;
+    case "flower":
+    case "flower2":
+    case "flower3": return <DecorPot />;
   }
 }
 

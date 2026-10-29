@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 
-export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower";
+export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3";
 export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number };
 
 export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] = [
@@ -16,7 +16,9 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] =
   { kind: "stone", label: "石堆", load: 0.1 },
   { kind: "fence", label: "木栅栏", load: 0.2 },
   { kind: "chair", label: "长椅", load: 0.4 },
-  { kind: "flower", label: "花", load: 0.3 },
+  { kind: "flower", label: "向日葵", load: 0.3 },
+  { kind: "flower2", label: "郁金香", load: 0.3 },
+  { kind: "flower3", label: "雏菊", load: 0.3 },
 ];
 
 /** 单星球装饰负荷上限（load 总和） */
