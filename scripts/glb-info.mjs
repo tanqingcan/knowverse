@@ -27,4 +27,4 @@ for (const m of json.meshes ?? []) for (const p of m.primitives ?? []) {
   tris += p.indices != null ? (acc[p.indices]?.count ?? 0) / 3 : n / 3;
 }
 const size = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]];
-console.log(JSON.stringify({ file, size: size.map((v) => +v.toFixed(3)), min: mn.map((v) => +v.toFixed(3)), max: mx.map((v) => +v.toFixed(3)), tris: Math.round(tris) }));
+console.log(JSON.stringify({ file, size: size.map((v) => +v.toFixed(3)), min: mn.map((v) => +v.toFixed(3)), max: mx.map((v) => +v.toFixed(3)), tris: Math.round(tris), meshes: (json.meshes ?? []).length, images: (json.images ?? []).length }));

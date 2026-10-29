@@ -16,7 +16,7 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] =
   { kind: "stone", label: "石堆", load: 0.1 },
   { kind: "fence", label: "木栅栏", load: 0.2 },
   { kind: "chair", label: "长椅", load: 0.4 },
-  { kind: "flower", label: "花丛", load: 0.3 },
+  { kind: "flower", label: "花", load: 0.3 },
 ];
 
 /** 单星球装饰负荷上限（load 总和） */
