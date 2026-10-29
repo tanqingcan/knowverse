@@ -21,9 +21,9 @@ function Procedural({ kind, seed, lights }: { kind: DecorKind; seed: number; lig
   }
 }
 
-/** 有登记 GLB 就用外部模型，否则用程序化模型；加载失败自动回退 */
-export function DecorItem({ kind, seed, lights }: { kind: DecorKind; seed: number; lights: number }) {
+/** 有登记 GLB 就用外部模型，否则用程序化模型；加载失败自动回退；tint 给 GLB 换色 */
+export function DecorItem({ kind, seed, lights, tint }: { kind: DecorKind; seed: number; lights: number; tint?: string }) {
   const def = MODEL_REGISTRY[kind];
   const fallback = <Procedural kind={kind} seed={seed} lights={lights} />;
-  return def ? <Model def={def} fallback={fallback} /> : fallback;
+  return def ? <Model def={def} fallback={fallback} tint={tint} /> : fallback;
 }

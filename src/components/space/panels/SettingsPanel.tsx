@@ -75,6 +75,8 @@ export function SettingsPanel() {
         {decorStore.decor.map((d) => (
           <div key={d.id} className="row small" style={{ marginTop: 6, flexWrap: "wrap", gap: 4, alignItems: "center" }}>
             <b className="grow">{DECOR_CATALOG.find((c) => c.kind === d.kind)?.label}</b>
+            <input type="color" value={d.color ?? "#ffffff"} onChange={(e) => decorStore.update(d.id, { color: e.target.value })} aria-label="颜色"
+              style={{ width: 28, height: 22, padding: 0, border: "1px solid var(--line-strong)", borderRadius: 6, background: "none", cursor: "pointer" }} />
             <button className="btn btn-ghost btn-sm" aria-label="左移" onClick={() => decorStore.update(d.id, { x: d.x - 0.08 })}>←</button>
             <button className="btn btn-ghost btn-sm" aria-label="右移" onClick={() => decorStore.update(d.id, { x: d.x + 0.08 })}>→</button>
             <button className="btn btn-ghost btn-sm" aria-label="前移" onClick={() => decorStore.update(d.id, { z: d.z - 0.08 })}>↑</button>

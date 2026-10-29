@@ -462,7 +462,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
             <group scale={d.scale}
               onPointerDown={(e) => { if (props.mode !== "garden") return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
-              <DecorItem kind={d.kind} seed={i + 1} lights={L} />
+              <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} />
             </group>
           </OnCap>
         ))}

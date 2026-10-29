@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 
 export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3";
-export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number };
+export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number; color?: string };
 
 export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] = [
   { kind: "lamp", label: "路灯", load: 0.2 },
