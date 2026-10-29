@@ -265,12 +265,6 @@ export function SpaceApp() {
               onHotspot={onHotspot} celebrate={celebrate} reduced={reduced} compact={focus} pose={pose}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} />
           )}
-          {focus && !narrow && (
-            <div className="world-mini-caption">
-              <div className="title">{space.planet?.name}</div>
-              <button className="btn btn-soft btn-sm" onClick={() => open({ panel: null })}>回到花园</button>
-            </div>
-          )}
         </section>
 
         {showIntro && <div className="intro-skip" aria-hidden="true">点击任意处跳过</div>}
