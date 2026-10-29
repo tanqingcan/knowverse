@@ -5,13 +5,16 @@
  */
 import { useEffect, useState } from "react";
 
-export type DecorKind = "lamp" | "bush" | "tree";
+export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence";
 export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number };
 
 export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] = [
   { kind: "lamp", label: "路灯", load: 0.2 },
   { kind: "bush", label: "灌木", load: 0.3 },
   { kind: "tree", label: "开花小树", load: 0.8 },
+  { kind: "pot", label: "花盆", load: 0.2 },
+  { kind: "stone", label: "石堆", load: 0.1 },
+  { kind: "fence", label: "木栅栏", load: 0.2 },
 ];
 
 /** 预设落点（球冠平面坐标，避开主花圃与建筑） */
