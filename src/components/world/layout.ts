@@ -67,7 +67,21 @@ const BED_SLOTS = [
 ];
 const HEIGHT_ORDER: Record<string, number> = { sunflower: 0, iris: 1, rose: 2, lily: 3 };
 
-export type BedLayout = { index: number; name: string; x: number; z: number; r: number; main: boolean; plants: { id: string; x: number; z: number }[] };
+/** 8 个及以上的花圃：黄金角螺旋往外扩，保持在球冠内且不挤在一起 */
+function bedSlot(i: number) {
+  if (i < BED_SLOTS.length) return BED_SLOTS[i];
+  const k = i - BED_SLOTS.length;
+  const a = 0.7 + k * 2.399963;
+  const r = Math.min(2.2, 1.25 + Math.sqrt(k) * 0.26);
+  return { x: Math.sin(a) * r, z: Math.cos(a) * r };
+}
+
+export type BedLayout = {
+  index: number; name: string; x: number; z: number; r: number; main: boolean;
+  plants: { id: string; x: number; z: number }[];
+  /** 超出单圃环位容量、未摆放的株数（分页/收起提示用，不静默丢弃） */
+  overflow: number;
+};
 
 export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[]): BedLayout[] {
   const n = Math.max(1, gardens.length);
@@ -76,7 +90,7 @@ export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[]): B
   const order = [natalG, ...Array.from({ length: n }, (_, i) => i).filter((i) => i !== natalG)];
   return Array.from({ length: n }, (_, gi) => {
     const si = order.indexOf(gi);
-    const slot = BED_SLOTS[si] ?? { x: Math.sin(si * 2.4) * 1.9, z: Math.cos(si * 2.4) * 1.9 };
+    const slot = bedSlot(si);
     const list = plants.filter((p) => (p.gardenIndex ?? 0) === gi || (gi === 0 && (p.gardenIndex ?? -1) < 0));
     const natal = list.find((p) => p.isNatal);
     const rest = list.filter((p) => p !== natal).sort((a, b) => (HEIGHT_ORDER[a.species] ?? 2) - (HEIGHT_ORDER[b.species] ?? 2));
@@ -94,12 +108,15 @@ export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[]): B
       const rings = [{ r: 0.23, n: 6 }, { r: 0.43, n: 10 }, { r: 0.63, n: 14 }];
       for (const ring of rings) for (let i = 0; i < ring.n; i++) { const a = (i / ring.n) * Math.PI * 2 + Math.PI; spots.push({ x: Math.sin(a) * ring.r, z: Math.cos(a) * ring.r }); }
     }
-    const used = spots.slice(0, rest.length).sort((a, b) => a.z - b.z); // 高的种在后排
-    const placed = rest.map((p, i) => ({ id: p.id, ...used[i] }));
+    // 环位容量有限：超出的株数计入 overflow，绝不产生 undefined 坐标
+    const shown = rest.slice(0, spots.length);
+    const overflow = rest.length - shown.length;
+    const used = spots.slice(0, shown.length).sort((a, b) => a.z - b.z); // 高的种在后排
+    const placed = shown.map((p, i) => ({ id: p.id, ...used[i] }));
     if (natal) placed.unshift({ id: natal.id, x: 0, z: 0.06 });
     const far = placed.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.z)), 0);
     const r = Math.max(natal ? 0.36 : 0.28, far + 0.13);
-    return { index: gi, name: gardens[gi]?.name ?? "花圃", x: slot.x, z: slot.z, r, main: si === 0, plants: placed };
+    return { index: gi, name: gardens[gi]?.name ?? "花圃", x: slot.x, z: slot.z, r, main: si === 0, plants: placed, overflow };
   });
 }
 
