@@ -35,12 +35,12 @@ function mid(a: string, b: string) { return "#" + new THREE.Color(a).lerp(new TH
 function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: number; bud: boolean }) {
   const k = bud ? 0 : open;
   const base = mid(c.deep, c.petal);
-  const inner = petalGeo({ len: 0.044, width: 0.05, cup: 1.25, curl: -0.04, base: c.deep, mid: base, tip: c.petal });
-  const r1 = petalGeo({ len: 0.058, width: 0.07, cup: 1.05, curl: -0.06, base, mid: c.petal, tip: c.light });
-  const r2 = petalGeo({ len: 0.07, width: 0.084, cup: 0.85, curl: -0.14, base, mid: c.petal, tip: c.light });
-  const r3 = petalGeo({ len: 0.078, width: 0.09, cup: 0.6, curl: -0.26, base, mid: c.petal, tip: c.light, round: 0.5 });
+  const inner = petalGeo({ len: 0.044, width: 0.052, cup: 1.4, curl: 0.0, base: c.deep, mid: base, tip: c.petal });
+  const r1 = petalGeo({ len: 0.058, width: 0.072, cup: 1.18, curl: -0.04, base, mid: c.petal, tip: c.light });
+  const r2 = petalGeo({ len: 0.07, width: 0.086, cup: 0.96, curl: -0.1, base, mid: c.petal, tip: c.light });
+  const r3 = petalGeo({ len: 0.078, width: 0.094, cup: 0.74, curl: -0.16, base, mid: c.petal, tip: c.light, round: 0.66 });
   const sep = leafGeo("almond", 0.05, 0.016, 0.4);
-  const budP = petalGeo({ len: 0.062, width: 0.04, cup: 1.5, curl: 0.0, base: c.deep, mid: c.petal, tip: c.petal, round: 0.9 });
+  const budP = petalGeo({ len: 0.05, width: 0.06, cup: 1.8, curl: 0.02, base: c.deep, mid: c.petal, tip: c.petal, round: 1 });
   if (bud) {
     return (
       <group>
@@ -49,7 +49,8 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
             <mesh geometry={sep} material={vcol("leaf")} rotation={[0.3, 0, 0]} castShadow />
           </group>
         ))}
-        {[0, 1, 2, 3].map((i) => <Petal key={i} geo={budP} az={(i / 4) * Math.PI * 2 + i * 0.2} tilt={-0.12} r={0.012} tw={0.2} />)}
+        <mesh geometry={sphereGeo(0.018, 12, 9)} material={matte(C.leafDeep)} position={[0, 0.012, 0]} scale={[1, 0.85, 1]} castShadow />
+        {[0, 1, 2, 3, 4, 5].map((i) => <Petal key={i} geo={budP} az={(i / 6) * Math.PI * 2 + i * 0.12} tilt={0.14} r={0.01} tw={0.08} />)}
       </group>
     );
   }

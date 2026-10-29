@@ -7,7 +7,7 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, glassMat, glowMat, rbox, cylGeo, coneGeo, sphereGeo, torusGeo, grainTexture, signTexture, haloTexture, contactGeo, contactMat, rand } from "./geo";
+import { C, matte, glassMat, glowMat, rbox, cylGeo, coneGeo, sphereGeo, torusGeo, grainTexture, signTexture, haloTexture, contactGeo, contactMat, bladeGeo, rand } from "./geo";
 
 export function Halo({ size = 0.3, opacity = 0.8, position }: { size?: number; opacity?: number; position?: [number, number, number] }) {
   const mat = useMemo(() => new THREE.SpriteMaterial({ map: haloTexture(), transparent: true, depthWrite: false, opacity, blending: THREE.AdditiveBlending }), [opacity]);
@@ -99,7 +99,7 @@ export function Greenhouse({ lights = 1 }: { lights?: number }) {
       {/* 玻璃 */}
       {[-1, 1].map((sd) => <mesh key={`w${sd}`} material={glassMat()} position={[0, 0.05 + H / 2, (sd * D) / 2]}><planeGeometry args={[W, H]} /></mesh>)}
       {[-1, 1].map((sd) => <mesh key={`s${sd}`} material={glassMat()} position={[(sd * W) / 2, 0.05 + H / 2, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[D, H]} /></mesh>)}
-      {[-1, 1].map((sd) => <mesh key={`r${sd}`} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng * -1 + (sd > 0 ? 0 : 0), 0, 0]} scale={[1, 1, 1]}><planeGeometry args={[W, roofLen]} /></mesh>)}
+      {[-1, 1].map((sd) => <mesh key={`r${sd}`} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng, 0, 0]}><planeGeometry args={[W, roofLen]} /></mesh>)}
       {/* 室内：书桌、书本、绿植、暖灯 */}
       <mesh geometry={rbox(0.26, 0.02, 0.14, 0.006)} material={matte(C.wood)} position={[0.03, 0.15, 0]} castShadow />
       {[-0.1, 0.13].map((x) => <mesh key={x} geometry={rbox(0.016, 0.1, 0.016, 0.004)} material={matte(C.woodDeep)} position={[x, 0.1, 0]} />)}
@@ -213,8 +213,8 @@ export function GrassField({ items }: { items: { pos: THREE.Vector3; quat: THREE
   const geo = useMemo(() => {
     const blades: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 3; i++) {
-      const b = new THREE.ConeGeometry(0.008, 0.05 + i * 0.012, 3);
-      b.translate(0, (0.05 + i * 0.012) / 2, 0);
+      const h = 0.05 + i * 0.012;
+      const b = bladeGeo(h, 0.006).clone();
       b.rotateZ((i - 1) * 0.35); b.translate((i - 1) * 0.008, 0, 0);
       blades.push(b);
     }

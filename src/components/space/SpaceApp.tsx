@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { FlowerSvg } from "@/components/art/Flower";
 import { GuideOrb } from "@/components/art/Props";
 import type { Celebration, Hotspot } from "@/components/world/GardenWorld";
@@ -102,7 +102,7 @@ export function SpaceApp() {
   const tid = useRef(0);
 
   const reload = useCallback(async () => {
-    try { const s = await api<Space>("/api/space"); setSpace(s); setLoadErr(null); return s; }
+    try { const s = await api<Space>("/api/space"); setSpace(s); setTimeZone(s.user.timezone); setLoadErr(null); return s; }
     catch (e: any) {
       if (e?.status === 401) { router.replace("/"); return null; }
       setLoadErr(e?.message ?? "加载失败"); return null;
@@ -198,7 +198,7 @@ export function SpaceApp() {
       const e = ordered[i++]; const p = byConcept.get(e.conceptId)!;
       setOverride((o) => ({ ...(o ?? {}), [p.id]: e.toStage as StageKey }));
       setCelebrate({ plantId: p.id, fromStage: (e.fromStage ?? "seed") as StageKey, toStage: e.toStage as StageKey, key: Date.now() + i });
-      setReplayLabel(`${new Date(e.createdAt).toLocaleDateString("zh-CN", { timeZone: "Asia/Taipei" })}　「${e.conceptName}」${STAGE_NAME[(e.fromStage ?? "seed") as StageKey]} → ${STAGE_NAME[e.toStage as StageKey]}`);
+      setReplayLabel(`${fmtDate(e.createdAt)}　「${e.conceptName}」${STAGE_NAME[(e.fromStage ?? "seed") as StageKey]} → ${STAGE_NAME[e.toStage as StageKey]}`);
       setTimeout(step, reducedRef.current ? 900 : 2800);
     };
     step();

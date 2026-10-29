@@ -125,7 +125,7 @@ type Surf = {
   color: (s: number, t: number) => THREE.Color;
 };
 function surface(p: Surf) {
-  const segU = p.segU ?? 6, segV = p.segV ?? 9;
+  const segU = p.segU ?? 10, segV = p.segV ?? 9;
   const pos: number[] = [], col: number[] = [], idx: number[] = [];
   for (let v = 0; v <= segV; v++) {
     const t = v / segV, w = p.width * p.profile(t);
@@ -215,6 +215,23 @@ export function bellGeo() {
 export const sphereGeo = (r = 1, w = 16, h = 12) => memo(`sph:${r}:${w}:${h}`, () => new THREE.SphereGeometry(r, w, h));
 export const cylGeo = (rt: number, rb: number, h: number, seg = 16) => memo(`cyl:${rt}:${rb}:${h}:${seg}`, () => new THREE.CylinderGeometry(rt, rb, h, seg));
 export const coneGeo = (r: number, h: number, seg = 18) => memo(`cone:${r}:${h}:${seg}`, () => new THREE.ConeGeometry(r, h, seg));
+/** 圆润草叶：细锥 + 顶部外弯，6 段径向细分，替代低分段圆锥 */
+export function bladeGeo(h: number, r = 0.006) {
+  return memo(`blade:${h}:${r}`, () => {
+    const g = new THREE.CylinderGeometry(r * 0.3, r, h, 6, 1, false);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const t = (pos.getY(i) + h / 2) / h; // 0 底部 → 1 顶部
+      const bend = t * t * h * 0.42;
+      pos.setX(i, pos.getX(i) + bend);
+      pos.setZ(i, pos.getZ(i) + bend * 0.3);
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    g.translate(0, h / 2, 0);
+    return g;
+  });
+}
 export const torusGeo = (r: number, t: number, rs = 10, ts = 28) => memo(`tor:${r}:${t}:${rs}:${ts}`, () => new THREE.TorusGeometry(r, t, rs, ts));
 export function rbox(w: number, h: number, d: number, r = 0.02) {
   return memo(`rbox:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, 3, r) as THREE.BufferGeometry);

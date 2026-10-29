@@ -10,7 +10,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, rand } from "./geo";
+import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, bladeGeo, rand } from "./geo";
 import { Flower3D } from "./Flower3D";
 import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
@@ -108,7 +108,7 @@ function Grass({ items }: { items: ReturnType<typeof scatter> }) {
     const parts: number[] = [];
     for (let i = 0; i < 5; i++) {
       const h = 0.028 + (i % 3) * 0.008;
-      const b = new THREE.ConeGeometry(0.009, h, 5).translate(0, h / 2, 0).rotateZ((i - 2) * 0.28).rotateY(i * 1.3).translate(Math.sin(i * 1.3) * 0.006, 0, Math.cos(i * 1.3) * 0.006).toNonIndexed();
+      const b = bladeGeo(h, 0.007).clone().rotateZ((i - 2) * 0.28).rotateY(i * 1.3).translate(Math.sin(i * 1.3) * 0.006, 0, Math.cos(i * 1.3) * 0.006).toNonIndexed();
       parts.push(...(b.attributes.position.array as Float32Array));
     }
     const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(parts, 3)); g.computeVertexNormals();
@@ -356,7 +356,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       const yaw = (Math.atan2(b.x - x, b.z - z) * 180) / Math.PI;
       return { ...capToAzPolar(x, z), yaw, lift: 0 };
     }
-    return { ...capToAzPolar(SPOTS.bench.x, SPOTS.bench.z - 0.005), yaw: SPOTS.bench.yaw, lift: 0 };
+    // 坐姿略向前，避免背部穿过长椅靠背（靠背在 z≈-0.04，身体后半约 -0.056）
+    return { ...capToAzPolar(SPOTS.bench.x, SPOTS.bench.z + 0.022), yaw: SPOTS.bench.yaw, lift: 0 };
   }, [props.pose, sel, celebPos]);
   const lampAt = useMemo(() => {
     const t = celebPos ?? sel;
