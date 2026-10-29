@@ -17,6 +17,7 @@ import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
 import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, pathCurve, scatter, SPOTS, TREES, type BedLayout, type WorldPlant } from "./layout";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
+import type { DecorPlacement } from "@/lib/decor";
 
 export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy";
 export type Celebration = { plantId: string; fromStage: StageKey; toStage: StageKey; key: number } | null;
@@ -28,6 +29,7 @@ export type WorldProps = {
   pose: Pose; lampState: "idle" | "think" | "celebrate" | "guide";
   signText: string; signSub?: string; recenterKey: number; onDragged?: (b: boolean) => void;
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
+  decor?: DecorPlacement[];
   onFail: () => void;
 };
 
@@ -425,6 +427,14 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
         {TREES.map((t, i) => (
           <OnCap key={i} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={(t as any).tint} /> : <Bush seed={t.seed} />}</OnCap>
+        ))}
+        {/* 玩家摆放的装饰（原型：localStorage；后续接 A 的 /api/decor） */}
+        {(props.decor ?? []).map((d, i) => (
+          <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot}>
+            <group scale={d.scale}>
+              {d.kind === "lamp" ? <Lamp lights={L} /> : d.kind === "bush" ? <Bush seed={i + 1} /> : <BlossomTree seed={i + 1} />}
+            </group>
+          </OnCap>
         ))}
 
         <SurfaceMover az={travelerAt.az} polar={travelerAt.polar} yaw={travelerAt.yaw} reduced={reduced} speed={1.6}>

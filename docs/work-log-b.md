@@ -127,6 +127,14 @@
 - 验证：`tsc` 通过；`/`、`/welcome`、`/dev/garden` 200；编译后 layout.css 含 `theme-night` / `theme-aurora` / `--s1`。
 - 待办：跨设备持久化需 A 在 `users` 加 `sky_theme`（或 `planet_settings`）。
 
+## W1.8 · 星球装饰原型（2026-10-29）
+
+- 新增 `src/lib/decor.ts`：装饰类型（路灯 / 灌木 / 开花小树）、预设落点、`localStorage` 读写、`useDecor`（localStorage + 自定义事件跨组件同步）。
+- `GardenWorld` 增加 `decor?: DecorPlacement[]`，按 `(x, z, rot, scale)` 用 `OnCap` 渲染到球面。
+- `SpaceApp` 用 `useDecor()` 把装饰传给场景；`SettingsPanel` 增加「星球装饰」：添加 / 清空 / 每个装饰的左移右移前移后移 / 左转右转 / 放大缩小 / 移除。
+- 验证：`tsc` 通过；`/`、`/dev/garden`、`/welcome` 200。
+- 说明：现在存本机浏览器；接 A 的 `/api/decor` 后改成接口即可，并开放「参观别人的星球」。
+
 ## W2–W6（占位，待 W1 完成后细化）
 
 - W2：B2 自转/手感 + B5 预算表/LOD + B3 原型（吃现有 `planets`，等 A2 契约）

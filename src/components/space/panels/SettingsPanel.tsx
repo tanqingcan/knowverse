@@ -4,12 +4,14 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSpace } from "../context";
 import { SKY_THEMES, setSkyTheme, useSkyTheme } from "@/lib/sky";
+import { DECOR_CATALOG, useDecor } from "@/lib/decor";
 
 const PERM: Record<string, string> = { read_own: "只读本人数据", propose: "只提建议", write_rules: "后端规则写入（模型不可直接调用）" };
 
 export function SettingsPanel() {
   const { space, reload, toast } = useSpace();
   const skyTheme = useSkyTheme();
+  const decorStore = useDecor();
   const [tools, setTools] = useState<any[]>([]);
   useEffect(() => { api<any[]>("/api/agent/tools").then(setTools).catch(() => {}); }, []);
   const set = async (p: any) => { try { await api("/api/me/preferences", { body: p }); await reload(); } catch (e: any) { toast(e.message, "error"); } };
@@ -39,6 +41,31 @@ export function SettingsPanel() {
           ))}
         </div>
         <p className="small muted">天空主题目前存在本机浏览器；跨设备同步需要后端加字段（A 的 `users.sky_theme`）。</p>
+      </div>
+      <div className="section card">
+        <h3>星球装饰</h3>
+        <div className="row" style={{ flexWrap: "wrap", gap: 4 }}>
+          {DECOR_CATALOG.map((c) => (
+            <button key={c.kind} className="btn btn-ghost btn-sm" onClick={() => decorStore.add(c.kind)}>＋ {c.label}</button>
+          ))}
+          {decorStore.decor.length > 0 && <button className="btn btn-quiet btn-sm" onClick={() => decorStore.reset()}>清空</button>}
+        </div>
+        {decorStore.decor.length === 0 && <p className="small muted">还没有装饰。加一盏路灯或一棵小树，你的星球就和别人不一样了。</p>}
+        {decorStore.decor.map((d) => (
+          <div key={d.id} className="row small" style={{ marginTop: 6, flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            <b className="grow">{DECOR_CATALOG.find((c) => c.kind === d.kind)?.label}</b>
+            <button className="btn btn-ghost btn-sm" aria-label="左移" onClick={() => decorStore.update(d.id, { x: d.x - 0.08 })}>←</button>
+            <button className="btn btn-ghost btn-sm" aria-label="右移" onClick={() => decorStore.update(d.id, { x: d.x + 0.08 })}>→</button>
+            <button className="btn btn-ghost btn-sm" aria-label="前移" onClick={() => decorStore.update(d.id, { z: d.z - 0.08 })}>↑</button>
+            <button className="btn btn-ghost btn-sm" aria-label="后移" onClick={() => decorStore.update(d.id, { z: d.z + 0.08 })}>↓</button>
+            <button className="btn btn-ghost btn-sm" aria-label="左转" onClick={() => decorStore.update(d.id, { rot: d.rot - 15 })}>↺</button>
+            <button className="btn btn-ghost btn-sm" aria-label="右转" onClick={() => decorStore.update(d.id, { rot: d.rot + 15 })}>↻</button>
+            <button className="btn btn-ghost btn-sm" aria-label="放大" onClick={() => decorStore.update(d.id, { scale: Math.min(1.6, d.scale + 0.1) })}>＋</button>
+            <button className="btn btn-ghost btn-sm" aria-label="缩小" onClick={() => decorStore.update(d.id, { scale: Math.max(0.6, d.scale - 0.1) })}>－</button>
+            <button className="btn btn-ghost btn-sm" aria-label="移除" onClick={() => decorStore.remove(d.id)}>✕</button>
+          </div>
+        ))}
+        <p className="small muted">原型：装饰位置存在本机浏览器；接 A 的 `/api/decor` 后可跨设备，也能开放「参观别人的星球」。</p>
       </div>
       <div className="section card">
         <h3>大模型</h3>

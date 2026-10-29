@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { Sky } from "@/components/ui/Sky";
+import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
 import { GuideOrb } from "@/components/art/Props";
 import type { Celebration, Hotspot } from "@/components/world/GardenWorld";
@@ -100,6 +101,7 @@ export function SpaceApp() {
   const pendingCard = useRef<GrowthCard>(null);
   const webgl = useWebGL();
   const narrow = useNarrow();
+  const decorStore = useDecor();
   const tid = useRef(0);
 
   const reload = useCallback(async () => {
@@ -255,7 +257,7 @@ export function SpaceApp() {
               onSelect={(id) => open({ panel: "dossier", plantId: id })} onHotspot={onHotspot}
               mode={focus ? "focus" : "garden"} reduced={reduced} celebrate={celebrate} pose={pose} lampState={lampState}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
-              recenterKey={recenterKey} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro}
+              recenterKey={recenterKey} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
