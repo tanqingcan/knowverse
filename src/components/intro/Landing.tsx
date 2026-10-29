@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { api, ApiError } from "@/lib/api";
 import { Sky } from "@/components/ui/Sky";
+import { useSkyTheme } from "@/lib/sky";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false });
 
@@ -15,6 +16,7 @@ type Phase = "far" | "near" | "question" | "auth";
 
 export function Landing() {
   const router = useRouter();
+  const skyTheme = useSkyTheme();
   const [phase, setPhase] = useState<Phase>("far");
   const [reduced, setReduced] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("register");
@@ -44,7 +46,7 @@ export function Landing() {
   };
 
   return (
-    <main className={`intro ${reduced ? "reduced-motion" : ""}`}>
+    <main className={`intro theme-${skyTheme} ${reduced ? "reduced-motion" : ""}`}>
       <Sky />
       {phase !== "question" && phase !== "auth" && (
         <button className="btn btn-ghost btn-sm skip" onClick={() => setPhase("question")}>跳过开场</button>

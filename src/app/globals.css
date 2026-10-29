@@ -97,32 +97,101 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
   --s6: #2a506d; --s7: #356079; --s8: #416f83; --s9: #4f7d86; --s10: #5f8a85;
   --glow-warm: rgba(120, 255, 200, 0.18); --glow-cool: rgba(120, 180, 255, 0.4); --aurora: rgba(90, 255, 190, 0.28);
 }
-/* 星点：上层平铺，向下渐隐 */
-.sky::before, .kv-sky::before {
-  content: ""; position: absolute; inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 20px 30px, rgba(255,247,232,.9), transparent 60%),
-    radial-gradient(1px 1px at 74px 96px, rgba(255,247,232,.7), transparent 60%),
-    radial-gradient(1.6px 1.6px at 128px 44px, rgba(255,247,232,.8), transparent 60%),
-    radial-gradient(1px 1px at 168px 128px, rgba(255,247,232,.55), transparent 60%),
-    radial-gradient(1.3px 1.3px at 96px 10px, rgba(255,247,232,.65), transparent 60%),
-    radial-gradient(1px 1px at 30px 150px, rgba(255,247,232,.5), transparent 60%),
-    radial-gradient(1.2px 1.2px at 150px 80px, rgba(255,247,232,.7), transparent 60%),
-    radial-gradient(1px 1px at 60px 60px, rgba(255,247,232,.6), transparent 60%),
-    radial-gradient(1.4px 1.4px at 110px 140px, rgba(255,247,232,.65), transparent 60%);
-  background-size: 200px 170px; background-repeat: repeat; opacity: .72;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 48%, transparent 78%);
-  animation: skytwinkle 6s ease-in-out infinite alternate;
+/* 星点：三层不同平铺尺寸（220 / 360 / 640），重叠后不容易看出重复；
+   越远的层越密越暗，近层只有几颗亮的 + 一圈柔光。 */
+.sky-layer { position: absolute; inset: 0; pointer-events: none; }
+.sky { --star-fade: linear-gradient(180deg, #000 0%, #000 44%, transparent 74%); }
+.sky-far, .sky-mid, .sky-near {
+  -webkit-mask-image: var(--star-fade); mask-image: var(--star-fade);
 }
+.sky-far {
+  opacity: .72;
+  background-image:
+    radial-gradient(1px 1px at 11px 17px, rgba(255, 247, 232, .55), transparent 60%),
+    radial-gradient(1px 1px at 39px 71px, rgba(255, 247, 232, .42), transparent 60%),
+    radial-gradient(1px 1px at 66px 24px, rgba(220, 228, 255, .5), transparent 60%),
+    radial-gradient(1px 1px at 88px 108px, rgba(255, 247, 232, .38), transparent 60%),
+    radial-gradient(1px 1px at 104px 46px, rgba(255, 247, 232, .5), transparent 60%),
+    radial-gradient(1px 1px at 128px 145px, rgba(255, 247, 232, .34), transparent 60%),
+    radial-gradient(1px 1px at 152px 82px, rgba(220, 228, 255, .45), transparent 60%),
+    radial-gradient(1px 1px at 172px 20px, rgba(255, 247, 232, .5), transparent 60%),
+    radial-gradient(1px 1px at 194px 126px, rgba(255, 247, 232, .4), transparent 60%),
+    radial-gradient(1px 1px at 206px 62px, rgba(255, 247, 232, .34), transparent 60%),
+    radial-gradient(1px 1px at 24px 152px, rgba(255, 247, 232, .42), transparent 60%),
+    radial-gradient(1px 1px at 58px 132px, rgba(255, 247, 232, .3), transparent 60%),
+    radial-gradient(1px 1px at 118px 12px, rgba(255, 247, 232, .44), transparent 60%),
+    radial-gradient(1px 1px at 146px 168px, rgba(255, 247, 232, .3), transparent 60%),
+    radial-gradient(1px 1px at 182px 96px, rgba(255, 247, 232, .36), transparent 60%),
+    radial-gradient(1px 1px at 44px 38px, rgba(255, 247, 232, .32), transparent 60%),
+    radial-gradient(1px 1px at 76px 176px, rgba(255, 247, 232, .28), transparent 60%),
+    radial-gradient(1px 1px at 160px 132px, rgba(255, 247, 232, .32), transparent 60%),
+    radial-gradient(1px 1px at 200px 168px, rgba(255, 247, 232, .26), transparent 60%),
+    radial-gradient(1px 1px at 30px 104px, rgba(255, 247, 232, .3), transparent 60%);
+  background-size: 220px 190px; background-repeat: repeat;
+}
+.sky-mid {
+  opacity: .82;
+  background-image:
+    radial-gradient(1.5px 1.5px at 26px 52px, rgba(255, 250, 238, .8), transparent 65%),
+    radial-gradient(1.5px 1.5px at 96px 18px, rgba(226, 232, 255, .72), transparent 65%),
+    radial-gradient(1.4px 1.4px at 168px 96px, rgba(255, 250, 238, .7), transparent 65%),
+    radial-gradient(1.6px 1.6px at 244px 42px, rgba(255, 244, 222, .82), transparent 65%),
+    radial-gradient(1.4px 1.4px at 300px 148px, rgba(255, 250, 238, .6), transparent 65%),
+    radial-gradient(1.5px 1.5px at 58px 168px, rgba(226, 232, 255, .62), transparent 65%),
+    radial-gradient(1.4px 1.4px at 132px 218px, rgba(255, 250, 238, .55), transparent 65%),
+    radial-gradient(1.6px 1.6px at 206px 262px, rgba(255, 244, 222, .72), transparent 65%),
+    radial-gradient(1.4px 1.4px at 282px 210px, rgba(255, 250, 238, .5), transparent 65%),
+    radial-gradient(1.5px 1.5px at 336px 88px, rgba(255, 250, 238, .66), transparent 65%),
+    radial-gradient(1.4px 1.4px at 12px 122px, rgba(255, 250, 238, .48), transparent 65%),
+    radial-gradient(1.5px 1.5px at 190px 8px, rgba(226, 232, 255, .58), transparent 65%),
+    radial-gradient(1.4px 1.4px at 262px 284px, rgba(255, 250, 238, .45), transparent 65%),
+    radial-gradient(1.5px 1.5px at 318px 232px, rgba(255, 244, 222, .6), transparent 65%);
+  background-size: 360px 300px; background-repeat: repeat;
+}
+.sky-near {
+  opacity: .95;
+  background-image:
+    radial-gradient(2.4px 2.4px at 62px 84px, rgba(255, 250, 238, .95), transparent 62%),
+    radial-gradient(11px 11px at 62px 84px, rgba(255, 226, 176, .16), transparent 72%),
+    radial-gradient(2.2px 2.2px at 268px 46px, rgba(236, 240, 255, .9), transparent 62%),
+    radial-gradient(10px 10px at 268px 46px, rgba(190, 200, 255, .14), transparent 72%),
+    radial-gradient(2.6px 2.6px at 452px 176px, rgba(255, 246, 226, .92), transparent 62%),
+    radial-gradient(12px 12px at 452px 176px, rgba(255, 222, 178, .15), transparent 72%),
+    radial-gradient(2px 2px at 520px 312px, rgba(255, 250, 238, .8), transparent 62%),
+    radial-gradient(2.3px 2.3px at 350px 402px, rgba(226, 232, 255, .82), transparent 62%),
+    radial-gradient(10px 10px at 350px 402px, rgba(190, 200, 255, .12), transparent 72%),
+    radial-gradient(2px 2px at 150px 336px, rgba(255, 246, 226, .7), transparent 62%),
+    radial-gradient(2px 2px at 590px 128px, rgba(255, 250, 238, .74), transparent 62%);
+  background-size: 640px 540px; background-repeat: repeat;
+  animation: skybreathe 9s ease-in-out infinite alternate;
+}
+/* 柔和星云：三层极淡的色团，压住「纯渐变」的塑料感，不压文字 */
+.sky-nebula {
+  opacity: .9; mix-blend-mode: screen;
+  background:
+    radial-gradient(46% 32% at 22% 14%, rgba(150, 138, 255, .17), transparent 72%),
+    radial-gradient(38% 28% at 78% 6%, rgba(120, 186, 214, .14), transparent 74%),
+    radial-gradient(30% 22% at 54% 28%, rgba(226, 180, 214, .08), transparent 76%);
+}
+@keyframes skybreathe { from { opacity: .78; } to { opacity: .95; } }
+@media (prefers-reduced-motion: reduce) { .sky-near, .kv-sky .sky-near { animation: none; } }
+.reduced-motion .sky-near { animation: none; }
+/* 主题差异：晨雾几乎看不到星；星夜最亮；暮色只在暗部露星 */
+.sky.theme-mist .sky-far { opacity: .2; }
+.sky.theme-mist .sky-mid { opacity: .16; }
+.sky.theme-mist .sky-near { opacity: .28; }
+.sky.theme-mist .sky-nebula { opacity: .3; }
+.sky.theme-night .sky-far { opacity: .92; }
+.sky.theme-night .sky-mid { opacity: 1; }
+.sky.theme-night .sky-nebula { opacity: 1; }
+.sky.theme-aurora .sky-nebula { opacity: .75; }
+.sky.theme-aurora .sky-near { opacity: .85; }
 /* 颗粒：消掉渐变的色带 */
 .sky::after, .kv-sky::after {
   content: ""; position: absolute; inset: -20%; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   opacity: .10; mix-blend-mode: overlay;
 }
-@keyframes skytwinkle { from { opacity: .4; } to { opacity: .65; } }
-@media (prefers-reduced-motion: reduce) { .sky::before, .kv-sky::before { animation: none; } }
 .kv-sky { position: fixed; }
 .kv-sky canvas { width: 100%; height: 100%; display: block; opacity: 0.6; }
 
@@ -466,6 +535,10 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .intro-scene.far { transform: scale(0.55) translateY(28vh); opacity: 0.0; }
 .intro-scene.near { transform: none; opacity: 1; }
 .intro-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(94, 85, 132, 0.55) 0%, rgba(94, 85, 132, 0.15) 45%, rgba(94, 85, 132, 0) 70%); pointer-events: none; }
+/* 开场蒙层跟着天空主题走：星夜/极光下不需要那层紫雾，否则天被冲淡、星点看不见 */
+.intro.theme-night .intro-veil { background: linear-gradient(180deg, rgba(6, 6, 20, 0.32) 0%, rgba(6, 6, 20, 0.08) 45%, rgba(6, 6, 20, 0) 72%); }
+.intro.theme-aurora .intro-veil { background: linear-gradient(180deg, rgba(5, 16, 26, 0.34) 0%, rgba(5, 16, 26, 0.08) 45%, rgba(5, 16, 26, 0) 72%); }
+.intro.theme-mist .intro-veil { background: linear-gradient(180deg, rgba(150, 165, 185, 0.38) 0%, rgba(150, 165, 185, 0.12) 45%, rgba(150, 165, 185, 0) 70%); }
 .intro-copy { position: relative; z-index: 2; text-align: center; padding: 0 18px; max-width: 640px; align-self: start; margin-top: 11vh; transition: opacity 1.2s ease, transform 1.2s var(--ease); }
 .intro-copy.hidden { opacity: 0; transform: translateY(10px); pointer-events: none; }
 .intro-copy .q { font-family: var(--font-title); font-size: clamp(22px, 3vw, 32px); line-height: 1.65; text-shadow: 0 2px 20px rgba(63, 54, 87, 0.5); margin: 0; }
