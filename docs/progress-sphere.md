@@ -506,7 +506,7 @@
 
 ### 现场
 
-- 分支 `feature/b-visual`，HEAD `c188582`，工作区干净；`tsc --noEmit` 通过；单测 34/34；开发站 `http://127.0.0.1:3000`（`/space` 需先 `POST /api/auth/demo {"account":"demo"}`）。
+- 分支 `feature/b-visual`，HEAD `b8aaa6c`（本条记录所在提交），工作区干净；`tsc --noEmit` 通过；单测 34/34；开发站 `http://127.0.0.1:3000`（`/space` 需先 `POST /api/auth/demo {"account":"demo"}`）。
 - 近期实测结论：100 株 1,131 draw / 587k tri（合并叶片后，原 1,320）；10 株 465 draw；瓶颈仍是 draw call。
 
 ### 下一步（按优先级，接口/数据都还没动）
