@@ -26,6 +26,7 @@ export default function Page() {
       <GardenWorld plants={PLANTS} gardens={[{ name: "数据库系统概论" }, { name: "概率统计" }]} mode={(q.get("mode") as any) ?? "garden"}
         reduced={q.has("reduced")} pose={cel ? "celebrate" : (q.get("pose") as any) ?? "idle"} lampState="idle" signText="左外连接" signSub="本命花"
         selectedId={q.get("sel") ? PLANTS[+q.get("sel")!].id : null} recenterKey={0} intro="none" celebrate={cel}
+        perf={q.has("perf")}
         hoverLabel={(k) => k} onFail={() => console.error("webgl fail")} />
     </div>
   );

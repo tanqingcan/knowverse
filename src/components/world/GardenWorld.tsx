@@ -33,6 +33,7 @@ export type WorldProps = {
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
   readOnly?: boolean;
+  perf?: boolean; // 开发用：显示 FPS / draw calls / 三角面
   onFail: () => void;
 };
 
@@ -324,6 +325,25 @@ function LabelTracker({ anchors, labelKey, el }: { anchors: React.MutableRefObje
   return null;
 }
 
+/** 开发用性能探针：把 FPS / draw calls / 三角面写到 #perf-hud */
+function PerfProbe() {
+  const { gl } = useThree();
+  const frames = useRef(0);
+  const last = useRef(performance.now());
+  useFrame(() => {
+    frames.current++;
+    const now = performance.now();
+    if (now - last.current >= 500) {
+      const fps = Math.round((frames.current * 1000) / (now - last.current));
+      const el = document.getElementById("perf-hud");
+      if (el) el.textContent = `${fps} fps · ${gl.info.render.calls} draw · ${gl.info.render.triangles} tri`;
+      frames.current = 0;
+      last.current = now;
+    }
+  });
+  return null;
+}
+
 function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
@@ -539,10 +559,12 @@ export function GardenWorld(props: WorldProps) {
           onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
+            {props.perf && <PerfProbe />}
             <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
           </Suspense>
         </Canvas>
       </GLBoundary>
+      {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
     </div>
   );

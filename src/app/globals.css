@@ -141,6 +141,10 @@ h3 { font-size: 16px; margin: 0 0 6px; font-family: var(--font-body); font-weigh
   background: rgba(255, 247, 232, 0.94); color: var(--ink); padding: 9px 18px; border-radius: 999px;
   box-shadow: var(--shadow-soft); font-size: 13.5px; white-space: nowrap; }
 
+/* 开发用性能探针 */
+.perf-hud { position: absolute; z-index: 9; left: 10px; top: 10px; background: rgba(16, 22, 41, 0.72); color: #fff7e8;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.5; padding: 4px 9px; border-radius: 8px; pointer-events: none; }
+
 /* ───── 纸张 ───── */
 .paper { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
 .paper-soft { background: rgba(255, 247, 232, 0.9); color: var(--ink); box-shadow: var(--shadow-soft); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
