@@ -10,6 +10,7 @@ function GlbModel({ def, tint }: { def: ModelDef; tint?: string }) {
   const gltf = useLoader(GLTFLoader, def.url);
   const scene = useMemo(() => {
     const s = gltf.scene.clone(true);
+    if (def.rx) s.rotation.x = def.rx;
     if (tint && tint.toLowerCase() !== "#ffffff") {
       s.traverse((o: any) => {
         if (o.isMesh && o.material) {
@@ -19,7 +20,7 @@ function GlbModel({ def, tint }: { def: ModelDef; tint?: string }) {
       });
     }
     return s;
-  }, [gltf, tint]);
+  }, [gltf, tint, def.rx]);
   const { s, y } = useMemo(() => {
     scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(scene);

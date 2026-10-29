@@ -10,6 +10,7 @@ export type ModelDef = {
   height?: number;  // 目标尺寸（场景单位），默认 0.3
   fit?: "height" | "max"; // 按高度（默认）还是按最大边长归一化
   rot?: number;     // 绕 Y 旋转（弧度）
+  rx?: number;      // 绕 X 旋转（弧度），Z-up 模型用 -Math.PI/2
 };
 
 /** 已下载并登记的模型（CC0 / CC-BY，见 public/assets/CREDITS.md） */

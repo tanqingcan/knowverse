@@ -16,18 +16,19 @@ powershell -ExecutionPolicy Bypass -File scripts/fetch-assets.ps1 -Open
 
 ## 2. 登记
 
-编辑 `src/lib/models.ts`，键名 = 装饰 kind（`lamp` / `bush` / `tree` / `pot` / `stone` / `fence` / `chair` / `flower`）：
+编辑 `src/lib/models.ts`，键名 = 装饰 kind（`lamp` / `bush` / `tree` / `pot` / `stone` / `fence` / `chair` / `flower` / `flower2` / `flower3` / `rock`）：
 
 ```ts
 export const MODEL_REGISTRY = {
   tree:  { url: "/assets/models/tree-a.glb",  height: 0.55 },
-  chair: { url: "/assets/models/chair-a.glb", height: 0.22 },
+  fence: { url: "/assets/models/fence.glb",   height: 0.55, fit: "max" },
 };
 ```
 
-- `height`：目标高度（场景单位）；加载时按包围盒**自动缩放并贴地**，不用手动算 scale。
-- `rot`：绕 Y 旋转（弧度）。
-- 已下载并登记：`tree` / `chair` / `flower`（来源与许可见 `public/assets/CREDITS.md`）。
+- `height`：目标尺寸（场景单位）；加载时按包围盒**自动缩放并贴地**。
+- `fit`：`"height"`（默认，按高度）或 `"max"`（按最大边长，适合栅栏/石头这类长条或扁平的模型）。
+- `rot`：绕 Y 旋转（弧度）；`rx`：绕 X 旋转（Z-up 的 Blender 模型用 `-Math.PI/2`）。
+- 已下载并登记：`tree` / `chair`(长椅) / `flower` / `flower2` / `flower3` / `lamp` / `fence` / `rock`（来源与许可见 `public/assets/CREDITS.md`）。
 
 ## 3. 行为
 
