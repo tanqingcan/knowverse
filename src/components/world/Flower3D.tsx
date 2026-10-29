@@ -7,6 +7,7 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { colorOf, type StageKey } from "@/lib/flora";
 import { C, matte, vcol, petalGeo, leafGeo, stemGeo, stemCurvePoint, bellGeo, sphereGeo, seedDiskTexture, contactGeo, contactMat, torusGeo, rand, cylGeo } from "./geo";
 
@@ -20,6 +21,23 @@ function Petal({ geo, az, tilt, r = 0, y = 0, tw = 0 }: { geo: THREE.BufferGeome
       <mesh geometry={geo} material={vcol("petal")} position={[0, y, r]} rotation={[tilt, 0, tw]} castShadow />
     </group>
   );
+}
+
+type PetalSpec = { geo: THREE.BufferGeometry; az: number; tilt: number; r?: number; y?: number; tw?: number };
+
+/** 把多片花瓣合并成一个 mesh，减少 draw calls（每片花瓣原来是独立 mesh） */
+function MergedPetals({ specs, deps }: { specs: PetalSpec[]; deps: string }) {
+  const merged = useMemo(() => {
+    const parts = specs.map((p) => {
+      const outer = new THREE.Matrix4().makeRotationY(p.az);
+      const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.tilt, 0, p.tw ?? 0, "XYZ"));
+      const inner = new THREE.Matrix4().compose(new THREE.Vector3(0, p.y ?? 0, p.r ?? 0), rot, new THREE.Vector3(1, 1, 1));
+      return p.geo.clone().applyMatrix4(outer.multiply(inner));
+    });
+    return mergeGeometries(parts, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deps]);
+  return <mesh geometry={merged} material={vcol("petal")} castShadow />;
 }
 
 function Leaf({ kind, len, w, at, yaw, tilt, bend = 0.25 }: { kind: any; len: number; w: number; at: THREE.Vector3; yaw: number; tilt: number; bend?: number }) {
@@ -50,7 +68,7 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
           </group>
         ))}
         <mesh geometry={sphereGeo(0.018, 12, 9)} material={matte(C.leafDeep)} position={[0, 0.012, 0]} scale={[1, 0.85, 1]} castShadow />
-        {[0, 1, 2, 3, 4, 5].map((i) => <Petal key={i} geo={budP} az={(i / 6) * Math.PI * 2 + i * 0.12} tilt={0.14} r={0.01} tw={0.08} />)}
+        <MergedPetals specs={[0, 1, 2, 3, 4, 5].map((i) => ({ geo: budP, az: (i / 6) * Math.PI * 2 + i * 0.12, tilt: 0.14, r: 0.01, tw: 0.08 }))} deps={`bud-${c.petal}`} />
       </group>
     );
   }
@@ -61,10 +79,15 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
           <mesh geometry={sep} material={vcol("leaf")} rotation={[bud ? 0.35 : 1.9, 0, 0]} castShadow />
         </group>
       ))}
-      {[0, 1, 2].map((i) => <Petal key={`c${i}`} geo={inner} az={(i / 3) * Math.PI * 2} tilt={0.04 + k * 0.05} r={0.004} />)}
-      {[0, 1, 2, 3, 4].map((i) => <Petal key={`a${i}`} geo={r1} az={(i / 5) * Math.PI * 2 + 0.6} tilt={bud ? 0.06 : 0.16 + k * 0.16} r={0.009} />)}
-      {!bud && [0, 1, 2, 3, 4, 5].map((i) => <Petal key={`b${i}`} geo={r2} az={(i / 6) * Math.PI * 2 + 0.25} tilt={0.32 + k * 0.32} r={0.015} y={-0.006} />)}
-      {!bud && k > 0.35 && [0, 1, 2, 3, 4, 5, 6].map((i) => <Petal key={`d${i}`} geo={r3} az={(i / 7) * Math.PI * 2} tilt={0.6 + k * 0.4} r={0.02} y={-0.012} />)}
+      <MergedPetals
+        specs={[
+          ...[0, 1, 2].map((i) => ({ geo: inner, az: (i / 3) * Math.PI * 2, tilt: 0.04 + k * 0.05, r: 0.004 })),
+          ...[0, 1, 2, 3, 4].map((i) => ({ geo: r1, az: (i / 5) * Math.PI * 2 + 0.6, tilt: 0.16 + k * 0.16, r: 0.009 })),
+          ...[0, 1, 2, 3, 4, 5].map((i) => ({ geo: r2, az: (i / 6) * Math.PI * 2 + 0.25, tilt: 0.32 + k * 0.32, r: 0.015, y: -0.006 })),
+          ...(k > 0.35 ? [0, 1, 2, 3, 4, 5, 6].map((i) => ({ geo: r3, az: (i / 7) * Math.PI * 2, tilt: 0.6 + k * 0.4, r: 0.02, y: -0.012 })) : []),
+        ]}
+        deps={`${Math.round(k * 20)}-${c.petal}`}
+      />
     </group>
   );
 }
@@ -87,8 +110,13 @@ function SunflowerHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: 
   const spread = 1.05 + open * 0.42;
   return (
     <group rotation={[0.95, 0, 0]}>
-      {Array.from({ length: 14 }, (_, i) => <Petal key={`b${i}`} geo={ray2} az={(i / 14) * Math.PI * 2 + 0.22} tilt={spread + 0.06} r={0.036} y={-0.004} />)}
-      {Array.from({ length: 16 }, (_, i) => <Petal key={`f${i}`} geo={ray} az={(i / 16) * Math.PI * 2} tilt={spread} r={0.04} />)}
+      <MergedPetals
+        specs={[
+          ...Array.from({ length: 14 }, (_, i) => ({ geo: ray2, az: (i / 14) * Math.PI * 2 + 0.22, tilt: spread + 0.06, r: 0.036, y: -0.004 })),
+          ...Array.from({ length: 16 }, (_, i) => ({ geo: ray, az: (i / 16) * Math.PI * 2, tilt: spread, r: 0.04 })),
+        ]}
+        deps={`${Math.round(spread * 20)}-${c.petal}`}
+      />
       <mesh geometry={cylGeo(0.046, 0.04, 0.016, 24)} material={matte("#5A3B22")} position={[0, 0.002, 0]} />
       <mesh material={disk} position={[0, 0.0105, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.046, 28]} /></mesh>
     </group>
@@ -108,8 +136,13 @@ function IrisHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
   const fall = petalGeo({ len: 0.085, width: 0.058, cup: 0.35, curl: 0.55, base: mid(c.deep, c.petal), mid: c.petal, tip: c.light, stripe: C.honey, round: 0.5 });
   return (
     <group>
-      {[0, 1, 2].map((i) => <Petal key={`s${i}`} geo={std} az={(i / 3) * Math.PI * 2} tilt={0.28 + open * 0.16} r={0.006} />)}
-      {[0, 1, 2].map((i) => <Petal key={`f${i}`} geo={fall} az={(i / 3) * Math.PI * 2 + Math.PI / 3} tilt={0.7 + open * 0.75} r={0.008} />)}
+      <MergedPetals
+        specs={[
+          ...[0, 1, 2].map((i) => ({ geo: std, az: (i / 3) * Math.PI * 2, tilt: 0.28 + open * 0.16, r: 0.006 })),
+          ...[0, 1, 2].map((i) => ({ geo: fall, az: (i / 3) * Math.PI * 2 + Math.PI / 3, tilt: 0.7 + open * 0.75, r: 0.008 })),
+        ]}
+        deps={`${Math.round(open * 20)}-${c.petal}`}
+      />
     </group>
   );
 }
