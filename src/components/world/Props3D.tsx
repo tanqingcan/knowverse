@@ -109,6 +109,18 @@ export function Greenhouse({ lights = 1 }: { lights?: number }) {
       {[-1, 1].map((sd) => <mesh key={`r${sd}`} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng, 0, 0]}><planeGeometry args={[W, roofLen]} /></mesh>)}
       {/* 山墙（三角）玻璃 */}
       {[-1, 1].map((sd) => <mesh key={`g${sd}`} geometry={gable} material={glassMat()} position={[(sd * W) / 2, 0.05 + H, 0]} rotation={[0, (sd * Math.PI) / 2, 0]} />)}
+      {/* 窗棂：玻璃本身很淡，靠木框把「三格玻璃」的节奏读出来（亮背景下也能看出是温室） */}
+      {[-1, 1].map((zsd) => (
+        <group key={`mm${zsd}`} position={[0, 0, (zsd * D) / 2]}>
+          {[-1, 1].map((xsd) => (
+            <mesh key={xsd} geometry={rbox(0.009, H, 0.008, 0.003)} material={beam} position={[(xsd * W) / 6, 0.05 + H / 2, 0]} castShadow />
+          ))}
+          <mesh geometry={rbox(W, 0.008, 0.008, 0.003)} material={beam} position={[0, 0.05 + H * 0.52, 0]} castShadow />
+        </group>
+      ))}
+      {[-1, 1].map((xsd) => (
+        <mesh key={`me${xsd}`} geometry={rbox(0.008, H, 0.009, 0.003)} material={beam} position={[(xsd * W) / 2, 0.05 + H / 2, 0]} castShadow />
+      ))}
       {/* 室内：书桌、书本、绿植、暖灯 */}
       <mesh geometry={rbox(0.26, 0.02, 0.14, 0.006)} material={matte(C.wood)} position={[0.03, 0.15, 0]} castShadow />
       {[-0.1, 0.13].map((x) => <mesh key={x} geometry={rbox(0.016, 0.1, 0.016, 0.004)} material={matte(C.woodDeep)} position={[x, 0.1, 0]} />)}
