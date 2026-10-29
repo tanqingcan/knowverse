@@ -46,6 +46,35 @@
 | **Sketchfab** | 逐条（筛 CC0） | 花 / 树 / 家具多，但面数常偏高 | ★★ 中 ~ 高 | — |
 | **OpenGameArt** | CC0 / CC-BY | 2D / 低模 | ★ 低 | — |
 
+## 二·五、小王子 / 绘本风格素材包推荐
+
+> 风格关键词：手绘 / 水彩 / 粉彩、低饱和暖色、圆润天真的造型、纸感与微缩舞台（星球）、柔光。和项目 `visual-redesign.md` 的「绘本微缩」一致。
+
+### 匹配度较高的包
+
+| 包 | 风格 | 许可 | 复杂度 | 链接 |
+|---|---|---|---|---|
+| **Quaternius · Stylized Nature MegaKit** | 低模手绘、植物 / 树 / 岩，风格统一 | QAL（多数包等同 CC0，逐包核对） | ★ 低（几十 ~ 几百面/件） | [Quaternius](https://quaternius.com/)（[License](https://quaternius.com/license.html)） |
+| **Kenney Nature Kit** | 极低模、统一色块，偏扁平 | CC0 | ★ 低 | [kenney.nl](https://kenney.nl/assets/nature-kit) |
+| **Dreamscape Nature: Meadows** | 手绘风格化草地 / 树 / 花，色彩柔和，最接近绘本 | Unity / UE 商店许可（付费） | ★★ 中（纹理较重） | [Unity](https://assetstore.unity.com/packages/3d/environments/fantasy/dreamscape-nature-meadows-stylized-open-world-environment-186894) · [UE](https://www.unrealengine.com/marketplace/en-US/product/dreamscape-nature-meadows) |
+| **Mac · Nature Pack Stylized Hand Painted** | 明确 hand-painted | Unity 商店许可（付费） | ★★ 中 | [Unity](https://assetstore.unity.com/packages/3d/environments/mac-nature-pack-stylized-hand-painted-273395) |
+| **Hand Painted Nature Kit** | 手绘自然 | Unity 商店许可（付费） | ★★ 中 | [Unity](https://assetstore.unity.com/packages/3d/environments/hand-painted-nature-kit-68402) |
+| **Synty POLYGON Nature Pack** | 统一低模、量大；偏「游戏低模」而非水彩 | Synty 许可（付费） | ★★ 中 | [Synty](https://syntystore.com/products/polygon-nature-pack) |
+| **CGTrader · Stylized Cartoon Grass and Bushes** | 卡通草丛 / 灌木 | 逐条 | ★ 低 | [CGTrader](https://www.cgtrader.com/3d-models/exterior/landscape/stylized-cartoon-grass-and-bushes) |
+
+### 版权提醒（重要）
+
+- 《小王子》的文字与插画在多数国家**仍受版权保护**（法国等地因战争延展较久），**不要直接使用原作插画或官方 / 粉丝 3D 模型**。Meshy 等站上的「Little Prince」模型多为 AI / 粉丝生成，不能作为商用素材。
+- 正确做法：**借鉴风格**（手绘、低饱和、圆润、纸感），用 CC0 / 商业许可包 + 程序化生成，保持原创。参考：[Le Petit Prince 版权复杂性](https://www.ccdigitallaw.ch/copyright-on-the-work-le-petit-prince-by-antoine-de-saint-exupery-the-complexity-of-the-different-national-copyright-laws-on-an-international-level/)。
+
+### 怎么把现有模型调成「小王子感」
+
+1. 材质：哑光 + 手绘 / 水彩纹理（或顶点色 + 轻微噪声），降低饱和度。
+2. 轮廓：加一层很淡的描边 / 纸纹（不要卡通粗描边）。
+3. 天空：粉彩渐变（已做）+ 柔光；避免纯黑深空。
+4. 构图：微缩舞台 / 星球，物件尺度略夸张、圆润。
+5. 仍按 §三 的复杂度预算减面。
+
 ## 三、素材复杂度预算
 
 > 以「软件渲染 ≥12fps、GPU 60fps、单星球 13 株植物」为基线。
