@@ -16,16 +16,18 @@ powershell -ExecutionPolicy Bypass -File scripts/fetch-assets.ps1 -Open
 
 ## 2. 登记
 
-编辑 `src/lib/models.ts`，键名 = 装饰 kind（`lamp` / `bush` / `tree` / `pot` / `stone` / `fence`）：
+编辑 `src/lib/models.ts`，键名 = 装饰 kind（`lamp` / `bush` / `tree` / `pot` / `stone` / `fence` / `chair` / `flower`）：
 
 ```ts
 export const MODEL_REGISTRY = {
-  lamp: { url: "/assets/models/lamp.glb", scale: 0.6 },
-  tree: { url: "/assets/models/tree.glb", scale: 0.5, y: 0 },
+  tree:  { url: "/assets/models/tree-a.glb",  height: 0.55 },
+  chair: { url: "/assets/models/chair-a.glb", height: 0.22 },
 };
 ```
 
-- `scale`：统一缩放；`y`：贴地偏移；`rot`：绕 Y 旋转（弧度）。
+- `height`：目标高度（场景单位）；加载时按包围盒**自动缩放并贴地**，不用手动算 scale。
+- `rot`：绕 Y 旋转（弧度）。
+- 已下载并登记：`tree` / `chair` / `flower`（来源与许可见 `public/assets/CREDITS.md`）。
 
 ## 3. 行为
 
