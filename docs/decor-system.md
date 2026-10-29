@@ -82,10 +82,11 @@ planet_decor (
 - 主题存 `users.sky_theme` 或 `planet_settings`；切换即时生效。
 - 这也直接解决「天空很丑」：先用 CSS 主题，后续可换 HDRI（Poly Haven CC0）。
 
-## 7. 分阶段
+## 7. 分阶段与实现现状
 
 - **v1（W2–W3）**：只读展示 + 固定装饰位（先用 3–5 个预设位验证观感）。
-- **v2（W3–W4）**：自由拖拽 + 旋转 + 负荷。
+- **v1.5（已做，2026-10-29）**：前端原型——`src/lib/decor.ts` + `GardenWorld` 的 `decor` 渲染 + `SettingsPanel` 的「星球装饰」操作区（添加 / 四向移动 / 旋转 / 缩放 / 移除），存 localStorage。
+- **v2（W3–W4）**：自由拖拽（3D 拾取）+ 旋转 + 负荷；接 A 的 `/api/decor`。
 - **v3（W5+）**：目录解锁 + 主题 + 社区参观。
 
 ## 8. 验收
