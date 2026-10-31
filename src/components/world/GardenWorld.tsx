@@ -475,7 +475,7 @@ function LabelTracker({ anchors, labelKey, el }: { anchors: React.MutableRefObje
   return null;
 }
 
-/** 开发用性能探针：把 FPS / draw calls / 三角面写到 #perf-hud */
+/** 性能探针：FPS / draw calls / 三角面 / 几何与纹理数；写 #perf-hud 与 window.__gardenPerf（G11 采样用） */
 function PerfProbe() {
   const { gl } = useThree();
   const frames = useRef(0);
@@ -485,8 +485,11 @@ function PerfProbe() {
     const now = performance.now();
     if (now - last.current >= 500) {
       const fps = Math.round((frames.current * 1000) / (now - last.current));
+      const mem = gl.info.memory;
+      const sample = { fps, calls: gl.info.render.calls, triangles: gl.info.render.triangles, geometries: mem.geometries, textures: mem.textures, programs: gl.info.programs?.length ?? 0, t: Date.now() };
       const el = document.getElementById("perf-hud");
-      if (el) el.textContent = `${fps} fps · ${gl.info.render.calls} draw · ${gl.info.render.triangles} tri`;
+      if (el) el.textContent = `${fps} fps · ${sample.calls} draw · ${sample.triangles} tri`;
+      (window as any).__gardenPerf = sample;
       frames.current = 0;
       last.current = now;
     }
@@ -855,7 +858,7 @@ export function GardenWorld(props: WorldProps) {
           onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
-            {props.perf && <PerfProbe />}
+            <PerfProbe />
             <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
           </Suspense>
         </Canvas>
