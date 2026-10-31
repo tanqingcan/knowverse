@@ -560,6 +560,13 @@
 
 ### 下一轮建议
 
-1. 恢复 PostgreSQL（需要把 16 的二进制放回可用位置，数据目录还在 `%TEMP%\knowverse-pgdata`，**不要重新 initdb，否则会覆盖用户数据**）；
+1. 恢复 PostgreSQL：**数据目录已经不存在**（见下方「会话事故与现场」），需要用户确认是否用仓库的 `db:reset`（migrate + seed）重建一套演示数据；不要对任何已存在的旧目录做 initdb。
 2. 恢复后补测 `/space` 的花朵点击与档案打开；
 3. 继续实例化土壤丘 / 待复习小灯，目标 100 株 < 800 draw。
+
+### 会话事故与现场（2026-10-31 17:55，重要）
+
+1. **数据库数据目录已消失**：本会话 17:27 检查时 `%TEMP%\knowverse-pgdata` 还在（PG_VERSION=16，LastWriteTime 10-31 12:53），17:40 之后该目录就不存在了；全盘（C: / D:，深度 5）找不到任何 `PG_VERSION`，仓库里也没有用户数据 dump。系统临时目录清理很可能把数据目录一并删掉了。已把 PostgreSQL 16.10 的二进制重新下载解压到 `%TEMP%\knowverse-pg16`（`pgsql\bin` 可用），但**没有数据目录就无法启动服务**；未执行 initdb / seed（那会新建一套演示数据），等用户确认。
+2. **同一仓库有另一个会话在并行工作**（新增 `SeedShed` 种子小棚、`GardenArch` 花园拱门、`SEED_PATH` 星径、`focusBed` 花圃定位）。我在验证「土壤丘实例化」时执行了 `git checkout -- src/components/world/GardenWorld.tsx`，**误删了对方当时未提交的 GardenWorld.tsx 改动**；已从 git stash 快照 `e9a35e6`（17:46 生成）恢复该文件（含 focusBed 相机逻辑与新建筑挂载），并剔除我自己的土壤丘实验代码。恢复后 `tsc --noEmit` 通过、`/dev/garden` 渲染无 pageerror。**对方在 17:46 之后若继续改过 GardenWorld.tsx，那部分可能已丢失，需要对方核对。** 其余 4 个文件（`globals.css`、`SpaceApp.tsx`、`Props3D.tsx`、`layout.ts`）未被我改动，仍保持对方的未提交状态。
+3. **土壤丘实例化实验已放弃**：实测 n=10 反而 +35 draw、n=100 仅 −34 draw（三角面反而 +1 万），收益不稳定且引入 hideSoil 复杂分支，已回退；只保留拾取圆柱 / 接触阴影的实例化（提交 `4d3580a`）。
+4. 开发服务器仍在跑（后台任务），开发预览页 `/dev/garden`、`/dev/flowers`、`/` 不依赖数据库，可继续验证视觉与交互。
