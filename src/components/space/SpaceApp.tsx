@@ -14,6 +14,7 @@ import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } f
 import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor";
 import { CreativeHotbar, DEFAULT_HOTBAR, HOTBAR_KEY } from "@/components/space/CreativeHotbar";
 import { DiyWorkbench } from "@/components/space/DiyWorkbench";
+import { saveVariant, variantOf } from "@/lib/home/variants";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
@@ -502,14 +503,16 @@ export function SpaceApp() {
               onPlace={(x, z) => {
                 // H06：复制预览确认 → 用源实例参数落位；普通放置 → 用素材默认参数
                 if (copyFrom) {
-                  const id = decorStore.place(copyFrom.kind, x, z, { rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage, width: copyFrom.width, length: copyFrom.length });
+                  const id = decorStore.place(copyFrom.kind, x, z, { rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage, width: copyFrom.width, length: copyFrom.length, parts: copyFrom.parts ? { ...copyFrom.parts } : undefined });
                   lastPlaceAt.current = performance.now();
                   setCopyFrom(null); setPlacingKind(null); setSelectedDecorId(id);
                   setLayoutMsg("已复制一份");
                   return;
                 }
                 if (placingKind) {
-                  const id = decorStore.place(placingKind as any, x, z);
+                  // H32：若该素材存过个人配色变体，新放置时复用（只影响新对象）
+                  const vp = variantOf(placingKind as string);
+                  const id = decorStore.place(placingKind as any, x, z, vp ? { parts: { ...vp } } : undefined);
                   lastPlaceAt.current = performance.now();
                   // H21：放置成功的明确反馈（热栏消息条）；连续放置开着时保持素材，否则放完退出
                   const label = DECOR_CATALOG.find((c) => c.kind === placingKind)?.label ?? placingKind;
@@ -570,6 +573,7 @@ export function SpaceApp() {
               item={it}
               onApply={(parts) => { decorStore.update(it.id, { parts }); setDiyTarget(null); setLayoutMsg("已应用 DIY 配色（可撤销回滚）"); }}
               onCancel={() => setDiyTarget(null)}
+              onSaveVariant={(parts) => { saveVariant(it.kind, parts); setLayoutMsg("已保存为你的素材变体（新放置同类素材时复用）"); }}
             />
           );
         })()}

@@ -76,10 +76,12 @@ function Preview({ kind, stage, parts, spin }: { kind: string; stage?: string; p
   );
 }
 
-export function DiyWorkbench({ item, onApply, onCancel }: {
+export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   item: DecorPlacement;
   onApply: (parts: Record<string, string>) => void;
   onCancel: () => void;
+  /** H32：把当前配色存成「我的素材变体」，之后新放置该素材时复用（不改同类已有对象） */
+  onSaveVariant?: (parts: Record<string, string>) => void;
 }) {
   const partDefs = useMemo(() => DIY_PARTS[item.kind] ?? [{ key: "primary", label: "整体", def: item.color ?? "#C56E6E" }], [item.kind, item.color]);
   const [parts, setParts] = useState<Record<string, string>>(() => {
@@ -155,6 +157,7 @@ export function DiyWorkbench({ item, onApply, onCancel }: {
         <div className="diy-foot">
           <span className="diy-note">应用只改这一个对象；可用「撤销」回滚</span>
           <button className="btn btn-quiet btn-sm" onClick={onCancel}>取消</button>
+          <button className="btn btn-quiet btn-sm" onClick={() => onSaveVariant?.(parts)} title="存成个人配色变体，新放置同类素材时默认复用">保存为素材变体</button>
           <button className="btn btn-primary btn-sm" onClick={() => onApply(parts)}>应用</button>
         </div>
       </div>
