@@ -41,3 +41,13 @@ export function DecorFence() {
     </group>
   );
 }
+
+/** 装饰玫瑰：复用 Flower3D 的 rose，支持选取外观阶段（纯装饰，不产生学习证据） */
+export function DecorRose({ stage = "bloom" }: { stage?: string }) {
+  const s = (["seed", "sprout", "leaf", "bud", "bloom"].includes(stage) ? stage : "bloom") as "seed" | "sprout" | "leaf" | "bud" | "bloom";
+  return (
+    <group>
+      <Flower3D species="rose" color="rose" stage={s} open={s === "bloom" ? 0.9 : s === "bud" ? 0.3 : 1} seed={13} scale={1} />
+    </group>
+  );
+}

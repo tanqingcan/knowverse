@@ -20,6 +20,7 @@ import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
 import type { DecorPlacement } from "@/lib/decor";
 import { DecorItem } from "./DecorItem";
+import { SphereSurface } from "./Surface3D";
 
 export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy" | "observatory";
 export type Celebration = { plantId: string; fromStage: StageKey; toStage: StageKey; key: number } | null;
@@ -628,15 +629,21 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         {WILD_ROCKS.map((r, i) => (
           <OnCap key={`r${i}`} x={r.x} z={r.z}><group scale={1.3}><DecorStone /></group></OnCap>
         ))}
-        {/* 玩家摆放的装饰（原型：localStorage；后续接 A 的 /api/decor） */}
-        {(props.decor ?? []).map((d, i) => (
-          <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" ? 1 : 0}>
-            <group scale={d.scale}
-              onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
-              <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} />
-            </group>
-          </OnCap>
-        ))}
+        {/* 玩家摆放的装饰：surface 类（土壤/道路）走 SphereSurface 贴球面；其余走 OnCap + DecorItem */}
+        {(props.decor ?? []).map((d, i) => {
+          const isSurface = d.kind === "soil" || d.kind === "road";
+          if (isSurface) {
+            return <SphereSurface key={d.id} cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} />;
+          }
+          return (
+            <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" ? 1 : 0}>
+              <group scale={d.scale}
+                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
+                <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} />
+              </group>
+            </OnCap>
+          );
+        })}
 
         <SurfaceMover az={travelerAt.az} polar={travelerAt.polar} yaw={travelerAt.yaw} reduced={reduced} speed={1.6}>
           <group scale={1.25}><Traveler pose={travelerPose} reduced={reduced} /></group>

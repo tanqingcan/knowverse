@@ -5,10 +5,11 @@
  */
 import { useEffect, useState } from "react";
 
-export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock";
-export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number; color?: string };
+export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road";
+/** surface 类（土壤/道路）：用 width(沿局部 x)/length(沿局部 z) 描述面积，scale 不用于放大面积 */
+export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number; color?: string; width?: number; length?: number; stage?: string };
 
-export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] = [
+export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surface?: boolean }[] = [
   { kind: "lamp", label: "路灯", load: 0.2 },
   { kind: "bush", label: "灌木", load: 0.3 },
   { kind: "tree", label: "开花小树", load: 0.8 },
@@ -20,6 +21,9 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number }[] =
   { kind: "flower2", label: "郁金香", load: 0.3 },
   { kind: "flower3", label: "雏菊", load: 0.3 },
   { kind: "rock", label: "石头", load: 0.1 },
+  { kind: "rose", label: "玫瑰", load: 0.4 },
+  { kind: "soil", label: "泥土/花圃地", load: 0.5, surface: true },
+  { kind: "road", label: "石径", load: 0.5, surface: true },
 ];
 
 /** 单星球装饰负荷上限（load 总和） */
