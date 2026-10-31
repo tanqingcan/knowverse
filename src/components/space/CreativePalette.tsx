@@ -16,8 +16,8 @@ const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道�
 
 export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
-  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number } | null;
-  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number }) => void;
+  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
+  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
   onRemove?: () => void;
   revision?: number; status?: string; message?: string | null;
   onSave?: () => void; onPublish?: () => void;
@@ -52,6 +52,13 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
             <label className="cp-prop">比例 <input type="range" min={0.5} max={2} step={0.05} value={selected.scale} onChange={(e) => onUpdate?.({ scale: +e.target.value })} /><span>{selected.scale.toFixed(2)}</span></label>
           )}
           <label className="cp-prop">旋转 <input type="range" min={-180} max={180} step={5} value={selected.rot ?? 0} onChange={(e) => onUpdate?.({ rot: +e.target.value })} /><span>{Math.round(selected.rot ?? 0)}°</span></label>
+          {selected.kind === "rose" && (
+            <label className="cp-prop">阶段
+              <select value={selected.stage ?? "bloom"} onChange={(e) => onUpdate?.({ stage: e.target.value })} aria-label="玫瑰外观阶段">
+                <option value="seed">种子</option><option value="sprout">萌芽</option><option value="leaf">生叶</option><option value="bud">花苞</option><option value="bloom">开花</option>
+              </select>
+            </label>
+          )}
           <div className="cp-prop-actions"><button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button></div>
         </div>
       )}
