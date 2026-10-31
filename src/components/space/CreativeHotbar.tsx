@@ -30,13 +30,16 @@ export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number 
   return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
 }
 
-export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
+export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, continuous, onToggleContinuous, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
   /** H20：槽位可为空（null），配置存 localStorage；材质 ID 用 kind，不用场景实例 ID */
   slots: (DecorKind | null)[];
   currentSlot?: number;
   activeKind: DecorKind | null;
   picking?: boolean;
   message?: string | null;
+  /** H21：连续放置开关——放完一个仍保持该素材 */
+  continuous?: boolean;
+  onToggleContinuous?: () => void;
   onPick: (k: DecorKind) => void;
   onOpenLibrary: () => void;
   onSave: () => void;
@@ -67,6 +70,8 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
     <div className="hotbar-wrap" role="region" aria-label="创造模式操作栏">
       <div className="hb-side">
         <button className="hb-lib" type="button" onClick={onOpenLibrary} title="打开全部素材库（E）">全部素材</button>
+        <button className={`hb-lib ${continuous ? "hb-on" : ""}`} type="button" aria-pressed={!!continuous}
+          onClick={onToggleContinuous} title="连续放置：放完一个继续放下一个">连续</button>
       </div>
       <div className="hotbar" ref={barRef} role="toolbar" aria-label="素材快捷栏（1–9 切换；滚轮切槽）">
         {slots.map((kind, i) => {
@@ -91,7 +96,7 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
         <button className="hb-mini hb-exit" type="button" onClick={onExit}>退出</button>
       </div>
       {message && <div className="hb-msg" role="status">{message}</div>}
-      {picking && <div className="hb-hint" role="status">点击星球放置 · Esc 取消</div>}
+      {picking && <div className="hb-hint" role="status">把指针移到星球上，出现半透明预览后点击放置 · Esc 取消{continuous ? " · 连续放置中" : ""}</div>}
     </div>
   );
 }

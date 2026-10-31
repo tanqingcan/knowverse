@@ -108,6 +108,7 @@ export function SpaceApp() {
   const [hotbar, setHotbar] = useState<(DecorKind | null)[]>(DEFAULT_HOTBAR);
   const [activeSlot, setActiveSlot] = useState(0);   // H20：当前槽（「放入槽位」的目标）
   const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
+  const [continuous, setContinuous] = useState(false); // H21：连续放置开关
   useEffect(() => {
     try {
       const raw = localStorage.getItem(HOTBAR_KEY);
@@ -474,7 +475,14 @@ export function SpaceApp() {
                   setLayoutMsg("已复制一份");
                   return;
                 }
-                if (placingKind) { const id = decorStore.place(placingKind as any, x, z); lastPlaceAt.current = performance.now(); setPlacingKind(null); setSelectedDecorId(id); }
+                if (placingKind) {
+                  const id = decorStore.place(placingKind as any, x, z);
+                  lastPlaceAt.current = performance.now();
+                  // H21：放置成功的明确反馈（热栏消息条）；连续放置开着时保持素材，否则放完退出
+                  const label = DECOR_CATALOG.find((c) => c.kind === placingKind)?.label ?? placingKind;
+                  setLayoutMsg(`已放置「${label}」（共 ${decorStore.decor.length + 1} 件）${continuous ? " · 连续放置中" : ""}`);
+                  if (!continuous) { setPlacingKind(null); setSelectedDecorId(id); }
+                }
               }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
@@ -527,6 +535,8 @@ export function SpaceApp() {
             slots={hotbar}
             activeKind={(placingKind as DecorKind) ?? null}
             picking={!!placingKind}
+            continuous={continuous}
+            onToggleContinuous={() => setContinuous((v) => !v)}
             message={layoutMsg}
             currentSlot={activeSlot}
             onPick={(k) => { setActiveSlot(hotbar.indexOf(k)); setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
