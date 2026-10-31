@@ -14,7 +14,13 @@ export type LayoutItemInput = {
   width?: number | null; length?: number | null; color?: string | null; stage?: string | null;
 };
 
-const VALID_KINDS = new Set(["lamp", "bush", "tree", "pot", "stone", "fence", "chair", "flower", "flower2", "flower3", "rock", "rose", "soil", "road"]);
+// H14：与服务端 schema 的 kind 约束（迁移 0005/0006）保持一致——建筑 7 种 + 群组 2 种也必须可保存，
+// 否则「搬走/复制初始建筑」在保存时会被判「未知素材」而整体失败。
+const VALID_KINDS = new Set([
+  "lamp", "bush", "tree", "pot", "stone", "fence", "chair", "flower", "flower2", "flower3", "rock", "rose", "soil", "road",
+  "cottage", "greenhouse", "observatory", "seedshed", "arch", "pond", "sign",
+  "grassGroup", "wildflowerGroup",
+]);
 const MAX_ITEMS = 300;
 
 function num(v: unknown, min: number, max: number, what: string): number {

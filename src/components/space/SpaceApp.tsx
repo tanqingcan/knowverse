@@ -186,7 +186,11 @@ export function SpaceApp() {
         }
       }
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutHasPublished(!!l.hasPublished);
-    }).catch(() => { /* 未登录或网络失败：保留本地 localStorage 草稿 */ });
+    }).catch(() => {
+      // H14：加载失败不静默写默认布局——保留本地草稿并明确告知（toast 全局可见，不依赖素材栏是否打开）
+      setLayoutMsg("布局加载失败：已保留本地草稿，可稍后重试");
+      toast("布局加载失败：已保留本地草稿，可稍后重试", "error");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const saveCreative = useCallback(async () => {
