@@ -77,7 +77,11 @@ function ClassView({ id, me, onChanged }: { id: string; me: any; onChanged: () =
         <text x={0} y={4} textAnchor="middle" fontSize={11} fill="#F5EEDF" opacity={0.75}>{g.class.name}</text>
       </svg>
       <p className="small muted" style={{ marginTop: 6 }}>邀请码 {g.class.joinCode}。{g.hiddenCount > 0 ? `另有 ${g.hiddenCount} 位成员未公开星球。` : ""}默认什么都不公开，只显示每个人主动打开的内容。</p>
-      <p style={{ marginTop: 6 }}><a className="btn btn-soft btn-sm" href="/visit">参观示例星球（只读）→</a></p>
+      {(() => { const target = g.planets.find((p: any) => !p.isMe); return target ? (
+        <p style={{ marginTop: 6 }}><a className="btn btn-soft btn-sm" href={`/visit?user=${target.userId}`}>参观 {target.displayName} 的星球（只读）→</a></p>
+      ) : (
+        <p className="small muted" style={{ marginTop: 6 }}>这个星系里还没有同学公开星球。</p>
+      ); })()}
 
       <div className="section card">
         <h3>我在这个星系的分享</h3>
