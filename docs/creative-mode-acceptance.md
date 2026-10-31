@@ -22,7 +22,7 @@
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
 | G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390×844 与 **768×1024 均无横向溢出**（vision 确认工具栏可见）；**创造模式 Esc 逐级退出实测**（取消放置→收起素材栏）；低动效/浮窗模糊/Tab 焦点未验 | Round 5/8 | `cm-mobile-creative.png`、`g10-768.png`、`test-g10.py` |
-| G11 性能与回归 | ⬜ 未开始 | 已有 draw 391 实测，需按本节重测 | — | — |
+| G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
 | G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
 
 ## 每轮记录
@@ -39,6 +39,14 @@
 
 - 低动效：`reduced_motion="reduce"` 上下文下空闲 4.5 秒像素差分 **0.495**（vs 正常 28.8）→ **不自转**（`test-reduced.py`）。
 - 极点：镜头抬到极点附近（`g3-pole.png`），vision 确认**地表连续无破洞/缝隙/黑洞**、泥土块**紧贴地面无悬空穿透**、无倒置漂浮 → G3 极点通过。
+
+### Round 10 · 性能采样（G11）
+
+- `PerfProbe` 常开，写 `window.__gardenPerf = {fps, calls, triangles, geometries, textures, programs}`。
+- 设备/参数：Windows + headless Chromium + `--use-gl=angle --use-angle=swiftshader`（**软件渲染，无 GPU**），1440×900，demo 数据。
+- 60 秒静置 × 30 采样（每 2s）：**FPS 1.1（1–2）、draw 297（284–308）、tri 453k（449k–456k）**。
+- 10 次进入/退出编辑 + 滚轮缩放：geometries **158→158**、textures **12→12**，**无单调累积**；无 pageerror。
+- 结论：资源回归通过；**GPU 60fps / 软件 ≥12fps 的目标在本软件渲染环境不达标**，按「无法测的设备标未验证」处理，不美化。
 
 **未验证**：接缝（世界旋转 360° 一周的接缝）未单独测；侧面视角仍为 vision 判读歧义。
 
