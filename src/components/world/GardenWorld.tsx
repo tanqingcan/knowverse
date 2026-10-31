@@ -948,7 +948,11 @@ export function GardenWorld(props: WorldProps) {
         }
         if (decorDrag.current) {
           // H02：拖动装饰/建筑走 DOM 层（R3F pointermove 在拖动期间不触发）
+          // H11 诊断探针：记录「对象拖动」次数，与相机移动次数对照可定位相机泄漏
+          if (typeof window !== "undefined") (window as any).__decorMoves = (((window as any).__decorMoves as number) ?? 0) + 1;
           const now = performance.now();
+          // H11：对象拖动期间必须刷新「最近活动」时间，否则超过 3s 后空闲慢转会在拖动中接管镜头（实测相机 yaw 漂移 +0.0175）
+          lastAct.current = now;
           if (now - lastDecorMove.current >= 80) {
             lastDecorMove.current = now;
             const c = pointerToCap.current?.(e.clientX, e.clientY);
@@ -959,6 +963,8 @@ export function GardenWorld(props: WorldProps) {
         const p = press.current; if (!p) return;
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         if (Math.abs(dx) + Math.abs(dy) < 6) return;
+        // H11 诊断探针：相机实际被指针改动的次数
+        if (typeof window !== "undefined") (window as any).__camMoves = (((window as any).__camMoves as number) ?? 0) + 1;
         lastAct.current = performance.now();
         drag.current = { yaw: p.yaw + dx * 0.005, tilt: Math.max(TILT_MIN, Math.min(TILT_MAX, p.tilt + dy * 0.0016)) };
         props.onDragged?.(Math.abs(dx) > 6 || Math.abs(dy) > 6);
