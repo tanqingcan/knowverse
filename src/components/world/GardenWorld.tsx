@@ -780,7 +780,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
                   }
                   props.onDecorSelect?.(d.id);
                 }}>
-                <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} signText={props.signText} signSub={props.signSub} />
+                <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} parts={d.parts} signText={props.signText} signSub={props.signSub} />
                 {isSel && <mesh geometry={torusGeo(isBld ? 0.5 : 0.18, isBld ? 0.012 : 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
               </group>
               {/* 建筑热点：非编辑模式下保留原业务/标签入口（H08）；编辑模式点击只选中，不打开业务 */}

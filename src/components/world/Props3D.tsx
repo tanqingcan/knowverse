@@ -37,26 +37,26 @@ export function Cottage({ lights = 1 }: { lights?: number }) {
     <group>
       <Contact r={0.42} />
       <mesh geometry={cylGeo(0.29, 0.3, 0.05, 28)} material={matte(C.stone)} position={[0, 0.025, 0]} receiveShadow castShadow />
-      <mesh geometry={cylGeo(0.255, 0.27, 0.36, 28)} material={wall} position={[0, 0.23, 0]} castShadow receiveShadow />
-      <mesh geometry={torusGeo(0.262, 0.012, 8, 36)} material={matte(C.wood)} position={[0, 0.405, 0]} rotation={[Math.PI / 2, 0, 0]} />
+      <mesh geometry={cylGeo(0.255, 0.27, 0.36, 28)} material={wall} position={[0, 0.23, 0]} castShadow receiveShadow userData={{ part: "wall" }} />
+      <mesh geometry={torusGeo(0.262, 0.012, 8, 36)} material={matte(C.wood)} position={[0, 0.405, 0]} rotation={[Math.PI / 2, 0, 0]} userData={{ part: "trim" }} />
       <group position={[0, 0.41, 0]} rotation={[0.06, 0, 0.1]}>
-        <mesh geometry={coneGeo(0.36, 0.2, 28)} material={matte(C.roof)} position={[0, 0.1, 0]} castShadow />
-        <mesh geometry={coneGeo(0.27, 0.2, 28)} material={matte(C.roofDeep)} position={[0, 0.24, 0]} castShadow />
-        <mesh geometry={coneGeo(0.16, 0.16, 24)} material={matte(C.roof)} position={[0, 0.37, 0]} castShadow />
+        <mesh geometry={coneGeo(0.36, 0.2, 28)} material={matte(C.roof)} position={[0, 0.1, 0]} castShadow userData={{ part: "roof" }} />
+        <mesh geometry={coneGeo(0.27, 0.2, 28)} material={matte(C.roofDeep)} position={[0, 0.24, 0]} castShadow userData={{ part: "roof" }} />
+        <mesh geometry={coneGeo(0.16, 0.16, 24)} material={matte(C.roof)} position={[0, 0.37, 0]} castShadow userData={{ part: "roof" }} />
         <mesh geometry={sphereGeo(0.028, 12, 8)} material={matte(C.honey)} position={[0, 0.46, 0]} />
         <mesh geometry={rbox(0.07, 0.14, 0.07, 0.015)} material={matte("#B9A3A0")} position={[0.15, 0.2, -0.08]} castShadow />
       </group>
       {/* 圆窗 */}
       <group position={[0.07, 0.25, 0.258]}>
         <mesh geometry={torusGeo(0.062, 0.014, 10, 32)} material={matte(C.wood)} castShadow />
-        <mesh material={glowMat(C.window, glow)}><circleGeometry args={[0.055, 28]} /></mesh>
+        <mesh material={glowMat(C.window, glow)} userData={{ part: "window" }}><circleGeometry args={[0.055, 28]} /></mesh>
         <mesh geometry={rbox(0.11, 0.008, 0.006, 0.002)} material={matte(C.woodDeep)} position={[0, 0, 0.004]} />
         <mesh geometry={rbox(0.008, 0.11, 0.006, 0.002)} material={matte(C.woodDeep)} position={[0, 0, 0.004]} />
         <Halo size={0.34} opacity={0.45 * lights} position={[0, 0, 0.03]} />
       </group>
       {/* 门 */}
       <group position={[-0.12, 0.05, 0.24]} rotation={[0, -0.42, 0]}>
-        <mesh geometry={rbox(0.11, 0.16, 0.025, 0.01)} material={matte(C.woodDeep)} position={[0, 0.08, 0]} castShadow />
+        <mesh geometry={rbox(0.11, 0.16, 0.025, 0.01)} material={matte(C.woodDeep)} position={[0, 0.08, 0]} castShadow userData={{ part: "trim" }} />
         <mesh geometry={cylGeo(0.055, 0.055, 0.025, 16)} material={matte(C.woodDeep)} position={[0, 0.16, 0]} rotation={[Math.PI / 2, 0, 0]} />
         <mesh geometry={sphereGeo(0.008, 8, 6)} material={matte(C.honey)} position={[0.034, 0.08, 0.016]} />
         <mesh geometry={cylGeo(0.07, 0.075, 0.014, 18)} material={matte(C.stone)} position={[0, 0.0, 0.05]} receiveShadow />

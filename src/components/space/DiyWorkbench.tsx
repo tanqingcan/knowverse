@@ -70,7 +70,7 @@ function Preview({ kind, stage, parts, spin }: { kind: string; stage?: string; p
       <directionalLight position={[2.5, 4, 2]} intensity={2.2} />
       <directionalLight position={[-2, 1.5, -1.5]} intensity={0.7} color="#C9B8E8" />
       <group ref={ref} rotation={[0, spin, 0]} position={[0, -0.35, 0]}>
-        <DecorItem kind={kind as DecorKind} seed={7} lights={1} stage={stage} tint={parts[PRIMARY_PART[kind] ?? ""] ?? undefined} />
+        <DecorItem kind={kind as DecorKind} seed={7} lights={1} stage={stage} parts={parts} tint={parts[PRIMARY_PART[kind] ?? ""] ?? undefined} />
       </group>
     </Canvas>
   );

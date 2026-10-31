@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import * as THREE from "three";
+import { vcol } from "./geo";
 import { Lamp, Bush, BlossomTree, Bench, Cottage, Greenhouse, Observatory, SeedShed, GardenArch, PondBridge, Sign } from "./Props3D";
 import { DecorPot, DecorStone, DecorFence, DecorRose } from "./Decor3D";
 import { Model } from "./Model";
@@ -36,6 +37,36 @@ function Procedural({ kind, seed, lights, stage, signText, signSub }: { kind: De
   }
 }
 
+
+/**
+ * H29：按部位上色——花瓣/叶片用 `vcol()` 材质身份区分，花心/屋顶/墙面等用模型上的 `userData.part` 标记。
+ * 每个网格克隆材质后改色，卸载时 dispose；不影响其他实例（与 H07 的材质隔离同一原则）。
+ */
+export function PartTint({ parts, children }: { parts?: Record<string, string>; children: React.ReactNode }) {
+  const ref = React.useRef<THREE.Group>(null);
+  const key = React.useMemo(() => (parts ? JSON.stringify(parts) : ""), [parts]);
+  React.useEffect(() => {
+    const g = ref.current;
+    if (!g || !parts || !Object.keys(parts).length) return;
+    const cloned: THREE.Material[] = [];
+    const petalMat = vcol("petal");
+    const leafMat = vcol("leaf");
+    g.traverse((o: any) => {
+      if (!o.isMesh || !o.material) return;
+      const marked = o.userData?.part as string | undefined;
+      const part = marked ?? (o.material === petalMat ? "petal" : o.material === leafMat ? "leaf" : undefined);
+      if (!part) return;
+      const color = parts[part];
+      if (!color) return;
+      const one = (m: any) => { const c = m.clone(); if (c.color) c.color = new THREE.Color(color); cloned.push(c); return c; };
+      o.material = Array.isArray(o.material) ? o.material.map(one) : one(o.material);
+    });
+    return () => { cloned.forEach((m) => m.dispose()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return <group ref={ref}>{children}</group>;
+}
+
 /**
  * H07：程序化模型的按实例改色。`matte()` 按颜色做全局缓存，直接改材质会串色（所有同色实例一起变），
  * 所以这里 **克隆材质** 再改色，并在卸载时 dispose；每个实例一份，互不影响。
@@ -63,11 +94,13 @@ function Tinted({ tint, children }: { tint?: string; children: React.ReactNode }
 }
 
 /** 有登记 GLB 就用外部模型，否则用程序化模型；加载失败自动回退；tint 给模型换色（按实例克隆材质，不串色） */
-export function DecorItem({ kind, seed, lights, tint, stage, signText, signSub }: { kind: DecorKind; seed: number; lights: number; tint?: string; stage?: string; signText?: string; signSub?: string }) {
+export function DecorItem({ kind, seed, lights, tint, stage, signText, signSub, parts }: { kind: DecorKind; seed: number; lights: number; tint?: string; stage?: string; signText?: string; signSub?: string; parts?: Record<string, string> }) {
   const def = MODEL_REGISTRY[kind];
   const fallback = <Procedural kind={kind} seed={seed} lights={lights} stage={stage} signText={signText} signSub={signSub} />;
-  if (def) return <Model def={def} fallback={fallback} tint={tint} />;
-  // 无 GLB：有 tint 时走按实例克隆材质的路径。
-  // key 里带上 kind/stage：切换阶段会重建网格，靠 key 重挂载让 Tinted 重新克隆，避免新网格用回缓存材质（丢色）。
-  return tint ? <Tinted key={`${kind}:${stage ?? ""}:${tint}`} tint={tint}>{fallback}</Tinted> : fallback;
+  const inner = def
+    ? <Model def={def} fallback={fallback} tint={tint} />
+    : (tint ? <Tinted key={`${kind}:${stage ?? ""}:${tint}`} tint={tint}>{fallback}</Tinted> : fallback);
+  // H29：有分区颜色时再包一层 PartTint（key 带上 parts，切换阶段/改色都会重新克隆）
+  if (!parts || !Object.keys(parts).length) return inner;
+  return <PartTint key={`${kind}:${stage ?? ""}:${JSON.stringify(parts)}`} parts={parts}>{inner}</PartTint>;
 }
