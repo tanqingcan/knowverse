@@ -1,0 +1,76 @@
+"use client";
+/**
+ * H17：沉浸式底部素材快捷栏（9 槽）。
+ * 取代「左侧 260px 常驻大面板」：进入创造后只在底部留一条 9 槽快捷栏 + 小型退出/保存入口，
+ * 全量素材库通过「全部素材」按钮/E 键按需打开（H19）。
+ */
+import React from "react";
+import { DECOR_CATALOG, type DecorKind } from "@/lib/decor";
+import { FlowerSvg } from "@/components/art/Flower";
+
+const FLOWER_MAP: Partial<Record<DecorKind, { species: string; color: string }>> = {
+  rose: { species: "rose", color: "rose" },
+  flower: { species: "sunflower", color: "gold" },
+  flower2: { species: "iris", color: "mist" },
+  flower3: { species: "lily", color: "cream" },
+  pot: { species: "rose", color: "rose" },
+};
+
+/** H17：默认 9 槽（花/树/石/围栏/地面/道路/建筑 各一类，覆盖最常用） */
+export const DEFAULT_HOTBAR: DecorKind[] = ["rose", "flower2", "tree", "bush", "fence", "stone", "soil", "road", "cottage"];
+export const HOTBAR_KEY = "kv-hotbar";
+
+function labelOf(kind: DecorKind): string {
+  return DECOR_CATALOG.find((c) => c.kind === kind)?.label ?? kind;
+}
+
+export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number }) {
+  const f = FLOWER_MAP[kind];
+  if (f) return <span className="hb-thumb"><FlowerSvg uid={`hb-${kind}`} species={f.species} color={f.color} stage="bloom" size={size - 4} crop /></span>;
+  return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
+}
+
+export function CreativeHotbar({ slots, activeKind, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo }: {
+  slots: DecorKind[];
+  activeKind: DecorKind | null;
+  picking?: boolean;
+  message?: string | null;
+  onPick: (k: DecorKind) => void;
+  onOpenLibrary: () => void;
+  onSave: () => void;
+  onExit: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}) {
+  return (
+    <div className="hotbar-wrap" role="region" aria-label="创造模式操作栏">
+      <div className="hb-side">
+        <button className="hb-lib" type="button" onClick={onOpenLibrary} title="打开全部素材库（E）">全部素材</button>
+      </div>
+      <div className="hotbar" role="toolbar" aria-label="素材快捷栏（1–9 切换）">
+        {slots.map((kind, i) => {
+          const active = activeKind === kind;
+          return (
+            <button key={`${kind}-${i}`} type="button" className={`hb-slot ${active ? "is-active" : ""}`}
+              aria-pressed={active} aria-label={`${i + 1} ${labelOf(kind)}`}
+              title={`${i + 1} · ${labelOf(kind)}`} onClick={() => onPick(kind)}>
+              <span className="hb-num" aria-hidden="true">{i + 1}</span>
+              <KindThumb kind={kind} />
+              <span className="hb-name">{labelOf(kind)}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="hb-side hb-right">
+        <button className="hb-mini" type="button" onClick={onUndo} disabled={!canUndo} aria-label="撤销">↶</button>
+        <button className="hb-mini" type="button" onClick={onRedo} disabled={!canRedo} aria-label="重做">↷</button>
+        <button className="hb-mini hb-save" type="button" onClick={onSave}>保存</button>
+        <button className="hb-mini hb-exit" type="button" onClick={onExit}>退出</button>
+      </div>
+      {message && <div className="hb-msg" role="status">{message}</div>}
+      {picking && <div className="hb-hint" role="status">点击星球放置 · Esc 取消</div>}
+    </div>
+  );
+}

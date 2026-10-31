@@ -11,7 +11,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
-import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, type DecorPlacement } from "@/lib/decor";
+import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor";
+import { CreativeHotbar, DEFAULT_HOTBAR, HOTBAR_KEY } from "@/components/space/CreativeHotbar";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
@@ -102,6 +103,18 @@ export function SpaceApp() {
   const [dragged, setDragged] = useState(false);
   const [bedFocus, setBedFocus] = useState<{ x: number; z: number; key: number } | null>(null);
   const [creativeOpen, setCreativeOpen] = useState(false);
+  // H16/H17：创造模式用底部 9 槽快捷栏替代左侧大面板；全量素材库按需打开（E / 「全部素材」）
+  const [libOpen, setLibOpen] = useState(false);
+  const [hotbar, setHotbar] = useState<DecorKind[]>(DEFAULT_HOTBAR);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HOTBAR_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 9 && arr.every((k) => DECOR_CATALOG.some((c) => c.kind === k))) setHotbar(arr);
+      }
+    } catch { /* 忽略损坏的快捷栏配置 */ }
+  }, []);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
   const [layoutRev, setLayoutRev] = useState(0);
@@ -407,7 +420,7 @@ export function SpaceApp() {
 
   return (
     <Ctx.Provider value={ctx}>
-      <div className={`app ${focus ? "is-focus" : "is-garden"} ${reduced ? "reduced-motion" : ""} ${showIntro ? "is-intro" : ""}`}>
+      <div className={`app ${focus ? "is-focus" : "is-garden"} ${reduced ? "reduced-motion" : ""} ${showIntro ? "is-intro" : ""} ${creativeOpen ? "is-creating" : ""}`}>
         <Sky />
 
         {/* 花园场景：同一个画布在两种模式间改变大小，不重新加载 */}
@@ -470,11 +483,33 @@ export function SpaceApp() {
           </div>
         </header>
 
-        {!focus && (
+        {/* H16：进入创造后保留「小型退出入口」——HUD 主体（今日建议/业务工具栏）隐藏，只留一个退出创造按钮 */}
+        {creativeOpen && !focus && (
+          <button className="create-exit" type="button" onClick={() => { setCreativeOpen(false); setPlacingKind(null); }} aria-label="退出创造模式">退出创造</button>
+        )}
+        {!focus && !creativeOpen && (
           <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} creativeOpen={creativeOpen} onToggleCreative={() => { setCreativeOpen(!creativeOpen); setPlacingKind(null); }} />
         )}
+        {/* H16：顶栏/主内容区在创造模式下隐藏（视觉只留星球 + 底部快捷栏） */}
+        {creativeOpen && !focus && (
+          <CreativeHotbar
+            slots={hotbar}
+            activeKind={(placingKind as DecorKind) ?? null}
+            picking={!!placingKind}
+            message={layoutMsg}
+            onPick={(k) => { setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
+            onOpenLibrary={() => setLibOpen(true)}
+            onSave={() => void saveCreative()}
+            onExit={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }}
+            onUndo={() => decorStore.undo()}
+            onRedo={() => decorStore.redo()}
+            canUndo={decorStore.canUndo}
+            canRedo={decorStore.canRedo}
+          />
+        )}
 
-        <CreativePalette open={creativeOpen && !focus} placingKind={placingKind}
+        {/* H16/H19：左侧素材栏不再是常驻面板——只作为「全部素材库」按需覆盖打开 */}
+        <CreativePalette open={creativeOpen && libOpen && !focus} placingKind={placingKind}
           selected={decorStore.decor.find((d) => d.id === selectedDecorId) ?? null}
           onUpdate={(patch) => { if (selectedDecorId) { decorStore.update(selectedDecorId, patch); } }}
           onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
@@ -496,7 +531,7 @@ export function SpaceApp() {
           showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
           onFirstDefault={() => setFirstDismissed(true)}
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
-          onSelect={(k) => { setCopyFrom(null); setPlacingKind(k); }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
+          onSelect={(k) => { setCopyFrom(null); setPlacingKind(k); setLibOpen(false); }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => setLibOpen(false)} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">
