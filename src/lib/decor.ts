@@ -17,7 +17,12 @@ export function isBuildingKind(k: string): k is BuildingKind {
   return (BUILDING_KINDS as readonly string[]).includes(k);
 }
 /** surface 类（土壤/道路）：用 width(沿局部 x)/length(沿局部 z) 描述面积，scale 不用于放大面积 */
-export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number; color?: string; width?: number; length?: number; stage?: string };
+export type DecorPlacement = {
+  id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number;
+  color?: string; width?: number; length?: number; stage?: string;
+  /** H28/H29：DIY 分区颜色（花瓣/花心/叶片/茎、屋顶/墙面/门窗/饰边…），按部位名存色值 */
+  parts?: Record<string, string>;
+};
 
 export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surface?: boolean }[] = [
   { kind: "lamp", label: "路灯", load: 0.2 },

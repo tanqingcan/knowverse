@@ -13,6 +13,7 @@ import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
 import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor";
 import { CreativeHotbar, DEFAULT_HOTBAR, HOTBAR_KEY } from "@/components/space/CreativeHotbar";
+import { DiyWorkbench } from "@/components/space/DiyWorkbench";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
@@ -109,6 +110,7 @@ export function SpaceApp() {
   const [activeSlot, setActiveSlot] = useState(0);   // H20：当前槽（「放入槽位」的目标）
   const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
   const [continuous, setContinuous] = useState(false); // H21：连续放置开关
+  const [diyTarget, setDiyTarget] = useState<string | null>(null); // H28：DIY 工作台目标对象
   // H25：退出前判断「未保存改动」——savedSnap 记录最近一次成功加载/保存时的布局快照
   const savedSnap = useRef<string>('');
   const [askExit, setAskExit] = useState(false);
@@ -524,7 +526,7 @@ export function SpaceApp() {
               onDecorTransformStart={() => decorStore.beginTransform()}
               onDecorTransformEnd={() => decorStore.endTransform()}
               onDecorUpdate={(id, patch) => decorStore.update(id, patch)}
-              onDecorDiy={(id) => { setSelectedDecorId(id); toast("DIY 工作台将在下一组任务提供（H28–H38）"); }}
+              onDecorDiy={(id) => { setSelectedDecorId(id); setDiyTarget(id); }}
               placingPreview={copyFrom
                 ? { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage }
                 : placingKind
@@ -559,6 +561,18 @@ export function SpaceApp() {
         {creativeOpen && !focus && (
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
         )}
+        {/* H28：DIY 工作台——独立覆盖层，主场景（星球/镜头/选中）不卸载不失位 */}
+        {diyTarget && (() => {
+          const it = decorStore.decor.find((d) => d.id === diyTarget);
+          if (!it) return null;
+          return (
+            <DiyWorkbench
+              item={it}
+              onApply={(parts) => { decorStore.update(it.id, { parts }); setDiyTarget(null); setLayoutMsg("已应用 DIY 配色（可撤销回滚）"); }}
+              onCancel={() => setDiyTarget(null)}
+            />
+          );
+        })()}
         {/* H25：未保存改动的三选一对话框——保存并退出 / 放弃本轮 / 继续编辑 */}
         {askExit && (
           <div className="exit-mask" role="dialog" aria-modal="true" aria-label="退出创造模式">

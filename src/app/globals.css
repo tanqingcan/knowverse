@@ -318,6 +318,40 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .exit-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .exit-actions .btn { min-height: 40px; }
 
+/* ── H28：独立 DIY 工作台 ── */
+.diy-mask { position: fixed; inset: 0; z-index: 32; display: flex; align-items: center; justify-content: center;
+  background: rgba(38, 30, 56, 0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.diy-card { width: min(880px, calc(100vw - 28px)); max-height: calc(100vh - 36px); display: flex; flex-direction: column;
+  border-radius: 20px; background: rgba(255, 247, 232, 0.98); box-shadow: 0 24px 70px rgba(30, 22, 46, 0.4); overflow: hidden; color: var(--ink); }
+.diy-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(120, 95, 70, 0.14); }
+.diy-head b { font-family: var(--font-title); font-size: 17px; }
+.diy-sub { font-size: 12.5px; opacity: 0.7; flex: 1; }
+.diy-body { display: flex; min-height: 0; flex: 1; }
+.diy-preview { position: relative; flex: 1 1 55%; min-height: 300px;
+  background: radial-gradient(circle at 50% 38%, rgba(255, 235, 190, 0.6), rgba(214, 198, 235, 0.28)); touch-action: none; cursor: grab; }
+.diy-preview canvas { display: block; }
+.diy-preview-hint { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; opacity: 0.6; pointer-events: none; }
+.diy-panel { flex: 0 0 300px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+  border-left: 1px solid rgba(120, 95, 70, 0.14); }
+.diy-parts { display: flex; flex-wrap: wrap; gap: 6px; }
+.diy-part { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; min-height: 36px; border-radius: 10px;
+  border: 1.5px solid rgba(120, 95, 70, 0.2); background: transparent; font-size: 12.5px; color: var(--ink); cursor: pointer; font-family: inherit; }
+.diy-part.is-active { border-color: var(--honey); background: rgba(255, 235, 190, 0.5); }
+.diy-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.14); }
+.diy-current { font-size: 12.5px; opacity: 0.82; }
+.diy-presets { display: flex; flex-direction: column; gap: 6px; }
+.diy-preset { display: flex; gap: 4px; padding: 5px 6px; border-radius: 10px; border: 1px solid rgba(120, 95, 70, 0.18);
+  background: transparent; cursor: pointer; }
+.diy-preset span { width: 22px; height: 22px; border-radius: 6px; }
+.diy-custom { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.diy-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid rgba(120, 95, 70, 0.14); }
+.diy-note { flex: 1; font-size: 11.5px; opacity: 0.62; }
+@media (max-width: 760px) {
+  .diy-body { flex-direction: column; }
+  .diy-preview { min-height: 210px; flex: 0 0 auto; }
+  .diy-panel { flex: 0 0 auto; border-left: none; border-top: 1px solid rgba(120, 95, 70, 0.14); max-height: 42vh; }
+}
+
 /* ── H16/H17：创造模式沉浸式底部操作栏 ── */
 /* 进入创造后隐藏原顶栏（今日建议/业务工具栏由 JSX 不渲染），视觉只留星球 + 底部快捷栏 */
 .app.is-creating .topnav { display: none; }
