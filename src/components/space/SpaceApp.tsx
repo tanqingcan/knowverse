@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, fromLayoutItem } from "@/lib/layout-api";
-import type { DecorPlacement } from "@/lib/decor";
+import { DEFAULT_TEMPLATE } from "@/lib/decor";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
@@ -166,6 +166,20 @@ export function SpaceApp() {
   // G2 撤销/重做：历史在 useDecor 内（与 list 同源），见 src/lib/decor.ts
   const undo = () => { decorStore.undo(); setSelectedDecorId(null); };
   const redo = () => { decorStore.redo(); setSelectedDecorId(null); };
+  // G6 初始模板 / 放弃修改
+  const applyTemplate = () => {
+    if (!window.confirm("用默认模板替换当前草稿？未保存的改动会丢失（可撤销）。")) return;
+    decorStore.applyTemplate(DEFAULT_TEMPLATE);
+    setSelectedDecorId(null);
+    setLayoutMsg("已载入默认模板（记得保存或发布）");
+  };
+  const discard = () => {
+    if (!window.confirm("放弃未保存的改动，恢复服务器上的布局？")) return;
+    loadLayout().then((l) => {
+      decorStore.setAll(l.items.map(fromLayoutItem));
+      setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutMsg("已恢复服务器布局");
+    }).catch((e: any) => setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`));
+  };
   // 入场动画的兜底：无论 3D 是否加载完成，最多 4.5 秒后显示界面
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
@@ -341,6 +355,7 @@ export function SpaceApp() {
           revision={layoutRev} status={layoutStatus} message={layoutMsg}
           onSave={saveCreative} onPublish={publishCreative}
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
+          onApplyTemplate={applyTemplate} onDiscard={discard}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (

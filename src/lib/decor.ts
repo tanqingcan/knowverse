@@ -26,6 +26,16 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
   { kind: "road", label: "石径", load: 0.5, surface: true },
 ];
 
+/** 团队可维护的默认布局模板（创造模式「从模板开始 / 恢复默认模板」用；只含用户装饰，不动系统固定物件） */
+export const DEFAULT_TEMPLATE: DecorPlacement[] = [
+  { id: "tpl-rose-1", kind: "rose", x: -0.35, z: 0.55, rot: 0, scale: 1.2, stage: "bloom" },
+  { id: "tpl-rose-2", kind: "rose", x: 0.4, z: 0.52, rot: 20, scale: 0.9, stage: "bud" },
+  { id: "tpl-soil", kind: "soil", x: 0, z: 0.78, rot: 0, scale: 1, width: 1.4, length: 0.8 },
+  { id: "tpl-road", kind: "road", x: 0.85, z: 0.25, rot: 40, scale: 1, width: 0.5, length: 1.6 },
+  { id: "tpl-fence", kind: "fence", x: -0.72, z: 0.5, rot: 90, scale: 1 },
+  { id: "tpl-lamp", kind: "lamp", x: 0.72, z: 0.72, rot: 0, scale: 0.9 },
+];
+
 /** 单星球装饰负荷上限（load 总和） */
 export const DECOR_LOAD_CAP = 50;
 export function loadOf(kind: DecorKind): number {
@@ -163,6 +173,11 @@ export function useDecor() {
     reset: () => commit([]),
     /** 用服务端布局整体替换本地列表（G4：加载已保存布局）——不记入撤销历史 */
     setAll: (next: DecorPlacement[]) => commit(next, false),
+    /** 从默认模板开始（重新生成 id，记入撤销历史） */
+    applyTemplate: (tpl: DecorPlacement[]) => {
+      const next = tpl.map((d) => ({ ...d, id: `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}` }));
+      commit(next);
+    },
     undo, redo,
     canUndo: history.current.length > 0,
     canRedo: future.current.length > 0,
