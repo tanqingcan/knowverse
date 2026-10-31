@@ -456,6 +456,7 @@ function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone
     cur.current.yaw += (drag.current.yaw - cur.current.yaw) * kd;
     cur.current.tilt += (drag.current.tilt - cur.current.tilt) * kd;
     if (worldRef.current) { worldRef.current.rotation.y = cur.current.yaw; worldRef.current.rotation.x = cur.current.tilt; }
+    if (typeof window !== "undefined") (window as any).__gardenYaw = cur.current.yaw; // G7 复位/慢转的可测探针
   });
   return null;
 }
