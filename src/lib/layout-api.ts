@@ -19,7 +19,8 @@ let seq = 0;
 export const toLayoutItem = (d: DecorPlacement): LayoutItem => ({
   kind: d.kind, x: d.x, z: d.z, rot: d.rot, scale: d.scale,
   width: d.width ?? null, length: d.length ?? null, color: d.color ?? null, stage: d.stage ?? null,
-  parts: d.parts ?? null,
+  // H51：颜色统一小写（服务端也会归一化，这里先做一次保证本地/服务器同口径）
+  parts: d.parts ? Object.fromEntries(Object.entries(d.parts).map(([k, v]) => [k, String(v).toLowerCase()])) : null,
 });
 export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
   id: `s-${Date.now().toString(36)}-${(seq++).toString(36)}`,

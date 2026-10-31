@@ -90,7 +90,8 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   const partDefs = useMemo(() => DIY_PARTS[item.kind] ?? [{ key: "primary", label: "整体", def: item.color ?? "#C56E6E" }], [item.kind, item.color]);
   const [parts, setParts] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
-    for (const p of partDefs) init[p.key] = item.parts?.[p.key] ?? p.def;
+    // H51：与服务端一致，颜色统一小写，避免刷新前后仅大小写不同被误判为不一致
+    for (const p of partDefs) init[p.key] = (item.parts?.[p.key] ?? p.def).toLowerCase();
     return init;
   });
   const [activePart, setActivePart] = useState(partDefs[0]?.key ?? "primary");
@@ -129,10 +130,10 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
-  const setPart = (key: string, color: string) => setParts((p) => ({ ...p, [key]: color }));
+  const setPart = (key: string, color: string) => setParts((p) => ({ ...p, [key]: color.toLowerCase() }));
   const resetPart = () => {
     const def = partDefs.find((p) => p.key === activePart);
-    if (def) setPart(activePart, def.def);
+    if (def) setPart(activePart, def.def.toLowerCase());
   };
   return (
     <div className="diy-mask" role="dialog" aria-modal="true" aria-label={`DIY 工作台：${labelOf(item.kind)}`}>
@@ -164,7 +165,7 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
                 <button key={i} className="diy-preset" onClick={() => {
                   const ps = Object.keys(parts);
                   const next = { ...parts };
-                  ps.forEach((k, idx) => { next[k] = row[idx % row.length]; });
+                  ps.forEach((k, idx) => { next[k] = row[idx % row.length].toLowerCase(); });
                   setParts(next);
                 }} aria-label={`预设配色 ${i + 1}`}>
                   {row.map((c) => <span key={c} style={{ background: c }} />)}
