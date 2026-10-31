@@ -14,13 +14,14 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
   onRemove?: () => void;
   revision?: number; status?: string; message?: string | null;
   onSave?: () => void; onPublish?: () => void;
+  onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
@@ -87,6 +88,10 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
       <div className="cp-foot">
         <div className="cp-rev">当前布局：revision {revision ?? 0} · {status === "published" ? "已发布" : "草稿"}</div>
         {message && <div className="cp-msg" role="status">{message}</div>}
+        <div className="cp-foot-actions">
+          <button className="btn btn-quiet btn-sm" onClick={onUndo} disabled={!canUndo} aria-label="撤销">↶ 撤销</button>
+          <button className="btn btn-quiet btn-sm" onClick={onRedo} disabled={!canRedo} aria-label="重做">↷ 重做</button>
+        </div>
         <div className="cp-foot-actions">
           <button className="btn btn-ghost btn-sm" onClick={onSave}>保存到服务器</button>
           <button className="btn btn-primary btn-sm" onClick={onPublish}>发布</button>

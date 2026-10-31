@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, fromLayoutItem } from "@/lib/layout-api";
+import type { DecorPlacement } from "@/lib/decor";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
@@ -162,6 +163,32 @@ export function SpaceApp() {
     try { setLayoutMsg("发布中…"); const r = await publishLayout(layoutRev); setLayoutStatus(r.status); setLayoutMsg(`已发布（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`发布失败：${e?.message ?? "网络错误"}`); }
   }, [layoutRev]);
+  // G2 撤销/重做：快照栈；滑杆连续变化 500ms 内合并算一次
+  const decorRef = useRef<DecorPlacement[]>([]);
+  decorRef.current = decorStore.decor;
+  const undoStack = useRef<DecorPlacement[][]>([]);
+  const redoStack = useRef<DecorPlacement[][]>([]);
+  const lastUndoAt = useRef(0);
+  const [undoTick, setUndoTick] = useState(0);
+  const pushUndo = (coalesce = false) => {
+    const now = performance.now();
+    if (coalesce && now - lastUndoAt.current < 500) return;
+    lastUndoAt.current = now;
+    undoStack.current.push(decorRef.current);
+    if (undoStack.current.length > 50) undoStack.current.shift();
+    redoStack.current = [];
+    setUndoTick((t) => t + 1);
+  };
+  const undo = () => {
+    const prev = undoStack.current.pop(); if (!prev) return;
+    redoStack.current.push(decorRef.current);
+    decorStore.setAll(prev); setSelectedDecorId(null); setUndoTick((t) => t + 1);
+  };
+  const redo = () => {
+    const next = redoStack.current.pop(); if (!next) return;
+    undoStack.current.push(decorRef.current);
+    decorStore.setAll(next); setSelectedDecorId(null); setUndoTick((t) => t + 1);
+  };
   // 入场动画的兜底：无论 3D 是否加载完成，最多 4.5 秒后显示界面
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
@@ -299,7 +326,7 @@ export function SpaceApp() {
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               placingKind={placingKind}
-              onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); setPlacingKind(null); setSelectedDecorId(id); } }}
+              onPlace={(x, z) => { if (placingKind) { pushUndo(); const id = decorStore.place(placingKind as any, x, z); setPlacingKind(null); setSelectedDecorId(id); } }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
@@ -332,10 +359,11 @@ export function SpaceApp() {
 
         <CreativePalette open={creativeOpen && !focus} placingKind={placingKind}
           selected={decorStore.decor.find((d) => d.id === selectedDecorId) ?? null}
-          onUpdate={(patch) => selectedDecorId && decorStore.update(selectedDecorId, patch)}
-          onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
+          onUpdate={(patch) => { if (selectedDecorId) { pushUndo(true); decorStore.update(selectedDecorId, patch); } }}
+          onRemove={() => { if (selectedDecorId) { pushUndo(); decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
           revision={layoutRev} status={layoutStatus} message={layoutMsg}
           onSave={saveCreative} onPublish={publishCreative}
+          onUndo={undo} onRedo={redo} canUndo={undoStack.current.length > 0} canRedo={redoStack.current.length > 0}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (
