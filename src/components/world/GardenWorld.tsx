@@ -210,10 +210,14 @@ function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, children }: { x: number; 
   const f = useMemo(() => capFrame(x, z, yaw, lift), [x, z, yaw, lift]);
   const q = useMemo(() => {
     if (!upright) return f.quat;
-    // 家具保持竖直：把「贴合球面」的四元数向「只绕世界 Y 偏航」插值
+    // 家具保持竖直：把「贴合球面」的四元数向「只绕世界 Y 偏航」插值。
+    // H10：竖直程度按纬度衰减——赤道附近仍硬直立会与球面穿插，靠近北极才完全竖直。
+    const polarRad = Math.hypot(x, z) / 3;
+    const k = Math.max(0, Math.min(1, upright * Math.cos(polarRad)));
+    if (!k) return f.quat;
     const up = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (yaw * Math.PI) / 180);
-    return f.quat.clone().slerp(up, Math.min(1, Math.max(0, upright)));
-  }, [f.quat, yaw, upright]);
+    return f.quat.clone().slerp(up, k);
+  }, [f.quat, yaw, upright, x, z]);
   return <group position={f.pos} quaternion={q}>{children}</group>;
 }
 
