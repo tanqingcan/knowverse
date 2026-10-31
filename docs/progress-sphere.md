@@ -524,3 +524,42 @@
 ### 仍未验证（不要在报告里标通过）
 
 - 真实 GPU 的帧时间与 B5 的 60 秒内存稳定性；真机触屏（iOS/微信）；`backdrop-filter` 在低端机的成本；「另有 K 株待扩容」文案没有真实 >28 株数据触发过。
+
+## 第十四轮：跨株实例化（拾取圆柱 + 接触阴影，2026-10-31 17:40）
+
+### 现场（本次会话恢复时）
+
+- 分支 `feature/b-visual`，HEAD `c8b1a1d`，工作区干净。
+- **PostgreSQL 起不来**：`%TEMP%\knowverse-pgdata` 数据目录还在（PG_VERSION=16），但 `%TEMP%\knowverse-pg16` 的**程序目录已被临时目录清理**，机器上也没有其它 `postgres.exe`（PATH / Program Files / AppData / Downloads 都搜过），5432 端口不通。因此本轮只用**不依赖数据库**的开发预览页（`/dev/garden`、`/dev/flowers`、`/`）验证；`/space`、花朵档案、共学等需要 DB 的页面本轮**没有验证**。
+
+### 改前
+
+每株植物固定占 1 个不可见的拾取圆柱（`cylGeo(0.1,0.1,0.55)` + `hitMat`）和 1 个接触阴影圆片（`contactGeo/contactMat`），100 株就是 200 次 draw。
+
+### 改动
+
+1. `GardenWorld.tsx` 新增 `BedHits`：一个花圃的所有拾取圆柱合成一个 `InstancedMesh`，**R3F 实例化事件自带 `instanceId`**，序号与 `bed.plants` 下标一一对应，悬停/选中语义不变（`onPointerOver`/`onClick` 里用 `items[e.instanceId].id` 反查）；
+2. `BedContacts`：接触阴影同样按花圃合并成一个实例化网格（每株的 scale 由阶段决定：开花 0.11、其它 0.08）；
+3. `PlantNode` 删掉逐株的拾取圆柱；`Flower3D` 增加 `hideContact` 开关（默认 false，`/dev/flowers` 等单独预览仍保留接触阴影）。
+
+### 验证
+
+- **draw 实测**（`/dev/garden?perf=1`，1440×900，SwiftShader，同一 URL 前后各测一次）：
+  - n=10 / 1 圃：**466 → 448**；
+  - n=100 / 3 圃：**1,139 → 963**（−176，−15.5%）；三角面 587,084 → 587,528（实例化不改几何，差异是随机构型）。
+  - 与第十三轮合并叶片叠加，100 株从最初的 **1,320 降到 963（−27%）**。
+- **拾取仍然有效（重点，已实测）**：在 `/dev/garden` 上按网格悬停，鼠标移到植物上时 `world-label` 显示 `plant:stress-8`、`plant:stress-9`（不同位置命中不同株，说明 instanceId → 植物映射正确）；临时在 `/dev/garden` 加一个 `onSelect` 测试钩子后，点击同一位置得到 `__picked = stress-2` / `stress-0`，点空地不改变选中。**测试钩子已回退，未提交**。
+- 视觉：`inst-n=100.png`（已转存 `docs/screenshots/ui/b2-perf-100-instanced.jpg`）植株与花圃正常，接触阴影仍在每株脚下。
+
+### 未做 / 行为变化 / 风险
+
+- **接触阴影不再跟随 0.9 秒入场生长动画缩放**（原来它挂在花株内部会一起放大，现在固定在花圃层）。属于可见的小变化，**没有逐帧对比验证**，只确认静止画面一致。
+- `/space` 的真实点击→打开花朵档案链路**本轮未验证**（数据库不可用）；只验证了 `/dev/garden` 上同一套 `GardenWorld` 的点击回调。
+- 100 株 963 draw 仍然偏高（B5 目标 ≤120）；下一步可继续实例化「土壤丘」（每株 1 个）与「待复习小灯」，并把每株的茎/花合批。
+- 数据库恢复后必须补测：`/space` 点击花朵、花圃弹层、桌面/移动端截图。
+
+### 下一轮建议
+
+1. 恢复 PostgreSQL（需要把 16 的二进制放回可用位置，数据目录还在 `%TEMP%\knowverse-pgdata`，**不要重新 initdb，否则会覆盖用户数据**）；
+2. 恢复后补测 `/space` 的花朵点击与档案打开；
+3. 继续实例化土壤丘 / 待复习小灯，目标 100 株 < 800 draw。

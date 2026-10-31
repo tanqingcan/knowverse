@@ -11,7 +11,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { colorOf, type StageKey } from "@/lib/flora";
 import { C, matte, vcol, petalGeo, leafGeo, stemGeo, stemCurvePoint, bellGeo, sphereGeo, seedDiskTexture, contactGeo, contactMat, torusGeo, rand, cylGeo } from "./geo";
 
-type P = { species: string; color: string; stage: StageKey; open?: number; seed?: number; selected?: boolean; hovered?: boolean; reduced?: boolean; scale?: number };
+type P = { species: string; color: string; stage: StageKey; open?: number; seed?: number; selected?: boolean; hovered?: boolean; reduced?: boolean; scale?: number; hideContact?: boolean };
 
 const HEIGHT: Record<string, number> = { rose: 0.3, sunflower: 0.36, iris: 0.3, lily: 0.2 };
 
@@ -182,7 +182,7 @@ function LilySpray({ c, open, bud, seed }: { c: ReturnType<typeof colorOf>; open
   );
 }
 
-export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, hovered, reduced, scale = 1 }: P) {
+export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, hovered, reduced, scale = 1, hideContact = false }: P) {
   const c = colorOf(color);
   const root = useRef<THREE.Group>(null);
   const bend = (rand(seed, 1) - 0.5) * 0.05;
@@ -263,7 +263,7 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
 
   return (
     <group>
-      <mesh geometry={contactGeo()} material={contactMat()} scale={stage === "bloom" ? 0.11 : 0.08} position={[0, 0.002, 0]} />
+      {!hideContact && <mesh geometry={contactGeo()} material={contactMat()} scale={stage === "bloom" ? 0.11 : 0.08} position={[0, 0.002, 0]} />}
       {(selected || hovered) && <mesh geometry={torusGeo(0.11, 0.004, 6, 40)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.006, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: selected ? 0.9 : 0.4 })} />}
       <group ref={root} rotation={[0, yaw, 0]}>{body}</group>
     </group>

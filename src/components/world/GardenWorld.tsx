@@ -10,7 +10,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand } from "./geo";
+import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat } from "./geo";
 import { Flower3D } from "./Flower3D";
 import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Observatory, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
@@ -104,22 +104,60 @@ function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, s
   return (
     <group position={[x, 0.032, z]}>
       <group ref={g}>
-        <Flower3D species={p.species} color={p.color} stage={stage} open={open} seed={(hashId(p.id) % 97) + 1} selected={selected} hovered={hovered} reduced={reduced} scale={scale} />
+        <Flower3D species={p.species} color={p.color} stage={stage} open={open} seed={(hashId(p.id) % 97) + 1} selected={selected} hovered={hovered} reduced={reduced} scale={scale} hideContact />
       </group>
       {p.reviewDue && <mesh geometry={sphereGeo(0.012, 10, 8)} material={matte("#F4DFA6", { emissive: "#F4DFA6", emissiveIntensity: 0.8 })} position={[0.07, 0.03, 0.04]} />}
       <group ref={(o) => register(`plant:${p.id}`, o)} position={[0, (p.stage === "bloom" || p.stage === "bud" ? 0.42 : 0.2) * (scale / 1.22) * 0.8, 0]} />
-      <mesh geometry={cylGeo(0.1, 0.1, 0.55, 8)} material={hitMat} position={[0, 0.26, 0]}
-        onPointerOver={(e) => { e.stopPropagation(); setHover(`plant:${p.id}`); }}
-        onPointerOut={() => setHover(null)}
-        onClick={(e) => { if (e.delta > 6) return; e.stopPropagation(); onSelect?.(p.id); }} />
     </group>
   );
 }
 function hashId(id: string) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return h; }
 
+/**
+ * 一个花圃的「拾取圆柱」合并成一次绘制：原来每株一个不可见的 cylinder，100 株就是 100 次 draw。
+ * R3F 的实例化事件会带 instanceId，序号与 `bed.plants` 下标一致，所以选中/悬停语义不变。
+ */
+function BedHits({ items, setHover, onSelect }: {
+  items: { id: string; x: number; z: number }[];
+  setHover: (k: string | null) => void;
+  onSelect?: (id: string) => void;
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    const m = ref.current; if (!m) return;
+    const mx = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+    items.forEach((it, i) => { mx.compose(new THREE.Vector3(it.x, 0.26, it.z), q, one); m.setMatrixAt(i, mx); });
+    m.count = items.length;
+    m.instanceMatrix.needsUpdate = true;
+  }, [items]);
+  const idAt = (i: number | undefined | null) => (i == null ? null : items[i]?.id ?? null);
+  return (
+    <instancedMesh ref={ref} args={[cylGeo(0.1, 0.1, 0.55, 8), hitMat, Math.max(1, items.length)]}
+      visible={items.length > 0} frustumCulled={false}
+      onPointerOver={(e) => { const k = idAt(e.instanceId); if (k) { e.stopPropagation(); setHover(`plant:${k}`); } }}
+      onPointerOut={() => setHover(null)}
+      onClick={(e) => { const k = idAt(e.instanceId); if (!k || e.delta > 6) return; e.stopPropagation(); onSelect?.(k); }} />
+  );
+}
+
+/** 接触阴影同理：每株一个贴地圆片，合并成一个实例化网格 */
+function BedContacts({ items }: { items: { x: number; z: number; s: number }[] }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    const m = ref.current; if (!m) return;
+    const mx = new THREE.Matrix4(), q = new THREE.Quaternion();
+    items.forEach((it, i) => { mx.compose(new THREE.Vector3(it.x, 0.034, it.z), q, new THREE.Vector3(it.s, it.s, it.s)); m.setMatrixAt(i, mx); });
+    m.count = items.length;
+    m.instanceMatrix.needsUpdate = true;
+  }, [items]);
+  return <instancedMesh ref={ref} args={[contactGeo(), contactMat(), Math.max(1, items.length)]} visible={items.length > 0} frustumCulled={false} />;
+}
+
 function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant> } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
   const f = useMemo(() => capFrame(bed.x, bed.z), [bed.x, bed.z]);
   const { selectedId, hover, fx, ...pass } = rest as any;
+  const hitItems = useMemo(() => bed.plants.map((pp) => ({ id: pp.id, x: pp.x, z: pp.z })), [bed.plants]);
+  const contactItems = useMemo(() => bed.plants.map((pp) => ({ x: pp.x, z: pp.z, s: plants.get(pp.id)?.stage === "bloom" ? 0.11 : 0.08 })), [bed.plants, plants]);
   return (
     <group position={f.pos} quaternion={f.quat}>
       <mesh geometry={cylGeo(bed.r * 1.05, bed.r * 1.08, 0.12, 40)} material={matte(C.soilDeep)} position={[0, -0.05, 0]} />
@@ -129,6 +167,8 @@ function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, Wor
         return <PlantNode key={pp.id} p={p} x={pp.x} z={pp.z} k={bed.main ? 1 : 0.8} selected={selectedId === p.id} hovered={hover === `plant:${p.id}`}
           fx={fx && fx.id === p.id ? fx : null} {...pass} />;
       })}
+      <BedHits items={hitItems} setHover={pass.setHover} onSelect={pass.onSelect} />
+      <BedContacts items={contactItems} />
     </group>
   );
 }
