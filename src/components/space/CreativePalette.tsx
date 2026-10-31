@@ -31,11 +31,12 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
   onRemove?: () => void;
+  onDuplicate?: () => void;
   revision?: number; status?: string; message?: string | null;
   onSave?: () => void; onPublish?: () => void;
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
@@ -100,7 +101,10 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
               </select>
             </label>
           )}
-          <div className="cp-prop-actions"><button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button></div>
+          <div className="cp-prop-actions">
+            <button className="btn btn-quiet btn-sm" onClick={onDuplicate} title="复制一份（Ctrl+D）">复制</button>
+            <button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button>
+          </div>
         </div>
       )}
       <div className="cp-search">

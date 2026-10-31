@@ -194,6 +194,19 @@ export function useDecor() {
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch), true, true),
     remove: (id: string) => commit(removeDecor(list, id)),
+    /** 复制实例（H02/H06）：新 id + 轻微偏移避免完全重叠，返回新 id 供选中 */
+    duplicate: (id: string) => {
+      const src = list.find((d) => d.id === id);
+      if (!src) return null;
+      const copy: DecorPlacement = {
+        ...src,
+        id: `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        x: Math.max(-4, Math.min(4, src.x + 0.25)),
+        z: Math.max(-4, Math.min(4, src.z + 0.25)),
+      };
+      commit([...list, copy]);
+      return copy.id;
+    },
     reset: () => commit([]),
     /** 用服务端布局整体替换本地列表（G4：加载已保存布局）——不记入撤销历史 */
     setAll: (next: DecorPlacement[]) => commit(next, false),

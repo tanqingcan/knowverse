@@ -237,6 +237,24 @@ export function SpaceApp() {
     setImportPrompt(null);
   };
   const keepServerLayout = () => setImportPrompt(null);
+  // H02/H06：复制选中对象（按钮或 Ctrl+D）；新实例 id + 轻微偏移，复制后选中新实例
+  const duplicateDecor = () => {
+    if (!selectedDecorId) return;
+    const id = decorStore.duplicate(selectedDecorId);
+    if (id) { setSelectedDecorId(id); setLayoutMsg("已复制一份（可在原对象旁调整）"); }
+  };
+  // Ctrl+D 复制：输入框/文本域聚焦时不拦截（H18 输入冲突要求）
+  useEffect(() => {
+    if (!creativeOpen) return;
+    const f = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateDecor(); }
+    };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creativeOpen, selectedDecorId]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -424,6 +442,7 @@ export function SpaceApp() {
           selected={decorStore.decor.find((d) => d.id === selectedDecorId) ?? null}
           onUpdate={(patch) => { if (selectedDecorId) { decorStore.update(selectedDecorId, patch); } }}
           onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
+          onDuplicate={duplicateDecor}
           revision={layoutRev} status={layoutStatus} message={layoutMsg}
           onSave={saveCreative} onPublish={publishCreative}
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
