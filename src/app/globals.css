@@ -354,6 +354,12 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
   .diy-body { flex-direction: column; }
   .diy-preview { min-height: 210px; flex: 0 0 auto; }
   .diy-panel { flex: 0 0 auto; border-left: none; border-top: 1px solid rgba(120, 95, 70, 0.14); max-height: 42vh; }
+  /* H37：手机端所有工作台控件 ≥44px 触摸目标，应用按钮固定在底部不被色板/键盘遮住 */
+  .diy-card button, .diy-card select, .diy-custom input[type="color"] { min-height: 44px; }
+  .diy-part { min-height: 44px; padding: 8px 12px; }
+  .diy-preset { min-height: 44px; align-items: center; }
+  .diy-foot { position: sticky; bottom: 0; background: rgba(255, 247, 232, 0.98); }
+  .diy-foot .btn { min-height: 44px; }
 }
 
 /* ── H16/H17：创造模式沉浸式底部操作栏 ── */
