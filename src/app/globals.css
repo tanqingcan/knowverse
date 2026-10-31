@@ -308,6 +308,15 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .sel-edit-row { display: flex; align-items: center; gap: 8px; }
 .sel-edit-row input[type="range"] { flex: 1; }
 .sel-edit-row span { min-width: 38px; text-align: right; opacity: 0.7; }
+/* H25：退出创造的三选一对话框 */
+.exit-mask { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+  background: rgba(38, 30, 56, 0.42); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.exit-card { width: min(360px, calc(100vw - 40px)); padding: 18px 20px 16px; border-radius: 18px;
+  background: rgba(255, 247, 232, 0.98); box-shadow: 0 20px 60px rgba(30, 22, 46, 0.35); color: var(--ink); }
+.exit-card b { font-family: var(--font-title); font-size: 17px; }
+.exit-sub { margin: 6px 0 14px; font-size: 13px; opacity: 0.78; line-height: 1.5; }
+.exit-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.exit-actions .btn { min-height: 40px; }
 
 /* ── H16/H17：创造模式沉浸式底部操作栏 ── */
 /* 进入创造后隐藏原顶栏（今日建议/业务工具栏由 JSX 不渲染），视觉只留星球 + 底部快捷栏 */

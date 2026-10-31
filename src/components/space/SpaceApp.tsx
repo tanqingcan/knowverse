@@ -109,6 +109,10 @@ export function SpaceApp() {
   const [activeSlot, setActiveSlot] = useState(0);   // H20：当前槽（「放入槽位」的目标）
   const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
   const [continuous, setContinuous] = useState(false); // H21：连续放置开关
+  // H25：退出前判断「未保存改动」——savedSnap 记录最近一次成功加载/保存时的布局快照
+  const savedSnap = useRef<string>('');
+  const [askExit, setAskExit] = useState(false);
+  const applyLayout = (arr: DecorPlacement[]) => { decorStore.setAll(arr); savedSnap.current = JSON.stringify(arr); };
   useEffect(() => {
     try {
       const raw = localStorage.getItem(HOTBAR_KEY);
@@ -141,6 +145,11 @@ export function SpaceApp() {
   const webgl = useWebGL();
   const narrow = useNarrow();
   const decorStore = useDecor();
+
+  // H25：isDirty 用 ref 取最新布局，避免 Esc 闭包拿到旧 decor
+  const decorRef = useRef<DecorPlacement[]>(decorStore.decor);
+  decorRef.current = decorStore.decor;
+  const isDirty = () => savedSnap.current !== '' && JSON.stringify(decorRef.current) !== savedSnap.current;
   const tid = useRef(0);
 
   const reload = useCallback(async () => {
@@ -182,7 +191,7 @@ export function SpaceApp() {
       const localHasBuildings = local.some((d) => isBuildingKind(d.kind));
       if (l.revision === 0) {
         // 从未保存过：本地已有建筑草稿就沿用；否则套初始布局 + 保留本地旧装饰
-        decorStore.setAll(localHasBuildings ? local : [...DEFAULT_HOME_LAYOUT, ...local.filter((d) => !isBuildingKind(d.kind))]);
+        applyLayout(localHasBuildings ? local : [...DEFAULT_HOME_LAYOUT, ...local.filter((d) => !isBuildingKind(d.kind))]);
       } else {
         const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
         if (serverHasBuildings) {
@@ -195,14 +204,14 @@ export function SpaceApp() {
               setImportPrompt({ local: local.length, server: l.items.length });
             }
           } catch { /* 忽略损坏的本地草稿 */ }
-          decorStore.setAll(l.items.map(fromLayoutItem));
+          applyLayout(l.items.map(fromLayoutItem));
         } else if (localHasBuildings) {
           // H03：服务端仍是迁移前的旧布局，但本地已做过首次创建（可能未保存）——保留用户草稿，不回弹模板
-          decorStore.setAll(local);
+          applyLayout(local);
           setLayoutMsg("本地已有新版布置（尚未保存到服务器）");
         } else {
           // H14：旧布局一次性补入初始建筑；模板只在此刻生效
-          decorStore.setAll([...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
+          applyLayout([...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
           setLayoutMsg("已按新版补入初始建筑（保存后生效）");
         }
       }
@@ -215,9 +224,31 @@ export function SpaceApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const saveCreative = useCallback(async () => {
-    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor); setLayoutRev(r.revision); setLayoutStatus(r.status); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
+    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
   }, [layoutRev, decorStore.decor]);
+  // H25：退出创造的三条路径（右上退出按钮 / 快捷栏退出 / Esc 最后一级）统一走这里
+  const doExit = () => {
+    setAskExit(false); setCreativeOpen(false); setPlacingKind(null);
+    setSelectedDecorId(null); setLibOpen(false); setSlotMode(false);
+  };
+  const requestExit = () => {
+    if (isDirty()) { setAskExit(true); return; }   // 有未保存改动 → 先问
+    doExit();
+  };
+  /** 保存并退出：保存失败时留在编辑并保留草稿（不退出、不清空） */
+  const saveThenExit = async () => {
+    try {
+      setLayoutMsg("保存中…");
+      const r = await saveLayout(layoutRev, decorStore.decor);
+      setLayoutRev(r.revision); setLayoutStatus(r.status);
+      savedSnap.current = JSON.stringify(decorStore.decor);
+      setLayoutMsg(`已保存到服务器（revision ${r.revision}）`);
+      doExit();
+    } catch (e: any) {
+      setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}（改动仍在，可重试）`);
+    }
+  };
   const publishCreative = useCallback(async () => {
     try { setLayoutMsg("发布中…"); const r = await publishLayout(layoutRev); setLayoutStatus(r.status); setLayoutHasPublished(true); setLayoutMsg(`已发布（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`发布失败：${e?.message ?? "网络错误"}`); }
@@ -228,7 +259,7 @@ export function SpaceApp() {
     try {
       setLayoutMsg("恢复中…");
       const r = await revertLayout();
-      decorStore.setAll(r.items.map(fromLayoutItem));
+      applyLayout(r.items.map(fromLayoutItem));
       setLayoutRev(r.revision); setLayoutStatus(r.status); setSelectedDecorId(null);
       setLayoutMsg(`已恢复上一已发布版本（revision ${r.revision}）`);
     } catch (e: any) { setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`); }
@@ -251,7 +282,7 @@ export function SpaceApp() {
     loadLayout().then((l) => {
       // H03：服务端还没有建筑实例时，恢复服务器布局也要补回初始建筑，否则会被清空成「没有房子」
       const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
-      decorStore.setAll(serverHasBuildings ? l.items.map(fromLayoutItem) : [...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
+      applyLayout(serverHasBuildings ? l.items.map(fromLayoutItem) : [...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutMsg("已恢复服务器布局");
     }).catch((e: any) => setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`));
   };
@@ -324,7 +355,7 @@ export function SpaceApp() {
       // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
       if (placingKind) { setPlacingKind(null); setCopyFrom(null); return; }
       if (selectedDecorId) { setSelectedDecorId(null); return; }
-      setCreativeOpen(false);
+      requestExit();
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
@@ -526,7 +557,21 @@ export function SpaceApp() {
 
         {/* H16：进入创造后保留「小型退出入口」——HUD 主体（今日建议/业务工具栏）隐藏，只留一个退出创造按钮 */}
         {creativeOpen && !focus && (
-          <button className="create-exit" type="button" onClick={() => { setCreativeOpen(false); setPlacingKind(null); }} aria-label="退出创造模式">退出创造</button>
+          <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
+        )}
+        {/* H25：未保存改动的三选一对话框——保存并退出 / 放弃本轮 / 继续编辑 */}
+        {askExit && (
+          <div className="exit-mask" role="dialog" aria-modal="true" aria-label="退出创造模式">
+            <div className="exit-card">
+              <b>有未保存的改动</b>
+              <p className="exit-sub">退出前要把当前布置保存到服务器吗？</p>
+              <div className="exit-actions">
+                <button className="btn btn-primary btn-sm" onClick={() => void saveThenExit()}>保存并退出</button>
+                <button className="btn btn-quiet btn-sm" onClick={() => { setAskExit(false); void discard(); doExit(); }}>放弃本轮</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setAskExit(false)}>继续编辑</button>
+              </div>
+            </div>
+          </div>
         )}
         {!focus && !creativeOpen && (
           <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} creativeOpen={creativeOpen} onToggleCreative={() => { setCreativeOpen(!creativeOpen); setPlacingKind(null); }} />
@@ -544,7 +589,7 @@ export function SpaceApp() {
             onPick={(k) => { setActiveSlot(hotbar.indexOf(k)); setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
             onOpenLibrary={() => setLibOpen(true)}
             onSave={() => void saveCreative()}
-            onExit={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }}
+            onExit={requestExit}
             onUndo={() => decorStore.undo()}
             onRedo={() => decorStore.redo()}
             canUndo={decorStore.canUndo}
