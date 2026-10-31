@@ -179,24 +179,42 @@ export function Lamp({ lights = 1 }: { lights?: number }) {
   );
 }
 
-/** 花圃：木质边框 + 微微隆起的松软土壤 + 边缘的苔藓与小石子 */
+/** 花圃：木质边框 + 微微隆起的松软土壤 + 边缘的苔藓与小石子（苔藓/木桩各 1 次 InstancedMesh 绘制） */
 export function GardenBed({ r, wood = C.wood }: { r: number; wood?: string }) {
   const soil = useMemo(() => { const t = grainTexture("#A07C63", "#6E5242", 128, 340); t.repeat.set(3, 3); return matte("#B08A6E", { map: t }); }, []);
+  const mossRef = useRef<THREE.InstancedMesh>(null);
+  const postRef = useRef<THREE.InstancedMesh>(null);
   const posts = Math.round(r * 46);
   const moss = useMemo(() => Array.from({ length: Math.round(r * 40) }, (_, i) => {
     const a = rand(i, 3) * Math.PI * 2, rr = r * (0.8 + rand(i, 4) * 0.16);
     return { x: Math.cos(a) * rr, z: Math.sin(a) * rr, s: 0.012 + rand(i, 5) * 0.012, c: i % 4 === 0 ? "#C9C2B4" : i % 3 === 0 ? "#B3C98F" : "#8EAD74", y: i % 4 === 0 ? 0.3 : 0.6 };
   }), [r]);
+  const postItems = useMemo(() => Array.from({ length: posts }, (_, i) => {
+    const a = (i / posts) * Math.PI * 2;
+    return { a, c: i % 4 ? wood : C.woodLight, rotZ: (rand(i, 2) - 0.5) * 0.12 };
+  }), [posts, wood]);
+  useEffect(() => {
+    const m = mossRef.current; if (m) {
+      const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), v = new THREE.Vector3();
+      moss.forEach((mm, i) => { mx.compose(new THREE.Vector3(mm.x, 0.03, mm.z), q, v.set(mm.s, mm.s * mm.y, mm.s)); m.setMatrixAt(i, mx); m.setColorAt(i, col.set(mm.c)); });
+      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    }
+    const p = postRef.current; if (p) {
+      const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), v = new THREE.Vector3();
+      postItems.forEach((pi, i) => {
+        q.setFromEuler(new THREE.Euler(0, -pi.a + Math.PI / 2, pi.rotZ));
+        mx.compose(new THREE.Vector3(Math.cos(pi.a) * r * 1.04, 0.035, Math.sin(pi.a) * r * 1.04), q, v.set(1, 1, 1));
+        p.setMatrixAt(i, mx); p.setColorAt(i, col.set(pi.c));
+      });
+      p.instanceMatrix.needsUpdate = true; if (p.instanceColor) p.instanceColor.needsUpdate = true;
+    }
+  }, [moss, postItems, r]);
   return (
     <group>
       <mesh geometry={sphereGeo(1, 40, 12)} material={soil} scale={[r, 0.05, r]} position={[0, 0.008, 0]} receiveShadow />
       <mesh geometry={cylGeo(r * 1.0, r * 1.02, 0.03, 40)} material={matte(C.soilDeep)} position={[0, 0.0, 0]} receiveShadow />
-      {moss.map((m, i) => <mesh key={`m${i}`} geometry={sphereGeo(1, 8, 6)} material={matte(m.c)} scale={[m.s, m.s * m.y, m.s]} position={[m.x, 0.03, m.z]} />)}
-      {Array.from({ length: posts }, (_, i) => {
-        const a = (i / posts) * Math.PI * 2;
-        const h = 0.06 + rand(i, r * 10) * 0.02;
-        return <mesh key={i} geometry={rbox(0.042, h, 0.034, 0.014)} material={matte(i % 4 ? wood : C.woodLight)} position={[Math.cos(a) * r * 1.04, h / 2, Math.sin(a) * r * 1.04]} rotation={[0, -a + Math.PI / 2, (rand(i, 2) - 0.5) * 0.12]} castShadow receiveShadow />;
-      })}
+      <instancedMesh ref={mossRef} args={[sphereGeo(1, 8, 6), matte("#ffffff"), Math.max(1, moss.length)]} />
+      <instancedMesh ref={postRef} args={[rbox(0.042, 0.07, 0.034, 0.014), matte("#ffffff"), Math.max(1, postItems.length)]} castShadow receiveShadow />
     </group>
   );
 }
