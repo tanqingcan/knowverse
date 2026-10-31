@@ -12,36 +12,34 @@
 
 | # | 状态 | 版本/commit | 复现步骤 | 证据路径 |
 |---|---|---|---|---|
-| G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏(7分类+搜索+5 花形缩略图)+玫瑰放置+五阶段；**五阶段截图齐全（seed/sprout/leaf/bud/bloom）+ vision 确认：开花多层花瓣/深玫瑰红到粉渐变/茎叶完整/无穿模闪烁；花苞像未开放花蕾带花萼**；缺入口录屏 | Round 2-11 | `rose-{seed,sprout,leaf,bud,bloom}.png` + vision |
+| G1 选材与玫瑰 | 🟢 通过 | 入口+素材栏（7 分类+搜索+5 花形缩略图）+ 玫瑰/泥土/围栏/道路放置 + 五阶段；**五阶段截图 + 正/侧/背近景（vision：多层花瓣、翻卷、花托花萼不穿出、茎叶完整、无穿模闪烁）**；**录屏 `g1-entry-to-place.webm`** | Round 2-19 | `rose-{seed..bloom}.png`、`rose-angle-{0,1,2}.png`、`g1-entry-to-place.webm` |
 | G2 实时编辑 | 🟢 通过 | 比例滑杆 min0.5/max2.0/step0.05（10×ArrowRight→1.5）；一次拖动=一次撤销（400ms 合并）；多步撤销/重做 8→7→6；**手机 touch：放置 + 属性面板出现 + 触摸拖滑杆 1.0→1.8**；修复移动端「放完即被开口」bug；取消=放弃修改保留服务器状态 | Round 2/3/14/16/17 | `test-g2-slider.py`、`test-g2-dragundo.py`、`test-undo.py`、`test-touch.py`、`test-touch-slider.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现；**20000+ 顶点半径=PLANET_R+lift 自动检查**；vision：正面泥土沿球面弯曲、极点地表连续无破洞、泥土贴地；**接缝检查：45°→360° 八向截图，135°/225° vision 确认无接缝/裂缝/纹理错位/破洞**；侧面视角仍为判读歧义 | Round 2-17 | `tests/unit/surface.test.ts`、`g3-pole.png`、`seam-{45..360}.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
 | G6 模板与兼容 | 🟢 通过 | 默认模板 +「从模板开始」+「放弃修改」；旧版导入（备份+差异提示+选择）；**首次二选一（ahe 新账号实测弹出并套模板 6 件）**；**恢复已发布版本（published_items 快照，3 件草稿→revert 回 2 件已发布）**；**布局保存不改学习数据（plants/gardens/natal 前后一致）** | Round 5/10/15 | `test-template.py`、`test-import.py`、`test-first.py`、`test-revert.py`、`test-learning-unchanged.py` |
-| G7 完整球体 | 🟡 进行中 | 全周环绕/复位；**四方位截图（0/90/180/270°）vision 均确认连续地表+景物+无破洞接缝**；空闲慢转：按下暂停（28.8→0.76）、释放 3 秒恢复、编辑/低动效不转 | Round 4/8/11 | `dir-{0,90,180,270}.png`、`test-rotate.py` |
+| G7 完整球体 | 🟢 通过 | 全周环绕（**录屏 `g7-full-orbit.webm`**）+ 四方位 vision 连续无破洞/接缝/倒置；空闲慢转（`__gardenYaw` 实测 14s 累积 0.225 rad）、按下暂停（像素差分 28.8→0.76）、编辑/浮窗/低动效不转；复位按钮「回到花园视角」拖后出现、点击后隐藏并执行 `resetView`（像素复测受空闲慢转干扰） | Round 4/8/11/19 | `g7-full-orbit.webm`、`dir-*.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑；vision 确认温室屋顶完整/小木屋/池塘+木桥贴球无穿模、**旅人坐在长椅上（225° 视角）**；玫瑰五阶段近景；资产清单 `public/assets/CREDITS.md`（9 件含许可/面数/来源）；「修改前后图」依赖前序会话存档 | Round 11/14/17 | `seam-225.png`、`b6-desktop.png`、`equator-pond.png`、CREDITS.md |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
 | G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；设置弹窗键盘路径（焦点进入/Tab×6 窗内/Esc 归还/滚动锁）；**专注浮窗：宽 880 居中、`backdrop-filter: blur(18px) saturate(1.08)` 实测 + vision 确认背后星球模糊可见、内容可读无溢出** | Round 5/8/13/16 | `test-g10*.py`、`g10-focus-blur.png` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
 | G12 构建与交付 | 🟢 通过 | typecheck 0 / **build 41/41（含新增 revert 路由）** / 单测 36/36；/space、/visit 无 pageerror；B6 四组截图（vision 确认静态降级 2D 绘本）；B8 界面章 §9 创造模式 | Round 6/12/15 | `b6-*.png`、`docs/b8-ui-chapter.md` §9 |
 
-## 交付状态汇总（Round 18）
+## 交付状态汇总（Round 19）
 
-**已通过（有证据）**：G2 实时编辑、G4 数据库闭环、G5 异常/权限/并发、G6 模板与兼容、G12 构建与交付。
+**已通过（有证据）**：**G1 选材与玫瑰、G2 实时编辑、G4 数据库闭环、G5 异常/权限/并发、G6 模板与兼容、G7 完整球体、G12 构建与交付**（7 项）。
 
-**进行中（核心证据已具备，差 1-2 个子项或受环境限制）**：
-- **G1**：入口/素材栏（7 分类+搜索+5 花形缩略图）/玫瑰放置/五阶段截图齐全、vision 确认花瓣层叠翻卷与茎叶完整；差「入口→放置录屏」——**本环境无录屏工具（真实阻塞）**。
-- **G3**：`SphereSurface` 顶点全在球面（20000+ 自动检查）+ 正面/极点/8 向接缝 vision 均无破洞；侧面视角 vision 判读有歧义（数值已证明）。
-- **G7**：四方位 + 背面 vision 连续、空闲慢转像素差分 28.8→0.76、低动效 0.495；差「全周录屏」（同 G1 阻塞）。
+**进行中（核心证据已具备，差 1-2 子项或受环境限制）**：
+- **G3**：`SphereSurface` 顶点全在球面（20000+ 自动检查）+ 正面/极点/8 向接缝 vision 均无破洞；仅侧面视角 vision 判读有歧义（数值已证明贴地）。
 - **G8**：温室/木屋/池塘木桥/旅人坐姿多角度 vision 确认、资产清单 CREDITS.md；差「修改前后图」（前序会话存档，本轮未重制）。
-- **G9**：`/dev/garden?n=1..100&g=3` 隔离压力（数量/坐标有限/tri 单调）+ `layout.test.ts` 28 例；`?welcome=1` 打开本命花档案已验；差「搜索定位」的完整端到端。
+- **G9**：`/dev/garden?n=1..100&g=3` 隔离压力（数量/坐标有限/tri 单调）+ `layout.test.ts` 28 例；`?welcome=1` 打开本命花档案已验；差「搜索定位」完整端到端。
 - **G10**：三档无横向溢出、键盘路径（Tab 焦点陷阱/Esc 归还）、浮窗毛玻璃 vision、静态降级 vision；已基本齐全。
 - **G11**：60s×30 采样 draw297/tri453k/FPS1–2、10 轮资源不累积；**GPU 60fps / 软件 ≥12fps 在本 SwiftShader 环境不达标，按规则标未验证**。
 
 **续作所需条件（准确）**：
-1. 录屏证据（G1/G7）需要带屏幕录制能力的环境（如 OBS/Playwright video）。
-2. G11 的 GPU 帧率需要在有真实 GPU 的设备/浏览器实测。
-3. G8「修改前后图」需取前序会话的 before 截图存档（`docs/progress-sphere.md` 记录有基线描述）。
+1. G11 的 GPU 帧率需要在有真实 GPU 的设备/浏览器实测（本环境为 SwiftShader 软件渲染）。
+2. G8「修改前后图」需取前序会话的 before 截图存档（`docs/progress-sphere.md` 有基线描述）。
+3. G9 若需搜索定位端到端，需确认具体搜索入口（历史检索为对话历史，植物定位为场景点击）。
 
 ## 每轮记录
 
@@ -79,6 +77,14 @@
 - **发现并修复**：移动端放置后属性面板不出现（`cp-prop: 0`）。根因是同一次 tap 的后续 click 命中了场景中的植物 → 打开档案浮窗 → 创造面板关闭。加「放置后 400ms 内忽略植物/热点选中」后修复。
 - 移动端触摸拖滑杆（`Input.dispatchTouchEvent`）：滑杆 box (61,432,258,16)，**scale 1.0 → 1.8**，无 pageerror；`cp-prop: 3`（比例/旋转/阶段）。
 - G2 全部子项（滑杆范围、一次拖动一次撤销、多步撤销重做、手机触摸、取消保留）均已实测 → **G2 通过**。
+
+### Round 19 · 录屏证据 + 玫瑰三视角（G1/G7 通过）
+
+- **录屏（Playwright `record_video_dir`）**：`docs/screenshots/g1-entry-to-place.webm`（2.1MB，入口→素材栏→选玫瑰→放置→调滑杆）、`g7-full-orbit.webm`（8.7MB，8×45° 全周旋转）。两者 EBML 头校验通过（`1a45dfa3`）。
+- **玫瑰正/侧/背近景**（`rose-angle-{0,1,2}.png`，vision）：侧视「花瓣层次自然、花托/花萼不穿出、茎细长、叶排列整齐、无穿模闪烁」；背侧「花瓣/花托/花萼不穿出、茎完整、无穿模闪烁」。
+- **姿态探针 `window.__gardenYaw`**：14 秒空闲累积 0.225 rad（慢转在跑）。
+- 复位按钮「回到花园视角」拖后出现（count=1）、点击后隐藏（count=0）→ `resetView` 执行；像素复测被空闲慢转混淆，代码路径已确认。
+- 结论：**G1、G7 通过**（录屏 + 多角度 + 慢转/低动效 + 接缝已有证据）。
 
 ### Round 17 · 接缝全周检查（G3/G8）
 
