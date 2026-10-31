@@ -478,7 +478,10 @@ export function SpaceApp() {
   const focusWinRef = useRef<HTMLElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const focusWinOpen = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
-  useDialog(focusWinOpen, focusWinRef, closePanel, 'nav.sections button[aria-current="page"]');
+  // H47：窗口真的渲染出来（星落结束后）才算「打开」，否则 ref 为 null、焦点与 Tab 陷阱会失效
+  const focus = !!panel.panel && FOCUS_PANELS.includes(panel.panel) && !starFall;
+  // H47：必须用「窗口已渲染」的 focus（星落期间窗口还没挂载，ref 为 null，focus/Tab 陷阱会全部失效）
+  useDialog(focus, focusWinRef, closePanel, 'nav.sections button[aria-current="page"]');
   useDialog(panel.panel === "settings", settingsRef, closePanel, 'button[aria-label="设置"]');
   // 植物档案是轻量侧栏：只补 Esc 关闭与焦点归还，不锁 Tab、不锁滚动
   useEscapeClose(panel.panel === "dossier", closePanel, '.tool-wrap .tool');
@@ -489,7 +492,6 @@ export function SpaceApp() {
   const showIntro = introPlaying && use3d;
   const ctx = { space, reload, open, panel, setPanelPatch, onGrowth, toast, reduced, wide, setWide, replay, replaying: !!override, setBusy };
   const natal = space.plants.find((p) => p.isNatal);
-  const focus = !!panel.panel && FOCUS_PANELS.includes(panel.panel) && !starFall;
   const section = sectionOf(panel.panel === "settings" ? null : panel.panel);
   const sec = SECTIONS.find((s) => s.key === section)!;
   const selectedPlant = panel.panel === "dossier" ? panel.plantId ?? null : null;

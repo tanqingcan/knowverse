@@ -498,7 +498,7 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
   width: min(480px, calc(100vw - 40px)); height: min(380px, calc(100vh - 170px));
   border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; animation: kv-rise-c .32s var(--ease);
   border: 1px solid var(--line);
-  background: rgba(255, 247, 232, 0.86);
+  background: rgba(255, 247, 232, 0.9);
   -webkit-backdrop-filter: blur(18px) saturate(1.08); backdrop-filter: blur(18px) saturate(1.08);
   box-shadow: 0 30px 90px rgba(30, 24, 50, 0.42), 0 2px 10px rgba(30, 24, 50, 0.18); }
 /* 浏览器/显卡不支持毛玻璃时，退回不透明纸面，保证文字可读 */
@@ -529,6 +529,8 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .subtabs button[aria-selected="true"] { background: var(--paper-card); color: var(--ink); box-shadow: 0 1px 4px rgba(63, 54, 87, 0.14); font-weight: 600; }
 .focus-head .lamp-line { margin-left: auto; }
 .focus-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; font-size: 15px; }
+/* H46：半透明底 + 最坏背景（窗外很暗）时，次要文字也要 ≥4.5:1 */
+.focus-body .muted, .focus .muted, .focus-body .stage-label, .focus-body .small { color: #5A5375; }
 /* H41：紧凑窗内的可点控件一律 ≥44px 热区（小按钮用内边距撑开，视觉不变大） */
 .focus-body .btn, .focus-body .chip, .focus-body .plant-row, .focus-body .sample-q { min-height: 44px; display: inline-flex; align-items: center; }
 .focus-body .plant-row { display: flex; }
