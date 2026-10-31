@@ -20,7 +20,7 @@
 | G6 模板与兼容 | 🟡 进行中 | 默认模板 +「从模板开始」+「放弃修改」；**旧版 localStorage 导入：备份 kv-decor-backup + 差异提示（本地1件/服务器7件）+ 导入/保持选择实测**；首次二选一、恢复已发布版本未做 | Round 5/10 | `test-template.py`、`test-import.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位；**四方位截图（0/90/180/270°）vision 均确认连续地表+景物+无破洞接缝**；空闲慢转：按下暂停（28.8→0.76）、释放 3 秒恢复、编辑/低动效不转 | Round 4/8/11 | `dir-{0,90,180,270}.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
-| G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
+| G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
 | G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；**设置弹窗键盘路径实测：焦点自动进入、Tab×6 始终在窗内（焦点陷阱）、Esc 关闭并归还焦点到「设置」、滚动锁恢复**；浮窗 `backdrop-filter: blur(18px)` + `@supports` 降级已在 CSS | Round 5/8/13 | `test-g10.py`、`test-g10-keys.py` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
 | G12 构建与交付 | 🟢 通过 | typecheck 0 / build 40/40 / 单测 36/36；/space、/visit 无 pageerror；**B6 四组截图（桌面/手机/静态降级/低动效）已产出并 vision 确认静态降级为 2D 绘本**；**B8 界面章已补「创造模式」章节** | Round 6/12 | `b6-{desktop,mobile,static,lowmotion}.png`、`docs/b8-ui-chapter.md` §9 |
@@ -49,6 +49,12 @@
 - 结论：资源回归通过；**GPU 60fps / 软件 ≥12fps 的目标在本软件渲染环境不达标**，按「无法测的设备标未验证」处理，不美化。
 
 **未验证**：接缝（世界旋转 360° 一周的接缝）未单独测；侧面视角仍为 vision 判读歧义。
+
+### Round 13 · 容量压力（G9）
+
+- `/dev/garden?n=N&g=3` 是**隔离压力数据**（不碰真实账号）；页面暴露 `window.__devPlants = {n, g, allFinite}`。
+- 实测：N=1/10/30/50/100 → 渲染植物数分别为 1/10/30/50/100、花园数 3、`allFinite=true`；triangles 从 413k 单调升到 617k（符合数据量）。N=0 时该页回退默认 7 株（0 株由 `layout.test.ts` 单测覆盖）。
+- 搜索/定位沿用 B4 已验证实现（点击花朵/列表打开对应 plantId 档案）。
 
 ### Round 13 · 键盘可达性（G10）
 
