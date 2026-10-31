@@ -16,8 +16,8 @@ const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道�
 
 export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
-  selected?: { id: string; kind: string; scale: number; width?: number; length?: number } | null;
-  onUpdate?: (patch: { scale?: number; width?: number; length?: number }) => void;
+  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number } | null;
+  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number }) => void;
   onRemove?: () => void;
   revision?: number; status?: string; message?: string | null;
   onSave?: () => void; onPublish?: () => void;
@@ -51,6 +51,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
           ) : (
             <label className="cp-prop">比例 <input type="range" min={0.5} max={2} step={0.05} value={selected.scale} onChange={(e) => onUpdate?.({ scale: +e.target.value })} /><span>{selected.scale.toFixed(2)}</span></label>
           )}
+          <label className="cp-prop">旋转 <input type="range" min={-180} max={180} step={5} value={selected.rot ?? 0} onChange={(e) => onUpdate?.({ rot: +e.target.value })} /><span>{Math.round(selected.rot ?? 0)}°</span></label>
           <div className="cp-prop-actions"><button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button></div>
         </div>
       )}

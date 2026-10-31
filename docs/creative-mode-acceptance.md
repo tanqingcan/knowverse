@@ -15,7 +15,7 @@
 | G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏+玫瑰放置已通；缩略图/五阶段预览未做 | 见 Round 2 | `.dsh-tools/cm-place-multi.png` |
 | G2 实时编辑 | 🟡 进行中 | 比例滑杆+宽长滑杆已实现；撤销/重做/触摸未做 | 见 Round 2 | — |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 已实现并放置成功；视觉贴地未目测 | 见 Round 2 | — |
-| G4 数据库闭环 | 🟡 进行中 | 表+API+保存/发布/加载已通；revision/刷新恢复实测；缺「两株不同大小+围栏+道路+跨浏览器上下文」完整证据 | 见 Round 3 | `.dsh-tools/test-g4.py` 输出 |
+| G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409 冲突实测；缺保存失败重试/跨账号越权/参观只读证据 | 见 Round 3 | `.dsh-tools/test-g5.py` 输出 |
 | G6 模板与兼容 | ⬜ 未开始 | — | — | — |
 | G7 完整球体 | 🟡 进行中 | 前序会话已实现全周环绕/复位/慢转 | 见 docs/progress-sphere.md | 待补本轮证据 |
@@ -40,7 +40,9 @@
 - PUT baseRevision=当前 → `revision:2`；再 PUT 同一旧 baseRevision → **409 conflict**；POST publish → `status:published, publishedRevision:2`；最终 GET 读回 items（`.dsh-tools/test-g5.py`）。
 - `tsc --noEmit` exit 0。
 
-**未验证/风险**：保存失败重试、跨账号越权、参观只读 published、跨独立浏览器上下文 未做；「两株不同大小玫瑰+围栏+道路」完整 G4 证据未补；视觉仍无图像输入。
+**G4 完整证据（补测 `test-g4-paths.py`）**：PUT 5 件（2 玫瑰 scale 1/1.6、泥土 w1.2/l0.9/rot30、围栏、道路 w0.8/l1.4/rot45）→ revision 3；**同上下文 / 退出重登 / 全新浏览器上下文**三条路径 GET 均返回 5 件且参数（kind/x/z/scale/width/length/rot）完全一致；清空 localStorage 后从服务端恢复。→ G4 通过。
+
+**未验证/风险**：保存失败重试、跨账号越权、参观只读 published 未做；视觉仍无图像输入。
 
 ### Round 2 · 创造模式前端（2026-10-31）
 
