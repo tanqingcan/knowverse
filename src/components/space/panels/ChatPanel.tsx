@@ -36,7 +36,8 @@ export function ChatPanel() {
   const { concepts } = useConcepts();
   const [win, setWin] = useState<Win | null>(null);
   const [list, setList] = useState<any[] | null>(null);
-  const [showList, setShowList] = useState(!panel.conversationId);
+  // H42：会话历史默认折叠（标题/按钮里再展开），不再一进来就占掉窗口 1/3
+  const [showList, setShowList] = useState(false);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingText, setPendingText] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function ChatPanel() {
   useEffect(() => { loadList(); }, []);
 
   useEffect(() => {
-    if (!panel.conversationId) { setWin(null); setShowList(true); return; }
+    if (!panel.conversationId) { setWin(null); setShowList(false); return; }
     setErr(null);
     const qs = panel.messageId ? `?around=${panel.messageId}` : "";
     api<Win>(`/api/conversations/${panel.conversationId}${qs}`).then((w) => { setWin(w); setTitle(w.conversation.title); setShowList(false); })

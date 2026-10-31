@@ -682,6 +682,7 @@ export function SpaceApp() {
                 </div>
               ) : <h1 className="focus-title">{TITLES[panel.panel]}</h1>}
               {panel.panel === "history" && <span className="lamp-line">你上次的问题，都在这条小径上。</span>}
+              <button className="focus-close" type="button" onClick={() => open({ panel: null })} aria-label="关闭学习窗" title="关闭（Esc）">✕</button>
             </div>
             <div className="focus-body">
               {panel.panel === "chat" && <ChatPanel />}
