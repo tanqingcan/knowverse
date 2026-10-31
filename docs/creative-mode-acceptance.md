@@ -16,7 +16,7 @@
 | G2 实时编辑 | 🟡 进行中 | 比例/宽长/旋转/阶段控件已实现；撤销/重做按钮+快照栈（**单步撤销实测通过，多步栈有 bug 待修**）；触摸未做 | Round 2/3 | `.dsh-tools/test-undo.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
-| G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409 冲突实测；缺保存失败重试/跨账号越权/参观只读证据 | 见 Round 3 | `.dsh-tools/test-g5.py` 输出 |
+| G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409、**跨账号隔离**（xingye 布局为空 vs demo 已发布）、**参观只读已发布**（xingye 见 demo 6 件装饰、vision 确认只读无编辑按钮）已实测；保存失败重试未模拟 | Round 3/6 | `test-g5.py`、`test-visit.py`、`visit-demo.png` |
 | G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位/慢转已实现；**vision 确认背面有连续草地+建筑/树/石、无破洞接缝倒置**；极点/接缝未逐一验 | Round 4 | `sphere-back.png` + vision |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
@@ -26,6 +26,15 @@
 | G12 构建与交付 | ⬜ 未开始 | — | — | — |
 
 ## 每轮记录
+
+### Round 6 · 参观只读 + 跨账号隔离（G5，提交 `0e61599`）
+
+- `server/planets.ts` 的 `publicPlanet` 增加 `decor`：仅当对方**已发布**（status=published）且 share_planet 打开时返回布局 items。
+- `/visit` 页把 `decor` 传给 GardenWorld（`readOnly`），只读渲染对方已发布装饰。
+- 实测（`test-visit.py`）：demo 发布（revision 4）→ xingye 登录 GET `/api/planets/<demoId>` → **decor 6 件**（rose/rose/soil/fence/road/rose）；xingye 自己的 `/api/planet-layout` 为 revision 0、items []（**账号隔离**）。
+- vision 确认 `visit-demo.png`：玫瑰/泥土/道路/围栏可见、明确标注只读、无编辑按钮。
+
+**未验证**：保存失败重试（模拟断网）、恢复已发布快照。
 
 ### Round 5 · 初始模板（G6 起步，提交 `b0058b0`）
 
