@@ -12,9 +12,9 @@
 
 | # | 状态 | 版本/commit | 复现步骤 | 证据路径 |
 |---|---|---|---|---|
-| G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏+玫瑰放置+**五阶段选择器（实测 bud 阶段保存后仍保留）**；缩略图/近景多角度图未做 | Round 2/3 | `.dsh-tools/test-stage.py` |
+| G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏+玫瑰放置+五阶段选择器；**vision_understand 近景确认：花瓣多层叠放/自然翻卷/茎叶完整/无穿模**；缩略图未做 | Round 2-4 | `rose-closeup.png` + vision |
 | G2 实时编辑 | 🟡 进行中 | 比例/宽长/旋转/阶段控件已实现；撤销/重做按钮+快照栈（**单步撤销实测通过，多步栈有 bug 待修**）；触摸未做 | Round 2/3 | `.dsh-tools/test-undo.py` |
-| G3 球面地板 | 🟡 进行中 | SphereSurface 已实现并放置成功；视觉贴地未目测 | 见 Round 2 | — |
+| G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409 冲突实测；缺保存失败重试/跨账号越权/参观只读证据 | 见 Round 3 | `.dsh-tools/test-g5.py` 输出 |
 | G6 模板与兼容 | ⬜ 未开始 | — | — | — |
@@ -26,6 +26,15 @@
 | G12 构建与交付 | ⬜ 未开始 | — | — | — |
 
 ## 每轮记录
+
+### Round 4 · 撤销/重做修复 + 视觉工具接入（2026-10-31）
+
+- **撤销/重做修复**：历史从 SpaceApp 的 ref 栈移入 `useDecor`（与 list 同源，`commit` 记录前态、`setAll` 不记录），实测 2 次放置 → 2 次撤销（8→7→6）→ 2 次重做均准确（`test-undo.py`）。提交 `2d1155c`。
+- **vision_understand 工具接入**（外部视觉模型，可 Read 本地截图）：
+  - `cm-base-desktop.png`：确认星球/温室/书屋/花圃/夜空存在。
+  - `cm-place-multi.png`：素材栏分类清晰、玫瑰渲染、泥土边缘沿球面弯曲、栅栏/道路、无悬空穿模。
+  - `rose-closeup.png`：玫瑰花瓣多层叠放、自然翻卷、茎叶完整、花托无穿出、无闪烁。
+- 视觉证据首次可「看」，G1/G3 从「未验证」提升为「vision 确认（部分）」。
 
 ### Round 3 · 数据库持久化闭环（G4/G5 起步，提交 `edaf65e`）
 
