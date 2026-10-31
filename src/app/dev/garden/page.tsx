@@ -32,6 +32,8 @@ export default function Page() {
   })) : null;
   const plants = (stress ?? PLANTS) as any[];
   const gardens = stress ? Array.from({ length: G }, (_, i) => ({ name: `花圃 ${i + 1}` })) : [{ name: "数据库系统概论" }, { name: "概率统计" }];
+  // G9 压力验证用：暴露本页渲染的植物数量/花园数/全部坐标是否有限（隔离数据，不碰真实账号）
+  if (typeof window !== "undefined") (window as any).__devPlants = { n: plants.length, g: gardens.length, allFinite: plants.every((p: any) => Number.isFinite(p.gardenIndex)) };
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#756B99 0%,#9CAFC5 42%,#F2C9B6 78%,#FFF7E8 100%)" }}>
       <GardenWorld plants={plants} gardens={gardens} mode={(q.get("mode") as any) ?? "garden"}
