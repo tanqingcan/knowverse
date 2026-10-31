@@ -214,7 +214,9 @@ export function SpaceApp() {
   const redo = () => { decorStore.redo(); setSelectedDecorId(null); };
   // G6 初始模板 / 放弃修改
   const applyTemplate = () => {
-    if (!window.confirm("用默认模板替换当前草稿？未保存的改动会丢失（可撤销）。")) return;
+    // H13：模板恢复「先预览」——告知将被替换成什么（件数与种类），并明确可撤销回滚
+    const summary = DEFAULT_TEMPLATE.map((d) => d.kind).join("、");
+    if (!window.confirm(`从模板开始：共 ${DEFAULT_TEMPLATE.length} 件（${summary}）。\n当前草稿会被整体替换，可用「撤销」回滚。`)) return;
     decorStore.applyTemplate(DEFAULT_TEMPLATE);
     setSelectedDecorId(null);
     setLayoutMsg("已载入默认模板（记得保存或发布）");
