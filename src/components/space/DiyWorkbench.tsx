@@ -11,22 +11,22 @@ import { DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor"
 
 /** H29：各类对象的可改色分区（花：花瓣/花心/叶片/茎；房屋：屋顶/墙面/门窗/饰边） */
 export const DIY_PARTS: Record<string, { key: string; label: string; def: string }[]> = {
+  // H29：只列「模型里真实存在的独立部位」——玫瑰/鸢尾/百合没有独立花心网格，就不假装有
   rose: [
     { key: "petal", label: "花瓣", def: "#C56E6E" },
-    { key: "core", label: "花心", def: "#EBB2BB" },
     { key: "leaf", label: "叶片", def: "#8DAF78" },
     { key: "stem", label: "茎", def: "#7C9B67" },
   ],
   flower: [
-    { key: "petal", label: "花瓣", def: "#F2C9B6" }, { key: "core", label: "花心", def: "#E0A96D" },
+    { key: "petal", label: "花瓣", def: "#F2C9B6" }, { key: "core", label: "花心", def: "#5A3B22" },
     { key: "leaf", label: "叶片", def: "#8DAF78" }, { key: "stem", label: "茎", def: "#7C9B67" },
   ],
   flower2: [
-    { key: "petal", label: "花瓣", def: "#E4A1AA" }, { key: "core", label: "花心", def: "#F6D3D8" },
+    { key: "petal", label: "花瓣", def: "#E4A1AA" },
     { key: "leaf", label: "叶片", def: "#8DAF78" }, { key: "stem", label: "茎", def: "#7C9B67" },
   ],
   flower3: [
-    { key: "petal", label: "花瓣", def: "#FFF7E8" }, { key: "core", label: "花心", def: "#E0C070" },
+    { key: "petal", label: "花瓣", def: "#FFF7E8" },
     { key: "leaf", label: "叶片", def: "#8DAF78" }, { key: "stem", label: "茎", def: "#7C9B67" },
   ],
   cottage: [

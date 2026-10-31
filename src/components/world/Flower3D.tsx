@@ -160,7 +160,7 @@ function SunflowerHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: 
         ]) },
         { geo: cylGeo(0.046, 0.04, 0.016, 24), color: "#5A3B22", m: new THREE.Matrix4().makeTranslation(0, 0.002, 0) },
       ])} material={vcol("petal")} castShadow />
-      <mesh material={disk} position={[0, 0.0105, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.046, 28]} /></mesh>
+      <mesh material={disk} position={[0, 0.0105, 0]} rotation={[-Math.PI / 2, 0, 0]} userData={{ part: "core" }}><circleGeometry args={[0.046, 28]} /></mesh>
     </group>
   );
 }
@@ -279,19 +279,22 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
     }
     if (species !== "lily" && stage === "leaf") leaves.push({ kind: "almond", len: 0.03, w: 0.018, at: top.toArray(), yaw: 0.5, tilt: 0.3 });
     // 土丘 + 茎 + 叶合并成一块（顶点色），每株从 3–4 次 draw 降到 1 次；花头仍是独立 mesh
-    const foliageParts: FoliagePart[] = [
+    // H29：把「茎」与「叶片」拆成两块 mesh——茎用 vcol("stem")、叶用 vcol("leaf")，
+    // 这样 DIY 才能分别给「茎」和「叶片」上色（原来合并成一块、同一材质，无法分区）。
+    const stemParts: FoliagePart[] = [
       { geo: sphereGeo(0.032, 14, 8), color: C.soilDeep, m: new THREE.Matrix4().makeScale(1, 0.22, 1) },
     ];
     if (species === "lily") {
-      if (stage === "leaf") foliageParts.push({ geo: stemGeo(0.09, 0.01, 0.006), color: C.stem });
+      if (stage === "leaf") stemParts.push({ geo: stemGeo(0.09, 0.01, 0.006), color: C.stem });
     } else {
-      foliageParts.push({ geo: stemGeo(h, bend, species === "sunflower" ? 0.011 : 0.007), color: C.stem });
+      stemParts.push({ geo: stemGeo(h, bend, species === "sunflower" ? 0.011 : 0.007), color: C.stem });
     }
-    if (leaves.length > 0) foliageParts.push({ geo: leavesGeo(leaves) });
-    const foliage = foliageGeo(foliageParts);
+    const stemMerged = foliageGeo(stemParts);
+    const leafMerged = leaves.length > 0 ? foliageGeo([{ geo: leavesGeo(leaves) }]) : null;
     return (
       <group>
-        <mesh geometry={foliage} material={vcol("leaf")} castShadow receiveShadow />
+        <mesh geometry={stemMerged} material={vcol("stem")} castShadow receiveShadow />
+        {leafMerged && <mesh geometry={leafMerged} material={vcol("leaf")} castShadow receiveShadow />}
         {species === "lily" && stage !== "leaf" && <LilySpray c={c} open={open} bud={stage === "bud"} seed={seed} />}
         {species !== "lily" && (stage === "bud" || stage === "bloom") && (
           <group position={top}>

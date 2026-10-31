@@ -51,10 +51,12 @@ export function PartTint({ parts, children }: { parts?: Record<string, string>; 
     const cloned: THREE.Material[] = [];
     const petalMat = vcol("petal");
     const leafMat = vcol("leaf");
+    const stemMat = vcol("stem");
     g.traverse((o: any) => {
       if (!o.isMesh || !o.material) return;
       const marked = o.userData?.part as string | undefined;
-      const part = marked ?? (o.material === petalMat ? "petal" : o.material === leafMat ? "leaf" : undefined);
+      const part = marked
+        ?? (o.material === petalMat ? "petal" : o.material === leafMat ? "leaf" : o.material === stemMat ? "stem" : undefined);
       if (!part) return;
       const color = parts[part];
       if (!color) return;
