@@ -13,7 +13,7 @@
 | # | 状态 | 版本/commit | 复现步骤 | 证据路径 |
 |---|---|---|---|---|
 | G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏(7分类+搜索+5 花形缩略图)+玫瑰放置+五阶段；**五阶段截图齐全（seed/sprout/leaf/bud/bloom）+ vision 确认：开花多层花瓣/深玫瑰红到粉渐变/茎叶完整/无穿模闪烁；花苞像未开放花蕾带花萼**；缺入口录屏 | Round 2-11 | `rose-{seed,sprout,leaf,bud,bloom}.png` + vision |
-| G2 实时编辑 | 🟡 进行中 | **比例滑杆 min0.5/max2.0/step0.05 实测**（10 次 ArrowRight → 1.0→1.5）；**一次拖动=一次撤销**（400ms 合并，一次撤销回 1.0）；多步撤销/重做 8→7→6；手机 touch 放置；缺「手机端滑杆拖动」逐帧记录 | Round 2/3/14/16 | `test-g2-slider.py`、`test-g2-dragundo.py`、`test-undo.py`、`test-touch.py` |
+| G2 实时编辑 | 🟢 通过 | 比例滑杆 min0.5/max2.0/step0.05（10×ArrowRight→1.5）；一次拖动=一次撤销（400ms 合并）；多步撤销/重做 8→7→6；**手机 touch：放置 + 属性面板出现 + 触摸拖滑杆 1.0→1.8**；修复移动端「放完即被开口」bug；取消=放弃修改保留服务器状态 | Round 2/3/14/16/17 | `test-g2-slider.py`、`test-g2-dragundo.py`、`test-undo.py`、`test-touch.py`、`test-touch-slider.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现；**20000+ 顶点半径=PLANET_R+lift 自动检查**；vision：正面泥土沿球面弯曲、极点地表连续无破洞、泥土贴地；**接缝检查：45°→360° 八向截图，135°/225° vision 确认无接缝/裂缝/纹理错位/破洞**；侧面视角仍为判读歧义 | Round 2-17 | `tests/unit/surface.test.ts`、`g3-pole.png`、`seam-{45..360}.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
@@ -55,6 +55,12 @@
 - `equator-view.py` 把镜头下压到赤道附近：vision 确认**圆形小池塘 + 木桥跨越其上、周围有花草、物件与球面贴合无悬空穿模**；同视角可见亭状小建筑与围栏。
 - `b6-desktop.png`：vision 确认**温室（透明玻璃+内部植物）、小木屋（棕色屋顶/圆窗）、草丛茂盛、屋顶完整、无悬空穿模、风格协调**。
 - 资产清单：`public/assets/CREDITS.md` 已列 9 件外部素材（作者/许可/三角面/来源），程序化建筑为原创。
+
+### Round 17 · 移动端滑杆 + 一个重要 bug 修复（G2 通过）
+
+- **发现并修复**：移动端放置后属性面板不出现（`cp-prop: 0`）。根因是同一次 tap 的后续 click 命中了场景中的植物 → 打开档案浮窗 → 创造面板关闭。加「放置后 400ms 内忽略植物/热点选中」后修复。
+- 移动端触摸拖滑杆（`Input.dispatchTouchEvent`）：滑杆 box (61,432,258,16)，**scale 1.0 → 1.8**，无 pageerror；`cp-prop: 3`（比例/旋转/阶段）。
+- G2 全部子项（滑杆范围、一次拖动一次撤销、多步撤销重做、手机触摸、取消保留）均已实测 → **G2 通过**。
 
 ### Round 17 · 接缝全周检查（G3/G8）
 
