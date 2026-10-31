@@ -3,7 +3,7 @@
  * 星球装饰：前端原型。现在存 localStorage（每台设备独立）；
  * A 的 `/api/decor` 就绪后，把 loadDecor/saveDecor 换成接口即可，其余不变。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road";
 /** surface 类（土壤/道路）：用 width(沿局部 x)/length(沿局部 z) 描述面积，scale 不用于放大面积 */
@@ -117,9 +117,12 @@ export function addPreset(list: DecorPlacement[], p: DecorPreset): DecorPlacemen
   return [...list, ...p.items.map((it) => ({ id: uid(), kind: it.kind, x: base.x + it.dx, z: base.z + it.dz, rot: it.rot ?? 0, scale: 1 }))];
 }
 
-/** 订阅装饰列表：localStorage + 自定义事件（跨组件同步） */
+/** 订阅装饰列表：localStorage + 自定义事件（跨组件同步）。内置撤销/重做历史（与 list 同源，避免快照错位）。 */
 export function useDecor() {
   const [list, setList] = useState<DecorPlacement[]>([]);
+  const history = useRef<DecorPlacement[][]>([]);
+  const future = useRef<DecorPlacement[][]>([]);
+  const [ver, setVer] = useState(0);
   useEffect(() => {
     setList(loadDecor());
     const on = (e: Event) => {
@@ -130,7 +133,26 @@ export function useDecor() {
     window.addEventListener("storage", on);
     return () => { window.removeEventListener(EVENT, on); window.removeEventListener("storage", on); };
   }, []);
-  const commit = (next: DecorPlacement[]) => { saveDecor(next); setList(next); };
+  /** commit：把当前 list 记入历史（record=true），再写入新列表 */
+  const commit = (next: DecorPlacement[], record = true) => {
+    if (record) {
+      history.current.push(list);
+      if (history.current.length > 50) history.current.shift();
+      future.current = [];
+      setVer((v) => v + 1);
+    }
+    saveDecor(next); setList(next);
+  };
+  const undo = () => {
+    const prev = history.current.pop(); if (!prev) return;
+    future.current.push(list);
+    saveDecor(prev); setList(prev); setVer((v) => v + 1);
+  };
+  const redo = () => {
+    const next = future.current.pop(); if (!next) return;
+    history.current.push(list);
+    saveDecor(next); setList(next); setVer((v) => v + 1);
+  };
   return {
     decor: list,
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
@@ -139,7 +161,11 @@ export function useDecor() {
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
     remove: (id: string) => commit(removeDecor(list, id)),
     reset: () => commit([]),
-    /** 用服务端布局整体替换本地列表（G4：加载已保存布局） */
-    setAll: (next: DecorPlacement[]) => commit(next),
+    /** 用服务端布局整体替换本地列表（G4：加载已保存布局）——不记入撤销历史 */
+    setAll: (next: DecorPlacement[]) => commit(next, false),
+    undo, redo,
+    canUndo: history.current.length > 0,
+    canRedo: future.current.length > 0,
+    ver,
   };
 }
