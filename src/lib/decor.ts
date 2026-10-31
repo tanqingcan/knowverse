@@ -194,7 +194,16 @@ export function useDecor() {
   return {
     decor: list,
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
-    place: (kind: DecorKind, x: number, z: number) => { const next = addDecorAt(list, kind, x, z); commit(next); return next[next.length - 1].id; },
+    place: (kind: DecorKind, x: number, z: number, opts?: Partial<DecorPlacement>) => {
+      // H06：复制预览确认时带上源实例的 rot/scale/color/stage/width/length，保证「预览 = 最终结果」
+      const base = addDecorAt(list, kind, x, z);
+      const last = base[base.length - 1];
+      const merged = opts
+        ? base.map((d, i) => (i === base.length - 1 ? { ...last, ...opts, id: last.id, kind, x, z } : d))
+        : base;
+      commit(merged);
+      return (merged[merged.length - 1] as DecorPlacement).id;
+    },
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch), true, true),
     remove: (id: string) => commit(removeDecor(list, id)),

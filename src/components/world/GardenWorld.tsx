@@ -35,6 +35,9 @@ export type WorldProps = {
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
+  /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
+   *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
+  placingPreview?: { kind: string; rot: number; scale: number; color?: string; stage?: string } | null;
   onPlace?: (x: number, z: number) => void; // 点击球面放置回调
   onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
   onDecorDuplicate?: (id: string) => void; // H05：紧凑操作条的「复制」
@@ -541,6 +544,25 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     };
     return () => { props.pointerToCap.current = null; };
   }, [camera, gl, dragRay, dragNdc, dragSphere, props.pointerToCap]);
+  // H06：放置预览 ghost（跟随指针的半透明模型）
+  const ghost = useRef<THREE.Group>(null);
+  useEffect(() => {
+    const g = ghost.current;
+    if (!g) return;
+    // 克隆材质再降透明度，避免影响场景里同材质的真实实例（H07 串色问题的同源风险）。
+    // 卸载时 dispose 克隆材质，避免反复进出预览累积显存（H55 资源泄漏检查相关）。
+    const cloned: THREE.Material[] = [];
+    g.traverse((o: any) => {
+      if (o.isMesh && o.material) {
+        o.material = o.material.clone();
+        o.material.transparent = true;
+        o.material.opacity = 0.55;
+        o.material.depthWrite = false;
+        cloned.push(o.material);
+      }
+    });
+    return () => { cloned.forEach((m) => m.dispose()); };
+  }, [props.placingKind, props.placingPreview?.kind]);
   const anchors = useRef(new Map<string, THREE.Object3D>());
   const register = useMemo(() => (k: string, o: THREE.Object3D | null) => { if (o) anchors.current.set(k, o); else anchors.current.delete(k); }, []);
   const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
@@ -654,9 +676,28 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
       }}>
         <mesh geometry={planetGeo} material={planetMat} receiveShadow />
+        {/* H06/H21：放置预览 ghost——跟随指针、半透明；只在放置/复制预览时挂载 */}
+        {props.placingKind && props.placingPreview && (
+          <group ref={ghost} visible={false}>
+            <group scale={props.placingPreview.scale}>
+              <DecorItem kind={props.placingPreview.kind as any} seed={99} lights={L} tint={props.placingPreview.color} stage={props.placingPreview.stage} signText={props.signText} signSub={props.signSub} />
+            </group>
+            <mesh geometry={torusGeo(0.26, 0.012, 6, 40)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.9 })} />
+          </group>
+        )}
         {/* 创造模式放置层：比地表/草/云略大的不可见球，截获点击换算球冠坐标；仅放置时存在 */}
         {props.placingKind && (
           <mesh geometry={sphereGeo(3.12, 24, 16)} material={hitMat}
+            onPointerMove={(e) => {
+              // H06：ghost 跟随指针（命令式改 transform，不触发 React 重渲染）
+              if (!ghost.current) return;
+              const c = pointToCap(e.point);
+              const f = capFrame(c.x, c.z, props.placingPreview?.rot ?? 0);
+              ghost.current.position.copy(f.pos);
+              ghost.current.quaternion.copy(f.quat);
+              ghost.current.visible = true;
+            }}
+            onPointerOut={() => { if (ghost.current) ghost.current.visible = false; }}
             onPointerUp={(e) => {
               if (e.delta > 6) return; // 拖动（镜头）时不放置
               const c = pointToCap(e.point);

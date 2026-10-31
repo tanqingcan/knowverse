@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
-import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind } from "@/lib/decor";
+import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, type DecorPlacement } from "@/lib/decor";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
@@ -241,12 +241,17 @@ export function SpaceApp() {
     setImportPrompt(null);
   };
   const keepServerLayout = () => setImportPrompt(null);
-  // H02/H06：复制选中对象（按钮或 Ctrl+D）；新实例 id + 轻微偏移，复制后选中新实例
-  const duplicateDecor = () => {
-    if (!selectedDecorId) return;
-    const id = decorStore.duplicate(selectedDecorId);
-    if (id) { setSelectedDecorId(id); setLayoutMsg("已复制一份（可在原对象旁调整）"); }
+  // H06：复制改为「进入跟随指针的预览」——记录源实例参数，点击球面才真正落位；Esc 取消不留幽灵
+  const [copyFrom, setCopyFrom] = useState<DecorPlacement | null>(null);
+  const startCopy = (id: string) => {
+    const src = decorStore.decor.find((d) => d.id === id);
+    if (!src) return;
+    setCopyFrom(src);
+    setPlacingKind(src.kind);
+    setSelectedDecorId(null);
+    setLayoutMsg("移动指针选择位置，点击确认；Esc 取消");
   };
+  const duplicateDecor = () => { if (selectedDecorId) startCopy(selectedDecorId); };
   // Ctrl+D 复制：输入框/文本域聚焦时不拦截（H18 输入冲突要求）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -264,7 +269,8 @@ export function SpaceApp() {
     if (!creativeOpen) return;
     const f = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (placingKind) { setPlacingKind(null); return; }
+      // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
+      if (placingKind) { setPlacingKind(null); setCopyFrom(null); return; }
       if (selectedDecorId) { setSelectedDecorId(null); return; }
       setCreativeOpen(false);
     };
@@ -409,13 +415,28 @@ export function SpaceApp() {
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               placingKind={placingKind}
-              onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); lastPlaceAt.current = performance.now(); setPlacingKind(null); setSelectedDecorId(id); } }}
+              onPlace={(x, z) => {
+                // H06：复制预览确认 → 用源实例参数落位；普通放置 → 用素材默认参数
+                if (copyFrom) {
+                  const id = decorStore.place(copyFrom.kind, x, z, { rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage, width: copyFrom.width, length: copyFrom.length });
+                  lastPlaceAt.current = performance.now();
+                  setCopyFrom(null); setPlacingKind(null); setSelectedDecorId(id);
+                  setLayoutMsg("已复制一份");
+                  return;
+                }
+                if (placingKind) { const id = decorStore.place(placingKind as any, x, z); lastPlaceAt.current = performance.now(); setPlacingKind(null); setSelectedDecorId(id); }
+              }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying}
               editing={creativeOpen}
-              onDecorDuplicate={(id) => { const nid = decorStore.duplicate(id); if (nid) setSelectedDecorId(nid); }}
+              onDecorDuplicate={(id) => startCopy(id)}
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
+              placingPreview={copyFrom
+                ? { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage }
+                : placingKind
+                  ? { kind: placingKind, rot: 0, scale: 1 }
+                  : null}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
@@ -466,7 +487,7 @@ export function SpaceApp() {
           showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
           onFirstDefault={() => setFirstDismissed(true)}
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
-          onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
+          onSelect={(k) => { setCopyFrom(null); setPlacingKind(k); }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">
