@@ -25,18 +25,19 @@ function Petal({ geo, az, tilt, r = 0, y = 0, tw = 0 }: { geo: THREE.BufferGeome
 
 type PetalSpec = { geo: THREE.BufferGeometry; az: number; tilt: number; r?: number; y?: number; tw?: number };
 
+function mergePetalGeo(specs: PetalSpec[]) {
+  const parts = specs.map((p) => {
+    const outer = new THREE.Matrix4().makeRotationY(p.az);
+    const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.tilt, 0, p.tw ?? 0, "XYZ"));
+    const inner = new THREE.Matrix4().compose(new THREE.Vector3(0, p.y ?? 0, p.r ?? 0), rot, new THREE.Vector3(1, 1, 1));
+    return p.geo.clone().applyMatrix4(outer.multiply(inner));
+  });
+  return mergeGeometries(parts, false)!;
+}
+
 /** 把多片花瓣合并成一个 mesh，减少 draw calls（每片花瓣原来是独立 mesh） */
 function MergedPetals({ specs, deps }: { specs: PetalSpec[]; deps: string }) {
-  const merged = useMemo(() => {
-    const parts = specs.map((p) => {
-      const outer = new THREE.Matrix4().makeRotationY(p.az);
-      const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.tilt, 0, p.tw ?? 0, "XYZ"));
-      const inner = new THREE.Matrix4().compose(new THREE.Vector3(0, p.y ?? 0, p.r ?? 0), rot, new THREE.Vector3(1, 1, 1));
-      return p.geo.clone().applyMatrix4(outer.multiply(inner));
-    });
-    return mergeGeometries(parts, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deps]);
+  const merged = useMemo(() => mergePetalGeo(specs), [deps]); // eslint-disable-line react-hooks/exhaustive-deps
   return <mesh geometry={merged} material={vcol("petal")} castShadow />;
 }
 
@@ -98,34 +99,35 @@ function RoseHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
   const sep = leafGeo("almond", 0.05, 0.016, 0.4);
   const budP = petalGeo({ len: 0.058, width: 0.046, cup: 2.4, curl: 0.035, base: c.deep, mid: c.petal, tip: c.light, round: 0.82 });
   if (bud) {
-    return (
-      <group>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <group key={`s${i}`} rotation={[0, (i / 5) * Math.PI * 2 + 0.3, 0]}>
-            <mesh geometry={sep} material={vcol("leaf")} rotation={[0.3, 0, 0]} castShadow />
-          </group>
-        ))}
-        <mesh geometry={sphereGeo(0.018, 12, 9)} material={matte(C.leafDeep)} position={[0, 0.012, 0]} scale={[1, 0.85, 1]} castShadow />
-        <MergedPetals specs={[0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ geo: budP, az: (i / 8) * Math.PI * 2 + i * 0.09, tilt: 0.07, r: 0.007, tw: 0.12 }))} deps={`bud-${c.petal}`} />
-      </group>
-    );
+    // 花萼 ×5 + 花心 + 花苞花瓣合成一块（原来 3 类 mesh），1 次 draw
+    const budGeo = foliageGeo([
+      ...[0, 1, 2, 3, 4].map((i) => ({
+        geo: sep,
+        m: new THREE.Matrix4().makeRotationY((i / 5) * Math.PI * 2 + 0.3).multiply(new THREE.Matrix4().makeRotationX(0.3)),
+      })),
+      { geo: sphereGeo(0.018, 12, 9), color: C.leafDeep, m: new THREE.Matrix4().makeTranslation(0, 0.012, 0).multiply(new THREE.Matrix4().makeScale(1, 0.85, 1)) },
+      { geo: mergePetalGeo([0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ geo: budP, az: (i / 8) * Math.PI * 2 + i * 0.09, tilt: 0.07, r: 0.007, tw: 0.12 }))) },
+    ]);
+    return <mesh geometry={budGeo} material={vcol("petal")} castShadow />;
   }
+  // 花萼 ×5 + 各层花瓣合成一块
+  const bloomGeo = foliageGeo([
+    ...[0, 1, 2, 3, 4].map((i) => ({
+      geo: sep,
+      m: new THREE.Matrix4().makeRotationY((i / 5) * Math.PI * 2 + 0.3).multiply(new THREE.Matrix4().makeRotationX(1.9)),
+    })),
+    {
+      geo: mergePetalGeo([
+        ...[0, 1, 2].map((i) => ({ geo: inner, az: (i / 3) * Math.PI * 2, tilt: 0.04 + k * 0.05, r: 0.004 })),
+        ...[0, 1, 2, 3, 4].map((i) => ({ geo: r1, az: (i / 5) * Math.PI * 2 + 0.6, tilt: 0.16 + k * 0.16, r: 0.009 })),
+        ...[0, 1, 2, 3, 4, 5].map((i) => ({ geo: r2, az: (i / 6) * Math.PI * 2 + 0.25, tilt: 0.32 + k * 0.32, r: 0.015, y: -0.006 })),
+        ...(k > 0.35 ? [0, 1, 2, 3, 4, 5, 6].map((i) => ({ geo: r3, az: (i / 7) * Math.PI * 2, tilt: 0.6 + k * 0.4, r: 0.02, y: -0.012 })) : []),
+      ]),
+    },
+  ]);
   return (
     <group rotation={[0.28, 0, 0]}>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <group key={`s${i}`} rotation={[0, (i / 5) * Math.PI * 2 + 0.3, 0]}>
-          <mesh geometry={sep} material={vcol("leaf")} rotation={[bud ? 0.35 : 1.9, 0, 0]} castShadow />
-        </group>
-      ))}
-      <MergedPetals
-        specs={[
-          ...[0, 1, 2].map((i) => ({ geo: inner, az: (i / 3) * Math.PI * 2, tilt: 0.04 + k * 0.05, r: 0.004 })),
-          ...[0, 1, 2, 3, 4].map((i) => ({ geo: r1, az: (i / 5) * Math.PI * 2 + 0.6, tilt: 0.16 + k * 0.16, r: 0.009 })),
-          ...[0, 1, 2, 3, 4, 5].map((i) => ({ geo: r2, az: (i / 6) * Math.PI * 2 + 0.25, tilt: 0.32 + k * 0.32, r: 0.015, y: -0.006 })),
-          ...(k > 0.35 ? [0, 1, 2, 3, 4, 5, 6].map((i) => ({ geo: r3, az: (i / 7) * Math.PI * 2, tilt: 0.6 + k * 0.4, r: 0.02, y: -0.012 })) : []),
-        ]}
-        deps={`${Math.round(k * 20)}-${c.petal}`}
-      />
+      <mesh geometry={bloomGeo} material={vcol("petal")} castShadow />
     </group>
   );
 }
@@ -136,26 +138,28 @@ function SunflowerHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: 
   const ray2 = petalGeo({ len: 0.062, width: 0.022, cup: 0.3, curl: 0.06, base: c.deep, mid: c.deep, tip: c.petal, round: 0.8 });
   const bract = leafGeo("almond", 0.03, 0.016, 0.1);
   if (bud) {
-    return (
-      <group>
-        <mesh geometry={sphereGeo(0.032, 14, 10)} material={matte(C.leafDeep)} scale={[1, 0.8, 1]} castShadow />
-        {Array.from({ length: 10 }, (_, i) => (
-          <group key={i} rotation={[0, (i / 10) * Math.PI * 2, 0]}><mesh geometry={bract} material={vcol("leaf")} position={[0, -0.01, 0.02]} rotation={[0.6, 0, 0]} /></group>
-        ))}
-      </group>
-    );
+    // 花心 + 10 片苞片原来 11 次 draw，合并成 1 次
+    const budGeo = foliageGeo([
+      { geo: sphereGeo(0.032, 14, 10), color: C.leafDeep, m: new THREE.Matrix4().makeScale(1, 0.8, 1) },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        geo: bract,
+        m: new THREE.Matrix4().makeRotationY((i / 10) * Math.PI * 2)
+          .multiply(new THREE.Matrix4().makeTranslation(0, -0.01, 0.02))
+          .multiply(new THREE.Matrix4().makeRotationX(0.6)),
+      })),
+    ]);
+    return <mesh geometry={budGeo} material={vcol("petal")} castShadow />;
   }
   const spread = 1.05 + open * 0.42;
   return (
     <group rotation={[0.95, 0, 0]}>
-      <MergedPetals
-        specs={[
+      <mesh geometry={foliageGeo([
+        { geo: mergePetalGeo([
           ...Array.from({ length: 14 }, (_, i) => ({ geo: ray2, az: (i / 14) * Math.PI * 2 + 0.22, tilt: spread + 0.06, r: 0.036, y: -0.004 })),
           ...Array.from({ length: 16 }, (_, i) => ({ geo: ray, az: (i / 16) * Math.PI * 2, tilt: spread, r: 0.04 })),
-        ]}
-        deps={`${Math.round(spread * 20)}-${c.petal}`}
-      />
-      <mesh geometry={cylGeo(0.046, 0.04, 0.016, 24)} material={matte("#5A3B22")} position={[0, 0.002, 0]} />
+        ]) },
+        { geo: cylGeo(0.046, 0.04, 0.016, 24), color: "#5A3B22", m: new THREE.Matrix4().makeTranslation(0, 0.002, 0) },
+      ])} material={vcol("petal")} castShadow />
       <mesh material={disk} position={[0, 0.0105, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.046, 28]} /></mesh>
     </group>
   );
@@ -163,12 +167,11 @@ function SunflowerHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: 
 
 function IrisHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: number; bud: boolean }) {
   if (bud) {
-    return (
-      <group>
-        <mesh geometry={sphereGeo(0.018, 10, 8)} material={matte(c.petal)} scale={[0.8, 2.6, 0.8]} position={[0, 0.03, 0]} castShadow />
-        <mesh geometry={leafGeo("sword", 0.06, 0.02, 0.05)} material={vcol("leaf")} rotation={[0.12, 0, 0]} />
-      </group>
-    );
+    const budGeo = foliageGeo([
+      { geo: sphereGeo(0.018, 10, 8), color: c.petal, m: new THREE.Matrix4().makeTranslation(0, 0.03, 0).multiply(new THREE.Matrix4().makeScale(0.8, 2.6, 0.8)) },
+      { geo: leafGeo("sword", 0.06, 0.02, 0.05), m: new THREE.Matrix4().makeRotationX(0.12) },
+    ]);
+    return <mesh geometry={budGeo} material={vcol("petal")} castShadow />;
   }
   const std = petalGeo({ len: 0.075, width: 0.05, cup: 0.6, curl: -0.22, base: mid(c.deep, c.petal), mid: c.petal, tip: c.light, round: 0.5 });
   const fall = petalGeo({ len: 0.085, width: 0.058, cup: 0.35, curl: 0.55, base: mid(c.deep, c.petal), mid: c.petal, tip: c.light, stripe: C.honey, round: 0.5 });
