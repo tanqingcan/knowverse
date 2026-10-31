@@ -35,8 +35,8 @@ const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道�
 
 export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
-  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string; color?: string } | null;
-  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string; color?: string }) => void;
+  selected?: { id: string; kind: string; x?: number; z?: number; scale: number; width?: number; length?: number; rot?: number; stage?: string; color?: string } | null;
+  onUpdate?: (patch: { x?: number; z?: number; scale?: number; width?: number; length?: number; rot?: number; stage?: string; color?: string }) => void;
   onRemove?: () => void;
   onDuplicate?: () => void;
   /** H04：草/野花「全星球群组」的密度（操作单元 = 整组，不逐株） */
@@ -99,6 +99,9 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
             <label className="cp-prop">比例 <input type="range" min={0.5} max={2} step={0.05} value={selected.scale} onChange={(e) => onUpdate?.({ scale: +e.target.value })} /><span>{selected.scale.toFixed(2)}</span></label>
           )}
           <label className="cp-prop">旋转 <input type="range" min={-180} max={180} step={5} value={selected.rot ?? 0} onChange={(e) => onUpdate?.({ rot: +e.target.value })} /><span>{Math.round(selected.rot ?? 0)}°</span></label>
+          {/* H11：数值精调——位置轴含义：X 为球冠平面「左右」、Z 为「前后（远离镜头）」 */}
+          <label className="cp-prop">位置 X（左右） <input type="range" min={-4} max={4} step={0.05} value={selected.x ?? 0} onChange={(e) => onUpdate?.({ x: +e.target.value })} /><span>{(selected.x ?? 0).toFixed(2)}</span></label>
+          <label className="cp-prop">位置 Z（前后） <input type="range" min={-4} max={4} step={0.05} value={selected.z ?? 0} onChange={(e) => onUpdate?.({ z: +e.target.value })} /><span>{(selected.z ?? 0).toFixed(2)}</span></label>
           {selected.kind === "rose" && (
             <label className="cp-prop">阶段
               <select value={selected.stage ?? "bloom"} onChange={(e) => onUpdate?.({ stage: e.target.value })} aria-label="玫瑰外观阶段">
