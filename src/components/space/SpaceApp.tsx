@@ -100,6 +100,7 @@ export function SpaceApp() {
   const [bedFocus, setBedFocus] = useState<{ x: number; z: number; key: number } | null>(null);
   const [creativeOpen, setCreativeOpen] = useState(false);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
+  const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -277,7 +278,9 @@ export function SpaceApp() {
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               placingKind={placingKind}
-              onPlace={(x, z) => { if (placingKind) { decorStore.place(placingKind as any, x, z); setPlacingKind(null); } }}
+              onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); setPlacingKind(null); setSelectedDecorId(id); } }}
+              onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
+              selectedDecorId={selectedDecorId}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
@@ -307,7 +310,10 @@ export function SpaceApp() {
         )}
 
         <CreativePalette open={creativeOpen && !focus} placingKind={placingKind}
-          onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); }} />
+          selected={decorStore.decor.find((d) => d.id === selectedDecorId) ?? null}
+          onUpdate={(patch) => selectedDecorId && decorStore.update(selectedDecorId, patch)}
+          onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
+          onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">

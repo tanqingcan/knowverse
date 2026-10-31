@@ -14,14 +14,18 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
+  selected?: { id: string; kind: string; scale: number; width?: number; length?: number } | null;
+  onUpdate?: (patch: { scale?: number; width?: number; length?: number }) => void;
+  onRemove?: () => void;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
   if (!open) return null;
   const q = kw.trim().toLowerCase();
   const hit = (c: (typeof DECOR_CATALOG)[number]) => !q || c.label.toLowerCase().includes(q) || CATEGORY[c.kind].includes(kw);
+  const selSurface = selected && (selected.kind === "soil" || selected.kind === "road");
   return (
     <aside className="creative-palette paper" aria-label="创造模式素材栏">
       <div className="cp-head">
@@ -32,6 +36,20 @@ export function CreativePalette({ open, placingKind, onSelect, onCancel, onClose
         <div className="cp-placing" role="status">
           <span>正在放置「{DECOR_CATALOG.find((c) => c.kind === placingKind)?.label ?? placingKind}」——点击球面确定，Esc 取消</span>
           <button className="btn btn-quiet btn-sm" onClick={onCancel}>取消</button>
+        </div>
+      )}
+      {selected && (
+        <div className="cp-props" aria-label="选中对象属性">
+          <div className="cp-prop-title">选中：{DECOR_CATALOG.find((c) => c.kind === selected.kind)?.label ?? selected.kind}</div>
+          {selSurface ? (
+            <>
+              <label className="cp-prop">宽 <input type="range" min={0.3} max={2.4} step={0.05} value={selected.width ?? 0.7} onChange={(e) => onUpdate?.({ width: +e.target.value })} /><span>{(selected.width ?? 0.7).toFixed(2)}</span></label>
+              <label className="cp-prop">长 <input type="range" min={0.3} max={2.4} step={0.05} value={selected.length ?? 0.7} onChange={(e) => onUpdate?.({ length: +e.target.value })} /><span>{(selected.length ?? 0.7).toFixed(2)}</span></label>
+            </>
+          ) : (
+            <label className="cp-prop">比例 <input type="range" min={0.5} max={2} step={0.05} value={selected.scale} onChange={(e) => onUpdate?.({ scale: +e.target.value })} /><span>{selected.scale.toFixed(2)}</span></label>
+          )}
+          <div className="cp-prop-actions"><button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button></div>
         </div>
       )}
       <div className="cp-search">

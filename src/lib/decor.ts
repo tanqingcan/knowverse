@@ -134,7 +134,7 @@ export function useDecor() {
   return {
     decor: list,
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
-    place: (kind: DecorKind, x: number, z: number) => commit(addDecorAt(list, kind, x, z)),
+    place: (kind: DecorKind, x: number, z: number) => { const next = addDecorAt(list, kind, x, z); commit(next); return next[next.length - 1].id; },
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
     remove: (id: string) => commit(removeDecor(list, id)),

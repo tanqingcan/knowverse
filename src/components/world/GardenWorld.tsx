@@ -10,7 +10,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat } from "./geo";
+import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat, torusGeo } from "./geo";
 import { Flower3D } from "./Flower3D";
 import { Bench, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
@@ -36,6 +36,8 @@ export type WorldProps = {
   onDecorMove?: (id: string, x: number, z: number) => void;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   onPlace?: (x: number, z: number) => void; // 点击球面放置回调
+  onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
+  selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   perf?: boolean; // 开发用：显示 FPS / draw calls / 三角面
   onFail: () => void;
@@ -644,14 +646,23 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         {/* 玩家摆放的装饰：surface 类（土壤/道路）走 SphereSurface 贴球面；其余走 OnCap + DecorItem */}
         {(props.decor ?? []).map((d, i) => {
           const isSurface = d.kind === "soil" || d.kind === "road";
+          const isSel = props.selectedDecorId === d.id;
           if (isSurface) {
-            return <SphereSurface key={d.id} cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} />;
+            return (
+              <group key={d.id}
+                onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
+                <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} />
+                {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
+              </group>
+            );
           }
           return (
             <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" ? 1 : 0}>
               <group scale={d.scale}
-                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}>
+                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}
+                onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
                 <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} />
+                {isSel && <mesh geometry={torusGeo(0.18, 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
               </group>
             </OnCap>
           );
