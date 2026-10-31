@@ -23,7 +23,7 @@
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
 | G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390×844 与 **768×1024 均无横向溢出**（vision 确认工具栏可见）；**创造模式 Esc 逐级退出实测**（取消放置→收起素材栏）；低动效/浮窗模糊/Tab 焦点未验 | Round 5/8 | `cm-mobile-creative.png`、`g10-768.png`、`test-g10.py` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
-| G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
+| G12 构建与交付 | 🟢 通过 | typecheck 0 / build 40/40 / 单测 36/36；/space、/visit 无 pageerror；**B6 四组截图（桌面/手机/静态降级/低动效）已产出并 vision 确认静态降级为 2D 绘本**；**B8 界面章已补「创造模式」章节** | Round 6/12 | `b6-{desktop,mobile,static,lowmotion}.png`、`docs/b8-ui-chapter.md` §9 |
 
 ## 每轮记录
 
@@ -49,6 +49,13 @@
 - 结论：资源回归通过；**GPU 60fps / 软件 ≥12fps 的目标在本软件渲染环境不达标**，按「无法测的设备标未验证」处理，不美化。
 
 **未验证**：接缝（世界旋转 360° 一周的接缝）未单独测；侧面视角仍为 vision 判读歧义。
+
+### Round 12 · B6 四组截图 + B8 章节（G12 通过）
+
+- `docs/screenshots/b6-{desktop,mobile,static,lowmotion}.png`：桌面 1440×900、手机 390×844、**静态降级（--disable-webgl，canvas=0 → StaticGarden 2D 绘本）**、低动效（reduced_motion）。
+- vision 确认静态降级画面为 2D 绘本风格星球/花园（有花圃植物、正常界面，非空白/报错）。
+- `docs/b8-ui-chapter.md` 新增 §9「创造模式」：入口/素材栏/放置与编辑/球面贴地/数据库持久化/模板兼容/参观只读/完整球体/视觉证据索引。
+- 加上 Round 6 的 tsc 0 / build 40/40 / 单测 36/36 / 无 pageerror → **G12 通过**。
 
 ### Round 11 · 玫瑰五阶段 + 四方位图（G1/G7）
 
