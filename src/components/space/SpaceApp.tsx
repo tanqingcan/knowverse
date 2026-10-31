@@ -155,30 +155,32 @@ export function SpaceApp() {
   // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
   useEffect(() => {
     loadLayout().then((l) => {
+      // H03：初始模板只负责「首次创建」。之后用户草稿（即使还没保存）优先于模板，
+      // 刷新不会把搬走的建筑弹回原位；服务端一旦有建筑实例即以其为权威。
+      const local = loadDecor();
+      const localHasBuildings = local.some((d) => isBuildingKind(d.kind));
       if (l.revision === 0) {
-        // H02/H03：首次进入用「初始首页布局」作为可编辑实例数据（建筑不再按 SPOTS 固定渲染）。
-        // 合并：建筑等初始实例 + 本地旧装饰草稿（只保留非建筑项，避免重复/双轨）。
-        const localDecor = loadDecor().filter((d) => !isBuildingKind(d.kind));
-        decorStore.setAll([...DEFAULT_HOME_LAYOUT, ...localDecor]);
-      }
-      if (l.revision > 0) {
-        // G6：旧版 localStorage 草稿检测——先备份，不静默覆盖；差异则提示一次性导入
-        try {
-          const raw = localStorage.getItem("kv-decor");
-          const local = raw ? JSON.parse(raw) : [];
-          const norm = (arr: any[]) => JSON.stringify(arr.map((d) => ({ k: d?.kind, x: +(+(d?.x ?? 0)).toFixed(3), z: +(+(d?.z ?? 0)).toFixed(3), s: +(+(d?.scale ?? 1)).toFixed(3) })));
-          const localNorm = norm(Array.isArray(local) ? local : []);
-          const serverNorm = norm(l.items);
-          if (Array.isArray(local) && local.length > 0 && localNorm !== serverNorm) {
-            localStorage.setItem("kv-decor-backup", raw!);
-            setImportPrompt({ local: local.length, server: l.items.length });
-          }
-        } catch { /* 忽略损坏的本地草稿 */ }
-        // H02/H14：旧布局（只含装饰、没有建筑实例）一次性兼容迁移——补入初始建筑，不覆盖用户装饰。
-        const hasBuildings = l.items.some((it) => isBuildingKind(it.kind));
-        if (hasBuildings) {
+        // 从未保存过：本地已有建筑草稿就沿用；否则套初始布局 + 保留本地旧装饰
+        decorStore.setAll(localHasBuildings ? local : [...DEFAULT_HOME_LAYOUT, ...local.filter((d) => !isBuildingKind(d.kind))]);
+      } else {
+        const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
+        if (serverHasBuildings) {
+          // 服务端权威：G6 旧版 localStorage 草稿检测——先备份，不静默覆盖；差异则提示一次性导入
+          try {
+            const raw = localStorage.getItem("kv-decor");
+            const norm = (arr: any[]) => JSON.stringify(arr.map((d) => ({ k: d?.kind, x: +(+(d?.x ?? 0)).toFixed(3), z: +(+(d?.z ?? 0)).toFixed(3), s: +(+(d?.scale ?? 1)).toFixed(3) })));
+            if (Array.isArray(local) && local.length > 0 && norm(local) !== norm(l.items)) {
+              if (raw) localStorage.setItem("kv-decor-backup", raw);
+              setImportPrompt({ local: local.length, server: l.items.length });
+            }
+          } catch { /* 忽略损坏的本地草稿 */ }
           decorStore.setAll(l.items.map(fromLayoutItem));
+        } else if (localHasBuildings) {
+          // H03：服务端仍是迁移前的旧布局，但本地已做过首次创建（可能未保存）——保留用户草稿，不回弹模板
+          decorStore.setAll(local);
+          setLayoutMsg("本地已有新版布置（尚未保存到服务器）");
         } else {
+          // H14：旧布局一次性补入初始建筑；模板只在此刻生效
           decorStore.setAll([...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
           setLayoutMsg("已按新版补入初始建筑（保存后生效）");
         }
@@ -220,7 +222,9 @@ export function SpaceApp() {
   const discard = () => {
     if (!window.confirm("放弃未保存的改动，恢复服务器上的布局？")) return;
     loadLayout().then((l) => {
-      decorStore.setAll(l.items.map(fromLayoutItem));
+      // H03：服务端还没有建筑实例时，恢复服务器布局也要补回初始建筑，否则会被清空成「没有房子」
+      const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
+      decorStore.setAll(serverHasBuildings ? l.items.map(fromLayoutItem) : [...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutMsg("已恢复服务器布局");
     }).catch((e: any) => setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`));
   };
