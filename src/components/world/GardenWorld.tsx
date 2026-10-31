@@ -742,7 +742,17 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
                 onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}
-                onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
+                onPointerUp={(e) => {
+                  if (props.mode !== "garden" || props.readOnly || e.delta >= 6) return;
+                  e.stopPropagation();
+                  // H08：浏览模式下点建筑「模型」应打开原业务入口，而不是进创造模式；
+                  // 编辑模式才选中。纯装饰建筑（无业务入口）浏览时点模型不做事，保持标签语义。
+                  if (isBld && !props.editing) {
+                    if (hit?.clickable) props.onHotspot?.(hit.name as Hotspot);
+                    return;
+                  }
+                  props.onDecorSelect?.(d.id);
+                }}>
                 <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} signText={props.signText} signSub={props.signSub} />
                 {isSel && <mesh geometry={torusGeo(isBld ? 0.5 : 0.18, isBld ? 0.012 : 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
               </group>
