@@ -332,6 +332,7 @@ export function SpaceApp() {
               onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); setPlacingKind(null); setSelectedDecorId(id); } }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
+              paused={creativeOpen || panel.panel !== null || introPlaying}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}

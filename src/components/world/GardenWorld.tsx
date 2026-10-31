@@ -39,6 +39,7 @@ export type WorldProps = {
   onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
+  paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
   perf?: boolean; // 开发用：显示 FPS / draw calls / 三角面
   onFail: () => void;
 };
@@ -386,14 +387,16 @@ function Sparks({ points, start }: { points: THREE.Vector3[]; start: number }) {
 }
 
 /* ───────── 镜头、拖动、入场 ───────── */
-function Rig({ mode, reduced, focusPoint, drag, zoom, intro, onIntroDone, worldRef }: {
-  mode: "garden" | "focus"; reduced: boolean; focusPoint: THREE.Vector3 | null;
+function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone, worldRef }: {
+  mode: "garden" | "focus"; reduced: boolean; paused?: boolean; focusPoint: THREE.Vector3 | null;
   drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>;
   intro: "long" | "short" | "none"; onIntroDone?: () => void;
   worldRef: React.RefObject<THREE.Group | null>;
 }) {
   const { camera, size } = useThree();
   const acc = useRef(0);
+  const lastInteract = useRef(0); // 最后一次按下/拖动的时间（空闲慢转用）
+  const pressing = useRef(false);  // 指针是否按下（按下期间不慢转）
   const wall = useRef<number | null>(null); // 入场动画已播放的时间（每帧最多计 50ms：首帧编译着色器很慢时动画不会被跳过）
   const done = useRef(intro === "none" || reduced);
   const look = useRef(LOOK.clone());
@@ -405,6 +408,17 @@ function Rig({ mode, reduced, focusPoint, drag, zoom, intro, onIntroDone, worldR
     window.addEventListener("keydown", skip); window.addEventListener("pointerdown", skip);
     return () => { window.removeEventListener("keydown", skip); window.removeEventListener("pointerdown", skip); };
   }, [onIntroDone]);
+  // 记录最后一次交互时间：空闲慢转在按下后暂停，释放 3 秒后恢复
+  useEffect(() => {
+    const down = (e: PointerEvent) => { pressing.current = true; lastInteract.current = performance.now(); };
+    const up = () => { pressing.current = false; lastInteract.current = performance.now(); };
+    const move = (e: PointerEvent) => { if (e.buttons) { pressing.current = true; lastInteract.current = performance.now(); } };
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    window.addEventListener("pointermove", move);
+    return () => { window.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); window.removeEventListener("pointermove", move); };
+  }, []);
   useFrame((_, dt) => {
     const cam = camera as THREE.PerspectiveCamera;
     const aspect = size.width / Math.max(1, size.height);
@@ -433,6 +447,10 @@ function Rig({ mode, reduced, focusPoint, drag, zoom, intro, onIntroDone, worldR
     look.current.lerp(tgt, k);
     cam.position.copy(look.current).addScaledVector(dir, dist.current);
     cam.lookAt(look.current);
+    // G7 空闲慢转：仅 garden、非低动效、无浮窗/编辑时；按下暂停，释放 3 秒后平滑恢复
+    if (!reduced && !paused && mode === "garden" && done.current && !pressing.current && performance.now() - lastInteract.current > 3000) {
+      drag.current.yaw += dt * 0.03;
+    }
     // 拖动（有限范围）
     const kd = reduced ? 1 : Math.min(1, dt * 6);
     cur.current.yaw += (drag.current.yaw - cur.current.yaw) * kd;
@@ -559,7 +577,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <ambientLight intensity={0.12} />
       <KeyLight />
       <directionalLight color="#A9BBD2" intensity={0.55} position={[6, 3, -3]} />
-      <Rig mode={props.mode} reduced={reduced} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
+      <Rig mode={props.mode} reduced={reduced} paused={!!props.paused} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
         onIntroDone={() => { setIntroDone(true); props.onIntroDone?.(); }} />
       <LabelTracker anchors={anchors} labelKey={hover ?? (selectedId ? `plant:${selectedId}` : null)} el={props.labelEl} />
 
