@@ -360,6 +360,16 @@ async function seedDemo(ids: Record<string, string>, subj: Record<string, string
     { q: "贝叶斯公式的分母为什么是全概率公式？", tags: [{ id: ids["贝叶斯公式"], status: "confirmed" }, { id: ids["全概率公式"], status: "candidate" }] },
   ]);
 
+  // 预置长期记忆（B4 记忆面板）：fact / preference，来源指向上面预置问答的具体消息
+  for (const mem of [
+    { kind: "fact", content: "LEFT JOIN 时，右表的过滤条件要写在 ON 子句里；写在 WHERE 会把未匹配的左表行也过滤掉。", concept: "左外连接", messageId: c2.turns[0].answerId, conversationId: c2.conversationId },
+    { kind: "fact", content: "GROUP BY 之后的聚合过滤（如 AVG > 75）要写在 HAVING 里，不能写在 WHERE。", concept: "分组聚合", messageId: c4.turns[0].answerId, conversationId: c4.conversationId },
+    { kind: "preference", content: "学贝叶斯公式时，更喜欢从「检测阳性后的患病概率」这类应用题入手。", concept: "贝叶斯公式", messageId: c6.turns[0].questionId, conversationId: c6.conversationId },
+  ]) {
+    await q(`INSERT INTO memories (user_id, kind, content, concept_id, source_message_id, source_conversation_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [demo, mem.kind, mem.content, ids[mem.concept], mem.messageId, mem.conversationId]);
+  }
+
   await withTx(async (c) => {
     const E = (conceptId: string, kind: any, detail: string, extra: Partial<EvidenceInput> = {}) => ({ userId: demo, conceptId, kind, detail, ...extra });
     // 内连接：提问 → 引导练习 → 独立作答（非变式）= 花苞

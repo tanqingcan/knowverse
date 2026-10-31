@@ -28,6 +28,7 @@ import { PracticePanel } from "./panels/PracticePanel";
 import { TimelinePanel, useTimeline } from "./panels/TimelinePanel";
 import { CardsPanel } from "./panels/CardsPanel";
 import { GalaxyPanel } from "./panels/GalaxyPanel";
+import { MemoryPanel } from "./panels/MemoryPanel";
 import { SettingsPanel } from "./panels/SettingsPanel";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false, loading: () => null });
@@ -37,14 +38,14 @@ type SectionKey = "garden" | "learn" | "review" | "materials" | "together";
 const SECTIONS: { key: SectionKey; label: string; panels: (PanelKey | null)[]; subs?: [PanelKey, string][] }[] = [
   { key: "garden", label: "花园", panels: [null, "dossier"] },
   { key: "learn", label: "学习", panels: ["chat", "practice", "cards"], subs: [["chat", "对话"], ["practice", "练习"], ["cards", "学习卡"]] },
-  { key: "review", label: "回顾", panels: ["history", "timeline"], subs: [["history", "历史问答"], ["timeline", "成长时间轴"]] },
+  { key: "review", label: "回顾", panels: ["history", "timeline", "memory"], subs: [["history", "历史问答"], ["timeline", "成长时间轴"], ["memory", "记忆"]] },
   { key: "materials", label: "资料", panels: ["materials"] },
   { key: "together", label: "共学", panels: ["galaxy"] },
 ];
-const FOCUS_PANELS: PanelKey[] = ["chat", "practice", "cards", "history", "timeline", "materials", "galaxy"];
+const FOCUS_PANELS: PanelKey[] = ["chat", "practice", "cards", "history", "timeline", "materials", "galaxy", "memory"];
 const TITLES: Record<PanelKey, string> = {
   chat: "与星灯对话", history: "历史问答", dossier: "植物档案", materials: "资料温室", practice: "练习",
-  timeline: "成长时间轴", cards: "学习卡", galaxy: "共学星系", settings: "设置",
+  timeline: "成长时间轴", cards: "学习卡", galaxy: "共学星系", memory: "记忆", settings: "设置",
 };
 const sectionOf = (p: PanelKey | null): SectionKey => SECTIONS.find((s) => s.panels.includes(p))?.key ?? "garden";
 
@@ -331,6 +332,7 @@ export function SpaceApp() {
               {panel.panel === "timeline" && <TimelinePanel />}
               {panel.panel === "cards" && <CardsPanel />}
               {panel.panel === "galaxy" && <GalaxyPanel />}
+              {panel.panel === "memory" && <MemoryPanel />}
             </div>
           </main>
         )}

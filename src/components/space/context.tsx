@@ -16,7 +16,7 @@ export type Space = {
   llm: { mode: "live" | "demo"; model: string | null; provider: string | null; configured: boolean; note: string };
 };
 
-export type PanelKey = "chat" | "history" | "dossier" | "materials" | "practice" | "timeline" | "cards" | "galaxy" | "settings";
+export type PanelKey = "chat" | "history" | "dossier" | "materials" | "practice" | "timeline" | "cards" | "galaxy" | "memory" | "settings";
 export type PanelState = {
   panel: PanelKey | null;
   conversationId?: string | null; messageId?: string | null; plantId?: string | null; conceptId?: string | null;

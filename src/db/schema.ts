@@ -460,6 +460,32 @@ export const notes = pgTable("notes", {
 ]);
 
 /**
+ * 长期记忆（B4 记忆面板）：AI 从对话中提炼、用户可确认/修正的“事实 / 偏好 / 事件”。
+ * 修正不删除：原记录 status 置为 corrected，新内容作为新 active 记录写入并指向原记录（corrects_id），
+ * 修正历史因此完整保留；删除为软删除（status → deleted）。
+ * source_message_id / source_conversation_id 用于定位到产生这条记忆的原对话消息。
+ */
+export const memories = pgTable("memories", {
+  id: id(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),                           // fact | preference | event
+  content: text("content").notNull(),
+  conceptId: uuid("concept_id").references(() => concepts.id, { onDelete: "set null" }),
+  sourceMessageId: uuid("source_message_id").references(() => messages.id, { onDelete: "set null" }),
+  sourceConversationId: uuid("source_conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("active"),     // active | deleted | corrected
+  correctsId: uuid("corrects_id").references((): AnyPgColumn => memories.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: ts("updated_at").defaultNow().notNull(),
+}, (t) => [
+  index("memories_user_status_idx").on(t.userId, t.status),
+  index("memories_source_msg_idx").on(t.sourceMessageId),
+  index("memories_concept_idx").on(t.conceptId),
+  check("memories_kind_ck", sql`${t.kind} in ('fact','preference','event')`),
+  check("memories_status_ck", sql`${t.status} in ('active','deleted','corrected')`),
+]);
+
+/**
  * 学习证据：成长的唯一依据。kind 明确区分
  *   self_report（用户自述理解） / read / asked / note（学习记录）
  *   guided_practice（AI 或提示辅助完成） / independent_attempt / independent_variant_pass（独立作答证据）

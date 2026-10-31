@@ -15,6 +15,13 @@
       "when": 1793006311612,
       "tag": "0001_constraints_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793446623825,
+      "tag": "0002_fair_doomsday",
+      "breakpoints": true
     }
   ]
 }
