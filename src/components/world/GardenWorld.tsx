@@ -18,7 +18,7 @@ import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH,
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
-import { isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
+import { DECOR_CATALOG, isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
 import { DecorItem } from "./DecorItem";
 import { SphereSurface } from "./Surface3D";
 
@@ -37,6 +37,8 @@ export type WorldProps = {
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   onPlace?: (x: number, z: number) => void; // 点击球面放置回调
   onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
+  onDecorDuplicate?: (id: string) => void; // H05：紧凑操作条的「复制」
+  onDecorRemove?: (id: string) => void;    // H05：紧凑操作条的「删除」
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
@@ -482,7 +484,7 @@ function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone
 }
 
 /** 悬停 / 选中标签：每帧把锚点投影到屏幕，直接写 DOM，不触发 React 渲染 */
-function LabelTracker({ anchors, labelKey, el }: { anchors: React.MutableRefObject<Map<string, THREE.Object3D>>; labelKey: string | null; el: React.RefObject<HTMLDivElement | null> }) {
+function LabelTracker({ anchors, labelKey, el, minX = 0 }: { anchors: React.MutableRefObject<Map<string, THREE.Object3D>>; labelKey: string | null; el: React.RefObject<HTMLDivElement | null>; minX?: number }) {
   const { camera, size } = useThree();
   const v = useMemo(() => new THREE.Vector3(), []);
   useFrame(() => {
@@ -491,7 +493,9 @@ function LabelTracker({ anchors, labelKey, el }: { anchors: React.MutableRefObje
     if (!o) { d.style.opacity = "0"; return; }
     o.getWorldPosition(v); v.project(camera);
     d.style.opacity = "1";
-    d.style.transform = `translate(${((v.x * 0.5 + 0.5) * size.width).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * size.height).toFixed(1)}px) translate(-50%, -100%)`;
+    // H05 审查：操作条投影到左侧素材栏下方时会被遮挡，最小 x 夹到面板右侧外
+    const x = Math.max(minX, (v.x * 0.5 + 0.5) * size.width);
+    d.style.transform = `translate(${x.toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * size.height).toFixed(1)}px) translate(-50%, -100%)`;
   });
   return null;
 }
@@ -518,7 +522,7 @@ function PerfProbe() {
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
   // H02：把「屏幕坐标 → 球冠坐标」暴露给外层 DOM 拖动。R3F 的 pointermove 在拖动期间不触发
@@ -623,6 +627,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <Rig mode={props.mode} reduced={reduced} paused={!!props.paused} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
         onIntroDone={() => { setIntroDone(true); props.onIntroDone?.(); }} />
       <LabelTracker anchors={anchors} labelKey={hover ?? (selectedId ? `plant:${selectedId}` : null)} el={props.labelEl} />
+      {/* H05：选中对象的紧凑操作条跟随对象投影（与悬停标签同一套投影，不触发 React 渲染） */}
+      <LabelTracker anchors={anchors} labelKey={props.selectedDecorId ? `decor:${props.selectedDecorId}` : null} el={props.selEl} minX={292} />
 
       {/* 天空中的远处星球（共学入口） */}
       <group position={[4.6, -2.6, -13]}>
@@ -706,6 +712,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
                   : <LabelHit name={hit.name} r={hit.r * d.scale} h={hit.h * d.scale} setHover={setHover} />
               )}
               {hit && <group ref={(o) => register(hit.name, o)} position={[0, hit.labelY, 0]} />}
+              {/* H05：选中对象的锚点（紧凑操作条用），高度按建筑/小件区分 */}
+              <group ref={(o) => register(`decor:${d.id}`, o)} position={[0, hit ? hit.labelY + 0.12 : 0.34 * Math.max(0.5, d.scale), 0]} />
             </OnCap>
           );
         })}
@@ -758,6 +766,10 @@ export function GardenWorld(props: WorldProps) {
   const zoom = useRef(1);
   // H02：Screen→球冠坐标函数（由内部 Scene 用相机+射线注册），供 DOM 层拖动使用
   const pointerToCap = useRef<((cx: number, cy: number) => { x: number; z: number } | null) | null>(null);
+  // H05：选中对象的紧凑操作条（DOM，位置由 Scene 的投影每帧写入）
+  const selEl = useRef<HTMLDivElement>(null);
+  const selItem = props.selectedDecorId ? (props.decor ?? []).find((d) => d.id === props.selectedDecorId) : undefined;
+  const selLabel = selItem ? (DECOR_CATALOG.find((c) => c.kind === selItem.kind)?.label ?? selItem.kind) : "";
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
   // 触屏：多指跟踪。双指间距用于缩放；单指环绕仍走 press 基准
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -891,7 +903,7 @@ export function GardenWorld(props: WorldProps) {
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
             <PerfProbe />
-            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} />
+            <Scene {...props} labelEl={labelEl} selEl={selEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} />
           </Suspense>
         </Canvas>
       </GLBoundary>
@@ -900,6 +912,15 @@ export function GardenWorld(props: WorldProps) {
       )}
       {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
+      {/* H05：选中对象的紧凑操作条——名称 + 复制/删除（位置由 Scene 的投影每帧写入，不参与 React 布局） */}
+      {selItem && (
+        <div ref={selEl} className="world-selbar" role="group" aria-label={`选中对象：${selLabel}`}>
+          <span className="selbar-name">{selLabel}</span>
+          <span className="selbar-scale">{selItem.scale.toFixed(2)}×</span>
+          <button className="selbar-btn" type="button" onClick={() => props.onDecorDuplicate?.(selItem.id)} title="复制一份（Ctrl+D）">复制</button>
+          <button className="selbar-btn selbar-del" type="button" onClick={() => props.onDecorRemove?.(selItem.id)} title="删除">删除</button>
+        </div>
+      )}
     </div>
   );
 }

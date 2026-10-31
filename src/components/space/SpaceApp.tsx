@@ -414,6 +414,8 @@ export function SpaceApp() {
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying}
               editing={creativeOpen}
+              onDecorDuplicate={(id) => { const nid = decorStore.duplicate(id); if (nid) setSelectedDecorId(nid); }}
+              onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}

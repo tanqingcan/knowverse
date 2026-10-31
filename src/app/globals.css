@@ -290,6 +290,16 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .world-label { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; white-space: nowrap; font-size: 13.5px; color: var(--ink);
   background: rgba(255, 247, 232, 0.95); padding: 3px 12px; border-radius: 10px; box-shadow: var(--shadow-soft); transition: opacity .2s; margin-top: -8px; }
 .world-label:empty { display: none; }
+/* H05：选中对象的紧凑操作条（跟随对象投影；只放名称与高频操作，不回到左侧大侧栏） */
+.world-selbar { position: absolute; left: 0; top: 0; pointer-events: auto; z-index: 4; display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 12px; border-radius: 12px; background: rgba(255, 247, 232, 0.97); box-shadow: var(--shadow-soft);
+  font-size: 13px; color: var(--ink); white-space: nowrap; opacity: 0; transition: opacity .15s; margin-top: -6px; }
+.world-selbar .selbar-name { font-weight: 600; }
+.world-selbar .selbar-scale { opacity: 0.62; font-size: 11.5px; }
+.selbar-btn { pointer-events: auto; border: 1px solid rgba(160, 120, 90, 0.26); background: transparent; border-radius: 8px;
+  padding: 3px 9px; font-size: 12px; color: inherit; cursor: pointer; font-family: inherit; min-height: 30px; }
+.selbar-btn:hover { background: rgba(180, 140, 100, 0.14); }
+.selbar-del:hover { color: #B4574E; border-color: rgba(180, 87, 78, 0.5); }
 
 .topnav { position: absolute; top: 0; left: 0; right: 0; height: var(--nav-h); z-index: 6; display: flex; align-items: center; gap: 16px; padding: 0 20px;
   color: var(--cream); background: linear-gradient(180deg, rgba(94, 85, 132, 0.55), rgba(94, 85, 132, 0)); }
