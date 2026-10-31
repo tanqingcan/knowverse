@@ -12,7 +12,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import * as THREE from "three";
 import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat } from "./geo";
 import { Flower3D } from "./Flower3D";
-import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
+import { Bench, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
 import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
@@ -205,14 +205,88 @@ function Grass({ items }: { items: ReturnType<typeof scatter> }) {
   return <instancedMesh ref={ref} args={[geo, mat, items.length]} frustumCulled={false} receiveShadow />;
 }
 
-/** 前景低云：裹住星球前缘，缩小下半球在画面中的占比 */
+/** 前景低云：裹住星球前缘，缩小下半球在画面中的占比（InstancedMesh，一次绘制 + 实例色） */
 function FrontClouds() {
+  const ref = useRef<THREE.InstancedMesh>(null);
   const puffs = useMemo(() => Array.from({ length: 16 }, (_, i) => {
     const x = -2.7 + (i / 15) * 5.4 + (rand(i, 1) - 0.5) * 0.3;
     const z = 1.78 - Math.abs(x) * 0.12 + rand(i, 2) * 0.22;
     return { x, z, s: 0.28 + rand(i, 3) * 0.22, lift: 0.02 + rand(i, 4) * 0.06, c: i % 5 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EFE6F3" : "#FFF7EE" };
   }), []);
-  return <>{puffs.map((p, i) => <OnCap key={i} x={p.x} z={p.z} lift={p.lift}><mesh geometry={sphereGeo(1, 18, 12)} material={matte(p.c, { rough: 1 })} scale={[p.s * 1.4, p.s * 0.7, p.s]} /></OnCap>)}</>;
+  useEffect(() => {
+    const m = ref.current; if (!m) return;
+    const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion();
+    puffs.forEach((p, i) => {
+      const f = capFrame(p.x, p.z, 0, p.lift);
+      q.copy(f.quat);
+      mx.compose(f.pos, q, new THREE.Vector3(p.s * 1.4, p.s * 0.7, p.s));
+      m.setMatrixAt(i, mx); m.setColorAt(i, col.set(p.c));
+    });
+    m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [puffs]);
+  return <instancedMesh ref={ref} args={[sphereGeo(1, 18, 12), matte("#ffffff", { rough: 1 }), puffs.length]} />;
+}
+
+/** 树木与灌木按几何类型合批（树干/树冠/灌木球/灌木花/接触阴影，各 1 次 draw）。纯装饰、无交互、无动画。 */
+type FloraItem = { x: number; z: number; kind: "tree" | "bush"; seed: number; tint?: string };
+function FloraField({ items }: { items: FloraItem[] }) {
+  const refs = {
+    trunk: useRef<THREE.InstancedMesh>(null),
+    crown: useRef<THREE.InstancedMesh>(null),
+    bush: useRef<THREE.InstancedMesh>(null),
+    flower: useRef<THREE.InstancedMesh>(null),
+    contact: useRef<THREE.InstancedMesh>(null),
+  };
+  const data = useMemo(() => {
+    type Inst = { pos: THREE.Vector3; quat: THREE.Quaternion; s: [number, number, number]; c?: string };
+    const trunk: Inst[] = [], crown: Inst[] = [], bush: Inst[] = [], flower: Inst[] = [], contact: Inst[] = [];
+    const up = new THREE.Vector3(0, 1, 0);
+    const CROWN = [[0, 0.36, 0, 0.15], [0.1, 0.31, 0.03, 0.11], [-0.1, 0.32, 0.02, 0.11], [0.02, 0.43, -0.03, 0.1]] as const;
+    const BALL = [[0, 0.06, 0, 0.08], [0.07, 0.045, 0.02, 0.06], [-0.06, 0.045, 0.03, 0.058], [0.01, 0.04, 0.07, 0.05]] as const;
+    items.forEach((it) => {
+      const f = capFrame(it.x, it.z);
+      const rot = new THREE.Quaternion().setFromAxisAngle(up, rand(it.seed, 1) * 6);
+      const baseQ = f.quat.clone().multiply(rot);
+      const at = (x: number, y: number, z: number) => f.pos.clone().add(new THREE.Vector3(x, y, z).applyQuaternion(baseQ));
+      if (it.kind === "tree") {
+        contact.push({ pos: f.pos.clone().add(new THREE.Vector3(0, 0.004, 0).applyQuaternion(f.quat)), quat: f.quat.clone(), s: [0.22, 0.22, 0.22] });
+        trunk.push({ pos: at(0, 0.14, 0), quat: baseQ.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.08))), s: [1, 1, 1] });
+        CROWN.forEach(([x, y, z, r], i) => crown.push({ pos: at(x, y, z), quat: baseQ.clone(), s: [r, r, r], c: i % 2 ? (it.tint ?? "#EBB2BB") : "#F2C6CC" }));
+      } else {
+        contact.push({ pos: f.pos.clone().add(new THREE.Vector3(0, 0.004, 0).applyQuaternion(f.quat)), quat: f.quat.clone(), s: [0.14, 0.14, 0.14] });
+        BALL.forEach(([x, y, z, r], i) => bush.push({ pos: at(x, y, z), quat: baseQ.clone(), s: [r, r, r], c: i % 2 ? (it.tint ?? "#8DAF78") : "#A3C28B" }));
+        if (rand(it.seed, 5) > 0.4) [0, 1, 2].forEach((i) => flower.push({ pos: at(Math.cos(i * 2.1) * 0.07, 0.1 - i * 0.012, Math.sin(i * 2.1) * 0.07), quat: baseQ.clone(), s: [1, 1, 1], c: ["#F4D9DF", "#FFF7E8", "#F2C9B6"][i] }));
+      }
+    });
+    return { trunk, crown, bush, flower, contact };
+  }, [items]);
+
+  useEffect(() => {
+    const groups: [keyof typeof refs, typeof data.trunk][] = [
+      ["trunk", data.trunk], ["crown", data.crown], ["bush", data.bush], ["flower", data.flower],
+    ];
+    const mx = new THREE.Matrix4(), col = new THREE.Color(), v = new THREE.Vector3();
+    for (const [key, list] of groups) {
+      const m = refs[key].current; if (!m) continue;
+      list.forEach((it, i) => { mx.compose(it.pos, it.quat, v.set(...it.s)); m.setMatrixAt(i, mx); if (it.c) m.setColorAt(i, col.set(it.c)); });
+      m.count = list.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    }
+    const cm = refs.contact.current;
+    if (cm) {
+      data.contact.forEach((it, i) => { mx.compose(it.pos, it.quat, v.set(...it.s)); cm.setMatrixAt(i, mx); });
+      cm.count = data.contact.length; cm.instanceMatrix.needsUpdate = true;
+    }
+  }, [data]);
+
+  return (
+    <>
+      <instancedMesh ref={refs.trunk} args={[cylGeo(0.022, 0.035, 0.28, 10), matte("#ffffff"), Math.max(1, data.trunk.length)]} castShadow />
+      <instancedMesh ref={refs.crown} args={[sphereGeo(1, 16, 12), matte("#ffffff"), Math.max(1, data.crown.length)]} castShadow />
+      <instancedMesh ref={refs.bush} args={[sphereGeo(1, 14, 10), matte("#ffffff"), Math.max(1, data.bush.length)]} castShadow />
+      <instancedMesh ref={refs.flower} args={[sphereGeo(0.012, 8, 6), matte("#ffffff"), Math.max(1, data.flower.length)]} />
+      <instancedMesh ref={refs.contact} args={[contactGeo(), contactMat(), Math.max(1, data.contact.length)]} />
+    </>
+  );
 }
 
 /** 草地上的小野花（两组实例化网格：花冠 + 花心），只是装饰，不代表任何学习记录 */
@@ -549,13 +623,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           <LabelHit name="pond" r={0.5} h={0.2} setHover={setHover} />
         </OnCap>
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
-        {TREES.map((t, i) => (
-          <OnCap key={i} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={(t as any).tint} /> : <Bush seed={t.seed} />}</OnCap>
-        ))}
-        {/* 外圈野生景观：环绕整颗星球 */}
-        {WILD.map((t, i) => (
-          <OnCap key={`w${i}`} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={t.tint} /> : <Bush seed={t.seed} />}</OnCap>
-        ))}
+        {/* 内圈与外圈野生树木/灌木：按几何类型合批（FloraField 内 5 个 InstancedMesh） */}
+        <FloraField items={[...TREES.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: (t as any).tint })), ...WILD.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: t.tint }))]} />
         {WILD_ROCKS.map((r, i) => (
           <OnCap key={`r${i}`} x={r.x} z={r.z}><group scale={1.3}><DecorStone /></group></OnCap>
         ))}

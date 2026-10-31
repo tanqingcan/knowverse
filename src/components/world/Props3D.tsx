@@ -261,15 +261,25 @@ export function GrassField({ items }: { items: { pos: THREE.Vector3; quat: THREE
   return <instancedMesh ref={ref} args={[geo, mat, items.length]} receiveShadow />;
 }
 
-/** 云海：环绕星球腰部的绘本云团，遮住下半球 */
+/** 云海：环绕星球腰部的绘本云团，遮住下半球（InstancedMesh，一次绘制 + 实例色） */
 export function CloudRing({ R }: { R: number }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
   const puffs = useMemo(() => Array.from({ length: 46 }, (_, i) => {
     const a = (i / 46) * Math.PI * 2 + rand(i, 1) * 0.2;
     const y = -R * (0.2 + rand(i, 2) * 0.22);
     const rr = Math.sqrt(R * R - y * y) * (1.0 + rand(i, 3) * 0.08);
     return { p: [Math.sin(a) * rr, y, Math.cos(a) * rr] as [number, number, number], s: 0.32 + rand(i, 4) * 0.34, c: i % 4 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EDE3F2" : "#FFF7EE" };
   }), [R]);
-  return <group>{puffs.map((p, i) => <mesh key={i} geometry={sphereGeo(1, 16, 12)} material={matte(p.c, { rough: 1 })} position={p.p} scale={[p.s * 1.3, p.s * 0.8, p.s]} />)}</group>;
+  useEffect(() => {
+    const m = ref.current; if (!m) return;
+    const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion();
+    puffs.forEach((p, i) => {
+      mx.compose(new THREE.Vector3(...p.p), q, new THREE.Vector3(p.s * 1.3, p.s * 0.8, p.s));
+      m.setMatrixAt(i, mx); m.setColorAt(i, col.set(p.c));
+    });
+    m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [puffs]);
+  return <instancedMesh ref={ref} args={[sphereGeo(1, 16, 12), matte("#ffffff", { rough: 1 }), puffs.length]} />;
 }
 
 /** 观星台：石台 + 低圆顶 + 望远镜 + 门口暖灯，放在星球背面，环绕时有可去的地方 */
