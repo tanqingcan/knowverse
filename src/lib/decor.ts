@@ -143,13 +143,20 @@ export function useDecor() {
     window.addEventListener("storage", on);
     return () => { window.removeEventListener(EVENT, on); window.removeEventListener("storage", on); };
   }, []);
-  /** commit：把当前 list 记入历史（record=true），再写入新列表 */
-  const commit = (next: DecorPlacement[], record = true) => {
+  /** commit：把当前 list 记入历史（record=true），再写入新列表。
+   *  coalesce=true 时，400ms 内的连续调用合并为一次历史（滑杆拖动=一次撤销，G2）。 */
+  const lastRecord = useRef(0);
+  const commit = (next: DecorPlacement[], record = true, coalesce = false) => {
     if (record) {
-      history.current.push(list);
-      if (history.current.length > 50) history.current.shift();
-      future.current = [];
-      setVer((v) => v + 1);
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const skip = coalesce && now - lastRecord.current < 400;
+      lastRecord.current = now;
+      if (!skip) {
+        history.current.push(list);
+        if (history.current.length > 50) history.current.shift();
+        future.current = [];
+        setVer((v) => v + 1);
+      }
     }
     saveDecor(next); setList(next);
   };
@@ -168,7 +175,7 @@ export function useDecor() {
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
     place: (kind: DecorKind, x: number, z: number) => { const next = addDecorAt(list, kind, x, z); commit(next); return next[next.length - 1].id; },
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
-    update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
+    update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch), true, true),
     remove: (id: string) => commit(removeDecor(list, id)),
     reset: () => commit([]),
     /** 用服务端布局整体替换本地列表（G4：加载已保存布局）——不记入撤销历史 */
