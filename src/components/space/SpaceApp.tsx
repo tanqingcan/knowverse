@@ -109,6 +109,7 @@ export function SpaceApp() {
   const [importPrompt, setImportPrompt] = useState<{ local: number; server: number } | null>(null);
   const [layoutHasPublished, setLayoutHasPublished] = useState(false);
   const [firstDismissed, setFirstDismissed] = useState(false);
+  const lastPlaceAt = useRef(0); // 刚放置后的短时间窗口，避免同一次点击又选中植物/热点而关闭创造面板
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -365,13 +366,14 @@ export function SpaceApp() {
         <section className="world-wrap" aria-label={`${space.planet?.name ?? "我的星球"}：${space.plants.length} 株植物`}>
           {use3d ? (
             <GardenWorld plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant}
-              onSelect={(id) => open({ panel: "dossier", plantId: id })} onHotspot={onHotspot}
+              onSelect={(id) => { if (performance.now() - lastPlaceAt.current < 400) return; open({ panel: "dossier", plantId: id }); }}
+              onHotspot={(h) => { if (performance.now() - lastPlaceAt.current < 400) return; onHotspot(h); }}
               mode={focus ? "focus" : "garden"} reduced={reduced} celebrate={celebrate} pose={pose} lampState={lampState}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               placingKind={placingKind}
-              onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); setPlacingKind(null); setSelectedDecorId(id); } }}
+              onPlace={(x, z) => { if (placingKind) { const id = decorStore.place(placingKind as any, x, z); lastPlaceAt.current = performance.now(); setPlacingKind(null); setSelectedDecorId(id); } }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying}
