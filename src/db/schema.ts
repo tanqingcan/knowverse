@@ -683,6 +683,9 @@ export const outboxEvents = pgTable("outbox_events", {
  * 只存可重建参数（kind/位置/姿态/尺寸/颜色/阶段/排序），不存 Three.js 对象或逐帧网格。
  */
 export const planetLayouts = pgTable("planet_layouts", {
+  /** H52：布局数据版本——1=迁移前（无建筑实例），2=v3 全场景布局（含初始建筑实例）。
+   *  加载时据此决定「是否需要用默认常量补建筑」，避免用户删光建筑后被模板补回。 */
+  schemaVersion: integer("schema_version").notNull().default(1),
   id: id(),
   planetId: uuid("planet_id").notNull().references(() => planets.id, { onDelete: "cascade" }),
   revision: integer("revision").notNull().default(1),

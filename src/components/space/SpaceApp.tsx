@@ -201,6 +201,14 @@ export function SpaceApp() {
         // 从未保存过：本地已有建筑草稿就沿用；否则套初始布局 + 保留本地旧装饰
         applyLayout(localHasBuildings ? local : [...DEFAULT_HOME_LAYOUT, ...local.filter((d) => !isBuildingKind(d.kind))]);
       } else {
+        // H52：v3 及以后的布局以服务端为唯一权威——用户可能故意把建筑全删了，
+        // 绝不能用 DEFAULT_HOME_LAYOUT 再补回来（旧版布局才走迁移兜底）。
+        if ((l.schemaVersion ?? 1) >= 2) {
+          applyLayout(l.items.map(fromLayoutItem));
+          setLayoutRev(l.revision);
+          setLayoutStatus(l.status);
+          return;
+        }
         const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
         if (serverHasBuildings) {
           // 服务端权威：G6 旧版 localStorage 草稿检测——先备份，不静默覆盖；差异则提示一次性导入

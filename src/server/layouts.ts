@@ -39,13 +39,13 @@ async function findPlanet(user: CurrentUser): Promise<string> {
 export async function getLayout(user: CurrentUser) {
   const planetId = await findPlanet(user);
   const layout = await q1(
-    `SELECT id, revision, status, published_revision AS "publishedRevision", (published_items IS NOT NULL) AS "hasPublished", updated_at AS "updatedAt"
+    `SELECT id, revision, status, schema_version AS "schemaVersion", published_revision AS "publishedRevision", (published_items IS NOT NULL) AS "hasPublished", updated_at AS "updatedAt"
      FROM planet_layouts WHERE planet_id = $1`, [planetId]);
-  if (!layout) return { planetId, revision: 0, status: "draft" as const, publishedRevision: null, hasPublished: false, items: [] as LayoutItemInput[] };
+  if (!layout) return { planetId, revision: 0, status: "draft" as const, schemaVersion: 1, publishedRevision: null, hasPublished: false, items: [] as LayoutItemInput[] };
   const items = await q(
     `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
-  return { planetId, revision: layout.revision as number, status: layout.status as string, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, items: items as LayoutItemInput[] };
+  return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, items: items as LayoutItemInput[] };
 }
 
 export async function saveDraft(user: CurrentUser, baseRevision: number, items: LayoutItemInput[]) {
@@ -74,12 +74,12 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
     const cur = await c.query(`SELECT id, revision FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
     let layoutId: string, nextRevision: number;
     if (!cur.rowCount) {
-      const r = await c.query(`INSERT INTO planet_layouts (planet_id, revision, status) VALUES ($1, 1, 'draft') RETURNING id, revision`, [planetId]);
+      const r = await c.query(`INSERT INTO planet_layouts (planet_id, revision, status, schema_version) VALUES ($1, 1, 'draft', 2) RETURNING id, revision`, [planetId]);
       layoutId = r.rows[0].id; nextRevision = 1;
     } else {
       if (baseRevision !== cur.rows[0].revision) throw new AppError("conflict", "布局已被其他窗口修改，请重载", 409);
       layoutId = cur.rows[0].id; nextRevision = cur.rows[0].revision + 1;
-      await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', updated_at = now() WHERE id = $1`, [layoutId, nextRevision]);
+      await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', schema_version = 2, updated_at = now() WHERE id = $1`, [layoutId, nextRevision]);
       await c.query(`DELETE FROM planet_layout_items WHERE layout_id = $1`, [layoutId]);
     }
     for (const it of clean) {

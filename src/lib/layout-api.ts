@@ -12,6 +12,8 @@ export type LayoutItem = {
 };
 export type LayoutResponse = {
   planetId: string; revision: number; status: string;
+  /** H52：1=迁移前旧布局；2=v3 全场景布局（用户可能删光建筑，不能再补模板） */
+  schemaVersion?: number;
   publishedRevision: number | null; hasPublished?: boolean; items: LayoutItem[];
 };
 
