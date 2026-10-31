@@ -42,6 +42,10 @@ export const DIY_PARTS: Record<string, { key: string; label: string; def: string
 };
 
 /** H30：绘本暖光的协调预设（每行一套：主色/点缀/叶/茎） */
+/** H35：只有「装饰花」允许在 DIY 里改外观阶段；知识植物的阶段来自学习证据，不在此处提供 */
+const STAGE_KINDS = ["rose", "flower", "flower2", "flower3"];
+const STAGES: [string, string][] = [["seed", "种子"], ["sprout", "萌芽"], ["leaf", "生叶"], ["bud", "花苞"], ["bloom", "开花"]];
+
 const PRESETS: string[][] = [
   ["#C56E6E", "#EBB2BB", "#8DAF78", "#7C9B67"],
   ["#E0A96D", "#F6D3B2", "#9DBE86", "#7C9B67"],
@@ -78,7 +82,7 @@ function Preview({ kind, stage, parts, spin }: { kind: string; stage?: string; p
 
 export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   item: DecorPlacement;
-  onApply: (parts: Record<string, string>) => void;
+  onApply: (parts: Record<string, string>, stage?: string) => void;
   onCancel: () => void;
   /** H32：把当前配色存成「我的素材变体」，之后新放置该素材时复用（不改同类已有对象） */
   onSaveVariant?: (parts: Record<string, string>) => void;
@@ -91,7 +95,27 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   });
   const [activePart, setActivePart] = useState(partDefs[0]?.key ?? "primary");
   const [spin, setSpin] = useState(0.5);
+  const [stage, setStage] = useState<string>(item.stage ?? "bloom");
   const dragging = useRef<{ x: number; spin: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  // H36：Esc = 取消并返回；打开时把焦点移进工作台，关闭时归还（场景快捷键由父层屏蔽）
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    const first = cardRef.current?.querySelector<HTMLElement>("button, select, input");
+    first?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); onCancel(); return; }
+      if (e.key !== "Tab" || !cardRef.current) return;
+      const nodes = Array.from(cardRef.current.querySelectorAll<HTMLElement>("button, select, input, [tabindex]:not([tabindex='-1'])")).filter((n) => !n.hasAttribute("disabled"));
+      if (!nodes.length) return;
+      const firstN = nodes[0], lastN = nodes[nodes.length - 1];
+      if (!e.shiftKey && document.activeElement === lastN) { e.preventDefault(); firstN.focus(); }
+      else if (e.shiftKey && document.activeElement === firstN) { e.preventDefault(); lastN.focus(); }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => { window.removeEventListener("keydown", onKey, true); prev?.focus?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 缓慢自转（低动效系统设置下不转）
   useEffect(() => {
     const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -112,7 +136,7 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   };
   return (
     <div className="diy-mask" role="dialog" aria-modal="true" aria-label={`DIY 工作台：${labelOf(item.kind)}`}>
-      <div className="diy-card">
+      <div className="diy-card" ref={cardRef}>
         <div className="diy-head">
           <b>DIY 工作台</b>
           <span className="diy-sub">{labelOf(item.kind)}</span>
@@ -122,7 +146,7 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
           <div className="diy-preview" onPointerDown={(e) => { dragging.current = { x: e.clientX, spin }; }}
             onPointerMove={(e) => { if (dragging.current) setSpin(dragging.current.spin + (e.clientX - dragging.current.x) * 0.01); }}
             onPointerUp={() => { dragging.current = null; }} onPointerLeave={() => { dragging.current = null; }}>
-            <Preview kind={item.kind} stage={item.stage} parts={parts} spin={spin} />
+            <Preview kind={item.kind} stage={stage} parts={parts} spin={spin} />
             <span className="diy-preview-hint">拖动可旋转预览</span>
           </div>
           <div className="diy-panel">
@@ -147,6 +171,14 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
                 </button>
               ))}
             </div>
+            {STAGE_KINDS.includes(item.kind) && (
+              <label className="diy-stage">外观阶段
+                <select value={stage} onChange={(e) => setStage(e.target.value)} aria-label="装饰花外观阶段">
+                  {STAGES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                </select>
+                <small className="diy-note">只影响这朵装饰花的外观；知识植物的阶段由学习证据决定，不能在 DIY 里伪装开花</small>
+              </label>
+            )}
             <label className="diy-custom">
               自定义颜色
               <input type="color" value={parts[activePart] ?? "#C56E6E"} onChange={(e) => setPart(activePart, e.target.value)} aria-label="自定义当前部位颜色" />
@@ -158,7 +190,7 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
           <span className="diy-note">应用只改这一个对象；可用「撤销」回滚</span>
           <button className="btn btn-quiet btn-sm" onClick={onCancel}>取消</button>
           <button className="btn btn-quiet btn-sm" onClick={() => onSaveVariant?.(parts)} title="存成个人配色变体，新放置同类素材时默认复用">保存为素材变体</button>
-          <button className="btn btn-primary btn-sm" onClick={() => onApply(parts)}>应用</button>
+          <button className="btn btn-primary btn-sm" onClick={() => onApply(parts, STAGE_KINDS.includes(item.kind) ? stage : undefined)}>应用</button>
         </div>
       </div>
     </div>

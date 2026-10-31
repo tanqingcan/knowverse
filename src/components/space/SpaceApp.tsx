@@ -317,6 +317,7 @@ export function SpaceApp() {
   useEffect(() => {
     if (!creativeOpen) return;
     const f = (e: KeyboardEvent) => {
+      if (diyTarget) return; // H36：工作台打开时屏蔽 1–9 / E 等场景快捷键
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateDecor(); }
@@ -324,13 +325,14 @@ export function SpaceApp() {
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creativeOpen, selectedDecorId]);
+  }, [creativeOpen, selectedDecorId, diyTarget]);
   // H18/H19：1–9 切槽、E 打开全量素材库；输入框/文本域聚焦时不拦截
   useEffect(() => {
     if (!creativeOpen) return;
     const f = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (diyTarget) return; // H36：DIY 工作台打开时屏蔽 1–9 / E 等场景快捷键
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key >= "1" && e.key <= "9") {
         const k = hotbar[Number(e.key) - 1];
@@ -347,12 +349,13 @@ export function SpaceApp() {
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, hotbar]);
+  }, [creativeOpen, hotbar, diyTarget]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
     const f = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (diyTarget) return; // H36：DIY 工作台自己处理 Esc
       // H19：全量素材库打开时 Esc 先关库
       if (libOpen) { setLibOpen(false); return; }
       // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
@@ -362,7 +365,7 @@ export function SpaceApp() {
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, placingKind, selectedDecorId, libOpen]);
+  }, [creativeOpen, placingKind, selectedDecorId, libOpen, diyTarget]);
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
   useEffect(() => { if (panel.panel === "chat" && panel.conversationId) lastConv.current = panel.conversationId; }, [panel]);
@@ -571,7 +574,7 @@ export function SpaceApp() {
           return (
             <DiyWorkbench
               item={it}
-              onApply={(parts) => { decorStore.update(it.id, { parts }); setDiyTarget(null); setLayoutMsg("已应用 DIY 配色（可撤销回滚）"); }}
+              onApply={(parts, stage) => { decorStore.update(it.id, stage ? { parts, stage } : { parts }); setDiyTarget(null); setLayoutMsg("已应用 DIY 配色（可撤销回滚）"); }}
               onCancel={() => setDiyTarget(null)}
               onSaveVariant={(parts) => { saveVariant(it.kind, parts); setLayoutMsg("已保存为你的素材变体（新放置同类素材时复用）"); }}
             />
