@@ -581,13 +581,17 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             props.lastDecorMove.current = now;
             const c = pointToCap(e.point);
             props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
-          }}
-          onClick={(e) => {
-            if (props.mode !== "garden" || props.readOnly || !props.placingKind || e.delta > 6) return;
-            const c = pointToCap(e.point);
-            e.stopPropagation();
-            props.onPlace?.(c.x, c.z);
           }} />
+        {/* 创造模式放置层：比地表/草/云略大的不可见球，截获点击换算球冠坐标；仅放置时存在 */}
+        {props.placingKind && (
+          <mesh geometry={sphereGeo(3.12, 24, 16)} material={hitMat}
+            onPointerUp={(e) => {
+              if (e.delta > 6) return; // 拖动（镜头）时不放置
+              const c = pointToCap(e.point);
+              e.stopPropagation();
+              props.onPlace?.(c.x, c.z);
+            }} />
+        )}
         <CloudRing R={PLANET_R} />
         <Grass items={grass} />
         <Wildflowers items={blooms} />
