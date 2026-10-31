@@ -17,7 +17,7 @@
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现；**自动检查 20000+ 顶点半径=PLANET_R+lift 且有限**；vision：正面泥土沿球面弯曲、**极点附近地表连续无破洞/泥土贴地无悬空/无倒置**；侧面视角 vision 判读歧义待复核 | Round 2-9 | `tests/unit/surface.test.ts`、`g3-front.png`、`g3-pole.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
-| G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
+| G6 模板与兼容 | 🟡 进行中 | 默认模板 +「从模板开始」+「放弃修改」；**旧版 localStorage 导入：备份 kv-decor-backup + 差异提示（本地1件/服务器7件）+ 导入/保持选择实测**；首次二选一、恢复已发布版本未做 | Round 5/10 | `test-template.py`、`test-import.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位；vision 确认背面连续草地无破洞；**空闲慢转已实现**：按下暂停（像素差分 28.8→0.76）、释放 3 秒恢复、编辑/浮窗/低动效不转 | Round 4/8 | `sphere-back.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
@@ -49,6 +49,11 @@
 - 结论：资源回归通过；**GPU 60fps / 软件 ≥12fps 的目标在本软件渲染环境不达标**，按「无法测的设备标未验证」处理，不美化。
 
 **未验证**：接缝（世界旋转 360° 一周的接缝）未单独测；侧面视角仍为 vision 判读歧义。
+
+### Round 10 · 旧版本地草稿导入（G6）
+
+- 加载时若服务端已有布局且 `kv-decor` 与服务器不同：先把旧草稿写入 `kv-decor-backup`，再以服务器布局为准渲染，并弹出一次性提示（本地 N 件 / 服务器 M 件，导入本地 / 保持服务器）——**不静默覆盖**。
+- 实测（`test-import.py`）：写入 1 件旧版路灯草稿 → 刷新 → 提示「检测到本地旧版草稿 1 件（已备份），服务器布局 7 件」；`kv-decor-backup` 存在；点「导入本地」后草稿变为该路灯；无 pageerror。
 
 ### Round 7 · 保存失败重试 + G3 自动检查（2026-10-31）
 
