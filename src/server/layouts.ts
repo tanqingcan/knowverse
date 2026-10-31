@@ -32,13 +32,13 @@ async function findPlanet(user: CurrentUser): Promise<string> {
 export async function getLayout(user: CurrentUser) {
   const planetId = await findPlanet(user);
   const layout = await q1(
-    `SELECT id, revision, status, published_revision AS "publishedRevision", updated_at AS "updatedAt"
+    `SELECT id, revision, status, published_revision AS "publishedRevision", (published_items IS NOT NULL) AS "hasPublished", updated_at AS "updatedAt"
      FROM planet_layouts WHERE planet_id = $1`, [planetId]);
-  if (!layout) return { planetId, revision: 0, status: "draft" as const, publishedRevision: null, items: [] as LayoutItemInput[] };
+  if (!layout) return { planetId, revision: 0, status: "draft" as const, publishedRevision: null, hasPublished: false, items: [] as LayoutItemInput[] };
   const items = await q(
     `SELECT kind, x, z, rot, scale, width, length, color, stage
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
-  return { planetId, revision: layout.revision as number, status: layout.status as string, publishedRevision: layout.publishedRevision as number | null, items: items as LayoutItemInput[] };
+  return { planetId, revision: layout.revision as number, status: layout.status as string, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, items: items as LayoutItemInput[] };
 }
 
 export async function saveDraft(user: CurrentUser, baseRevision: number, items: LayoutItemInput[]) {
@@ -85,7 +85,35 @@ export async function publishLayout(user: CurrentUser, baseRevision: number) {
     const r = await c.query(`SELECT id, revision FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
     if (!r.rowCount) throw notFound("布局");
     if (baseRevision !== r.rows[0].revision) throw new AppError("conflict", "布局已被其他窗口修改，请重载", 409);
-    await c.query(`UPDATE planet_layouts SET status = 'published', published_revision = revision, updated_at = now() WHERE id = $1`, [r.rows[0].id]);
+    const items = await c.query(
+      `SELECT kind, x, z, rot, scale, width, length, color, stage
+       FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [r.rows[0].id]);
+    // 发布时把当前布局固化成快照：参观只读与「恢复上一已发布版本」都用它
+    await c.query(
+      `UPDATE planet_layouts SET status = 'published', published_revision = revision, published_items = $2::jsonb, updated_at = now() WHERE id = $1`,
+      [r.rows[0].id, JSON.stringify(items.rows)]);
     return { planetId, revision: r.rows[0].revision as number, status: "published" as const };
+  });
+}
+
+/** 恢复上一已发布版本：用 published_items 快照替换当前草稿（revision+1，不直接发布）。 */
+export async function revertToPublished(user: CurrentUser) {
+  const planetId = await findPlanet(user);
+  return withTx(async (c) => {
+    const r = await c.query(`SELECT id, revision, published_items AS "publishedItems" FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
+    if (!r.rowCount) throw notFound("布局");
+    const snap = r.rows[0].publishedItems as LayoutItemInput[] | null;
+    if (!snap) throw notFound("已发布版本");
+    const nextRev = (r.rows[0].revision as number) + 1;
+    await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', updated_at = now() WHERE id = $1`, [r.rows[0].id, nextRev]);
+    await c.query(`DELETE FROM planet_layout_items WHERE layout_id = $1`, [r.rows[0].id]);
+    let i = 0;
+    for (const it of snap) {
+      await c.query(
+        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [r.rows[0].id, it.kind, it.x, it.z, it.rot ?? 0, it.scale ?? 1, it.width ?? null, it.length ?? null, it.color ?? null, it.stage ?? null, i++]);
+    }
+    return { planetId, revision: nextRev, status: "draft" as const, items: snap };
   });
 }

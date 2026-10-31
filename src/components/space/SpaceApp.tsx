@@ -10,7 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
-import { loadLayout, saveLayout, publishLayout, fromLayoutItem } from "@/lib/layout-api";
+import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
 import { DEFAULT_TEMPLATE } from "@/lib/decor";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
@@ -107,6 +107,7 @@ export function SpaceApp() {
   const [layoutStatus, setLayoutStatus] = useState("draft");
   const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
   const [importPrompt, setImportPrompt] = useState<{ local: number; server: number } | null>(null);
+  const [layoutHasPublished, setLayoutHasPublished] = useState(false);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -166,7 +167,7 @@ export function SpaceApp() {
         } catch { /* 忽略损坏的本地草稿 */ }
         decorStore.setAll(l.items.map(fromLayoutItem));
       }
-      setLayoutRev(l.revision); setLayoutStatus(l.status);
+      setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutHasPublished(!!l.hasPublished);
     }).catch(() => { /* 未登录或网络失败：保留本地 localStorage 草稿 */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -175,9 +176,21 @@ export function SpaceApp() {
     catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
   }, [layoutRev, decorStore.decor]);
   const publishCreative = useCallback(async () => {
-    try { setLayoutMsg("发布中…"); const r = await publishLayout(layoutRev); setLayoutStatus(r.status); setLayoutMsg(`已发布（revision ${r.revision}）`); }
+    try { setLayoutMsg("发布中…"); const r = await publishLayout(layoutRev); setLayoutStatus(r.status); setLayoutHasPublished(true); setLayoutMsg(`已发布（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`发布失败：${e?.message ?? "网络错误"}`); }
   }, [layoutRev]);
+  // G6：恢复上一已发布版本（用服务端 published_items 快照替换草稿，revision+1）
+  const revertCreative = useCallback(async () => {
+    if (!window.confirm("用上一已发布版本替换当前草稿？（revision 会 +1，未保存改动会丢失）")) return;
+    try {
+      setLayoutMsg("恢复中…");
+      const r = await revertLayout();
+      decorStore.setAll(r.items.map(fromLayoutItem));
+      setLayoutRev(r.revision); setLayoutStatus(r.status); setSelectedDecorId(null);
+      setLayoutMsg(`已恢复上一已发布版本（revision ${r.revision}）`);
+    } catch (e: any) { setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decorStore]);
   // G2 撤销/重做：历史在 useDecor 内（与 list 同源），见 src/lib/decor.ts
   const undo = () => { decorStore.undo(); setSelectedDecorId(null); };
   const redo = () => { decorStore.redo(); setSelectedDecorId(null); };
@@ -398,6 +411,7 @@ export function SpaceApp() {
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
           onApplyTemplate={applyTemplate} onDiscard={discard}
           importPrompt={importPrompt} onImportLocal={importLocalDraft} onKeepServer={keepServerLayout}
+          hasPublished={layoutHasPublished} onRevert={revertCreative}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (

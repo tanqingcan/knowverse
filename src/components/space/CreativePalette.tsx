@@ -29,7 +29,7 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
@@ -40,6 +40,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   onApplyTemplate?: () => void; onDiscard?: () => void;
   importPrompt?: { local: number; server: number } | null;
   onImportLocal?: () => void; onKeepServer?: () => void;
+  hasPublished?: boolean; onRevert?: () => void;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
@@ -126,6 +127,9 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
         <div className="cp-foot-actions">
           <button className="btn btn-quiet btn-sm" onClick={onApplyTemplate}>从模板开始</button>
           <button className="btn btn-quiet btn-sm" onClick={onDiscard}>放弃修改</button>
+        </div>
+        <div className="cp-foot-actions">
+          <button className="btn btn-quiet btn-sm" onClick={onRevert} disabled={!hasPublished} title="用上一已发布版本替换当前草稿">恢复已发布</button>
         </div>
       </div>
     </aside>

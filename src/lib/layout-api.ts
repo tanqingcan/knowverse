@@ -10,7 +10,7 @@ export type LayoutItem = {
 };
 export type LayoutResponse = {
   planetId: string; revision: number; status: string;
-  publishedRevision: number | null; items: LayoutItem[];
+  publishedRevision: number | null; hasPublished?: boolean; items: LayoutItem[];
 };
 
 let seq = 0;
@@ -32,4 +32,8 @@ export function saveLayout(baseRevision: number, list: DecorPlacement[]) {
 }
 export function publishLayout(baseRevision: number) {
   return api<{ revision: number; status: string }>("/api/planet-layout/publish", { method: "POST", body: { baseRevision } });
+}
+/** 恢复上一已发布版本（用 published_items 快照替换草稿，revision+1） */
+export function revertLayout() {
+  return api<{ revision: number; status: string; items: LayoutItem[] }>("/api/planet-layout/revert", { method: "POST" });
 }

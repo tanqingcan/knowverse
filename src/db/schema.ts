@@ -688,6 +688,8 @@ export const planetLayouts = pgTable("planet_layouts", {
   revision: integer("revision").notNull().default(1),
   status: text("status").notNull().default("draft"),
   publishedRevision: integer("published_revision"),
+  /** 最近一次发布的布局快照（可「恢复上一已发布版本」，且参观只读用） */
+  publishedItems: jsonb("published_items"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").defaultNow().notNull(),
 }, (t) => [

@@ -29,6 +29,13 @@
       "when": 1793455616231,
       "tag": "0003_complete_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793460816813,
+      "tag": "0004_fancy_changeling",
+      "breakpoints": true
     }
   ]
 }
