@@ -29,7 +29,7 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
@@ -41,6 +41,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   importPrompt?: { local: number; server: number } | null;
   onImportLocal?: () => void; onKeepServer?: () => void;
   hasPublished?: boolean; onRevert?: () => void;
+  showFirstEntry?: boolean; onFirstDefault?: () => void; onFirstTemplate?: () => void;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
@@ -54,6 +55,15 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
         <b>创造模式</b>
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="收起素材栏">收起</button>
       </div>
+      {showFirstEntry && (
+        <div className="cp-import" role="status">
+          <span>你的星球还没有布置过：保持默认，或者从模板开始创造。</span>
+          <div className="cp-import-actions">
+            <button className="btn btn-primary btn-sm" onClick={onFirstTemplate}>从模板开始创造</button>
+            <button className="btn btn-quiet btn-sm" onClick={onFirstDefault}>保持默认</button>
+          </div>
+        </div>
+      )}
       {importPrompt && (
         <div className="cp-import" role="alert">
           <span>检测到本地旧版草稿 {importPrompt.local} 件（已备份），服务器布局 {importPrompt.server} 件。是否导入本地草稿？</span>

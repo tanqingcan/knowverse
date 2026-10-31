@@ -108,6 +108,7 @@ export function SpaceApp() {
   const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
   const [importPrompt, setImportPrompt] = useState<{ local: number; server: number } | null>(null);
   const [layoutHasPublished, setLayoutHasPublished] = useState(false);
+  const [firstDismissed, setFirstDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -412,6 +413,9 @@ export function SpaceApp() {
           onApplyTemplate={applyTemplate} onDiscard={discard}
           importPrompt={importPrompt} onImportLocal={importLocalDraft} onKeepServer={keepServerLayout}
           hasPublished={layoutHasPublished} onRevert={revertCreative}
+          showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
+          onFirstDefault={() => setFirstDismissed(true)}
+          onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (
