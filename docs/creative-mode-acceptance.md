@@ -17,7 +17,7 @@
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409 冲突实测；缺保存失败重试/跨账号越权/参观只读证据 | 见 Round 3 | `.dsh-tools/test-g5.py` 输出 |
-| G6 模板与兼容 | ⬜ 未开始 | — | — | — |
+| G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位/慢转已实现；**vision 确认背面有连续草地+建筑/树/石、无破洞接缝倒置**；极点/接缝未逐一验 | Round 4 | `sphere-back.png` + vision |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
@@ -26,6 +26,15 @@
 | G12 构建与交付 | ⬜ 未开始 | — | — | — |
 
 ## 每轮记录
+
+### Round 5 · 初始模板（G6 起步，提交 `b0058b0`）
+
+- `DEFAULT_TEMPLATE`（6 件：2 玫瑰 bloom/bud、泥土、道路、围栏、路灯）在 `src/lib/decor.ts`，团队可维护。
+- 属性栏加「从模板开始」（confirm 后写入本地草稿，重新生成 id，可撤销）与「放弃修改」（confirm 后重新 GET 服务器布局覆盖草稿）。
+- 实测（`test-template.py`）：从模板开始后草稿变为 6 件模板素材；放弃修改后恢复服务器布局；无 pageerror。
+- vision 确认（`template-applied.png`）：玫瑰/泥土/道路/围栏/路灯布局自然、无穿模悬空、画面柔和。
+
+**未完成**：旧 localStorage 一次性导入预览、恢复上一已发布版本（需 published 快照）、首次进入的二选一流程。
 
 ### Round 4 · 撤销/重做修复 + 视觉工具接入（2026-10-31）
 
