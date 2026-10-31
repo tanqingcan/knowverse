@@ -27,7 +27,10 @@ export function capToWorldXZ(x: number, z: number) {
   return { x: x * k, z: z * k };
 }
 
-/* ───────── 固定场景物体 ───────── */
+/* ───────── 固定场景物体 ─────────
+ * 坐标：球冠平面 (x 向右, z 朝向镜头)，单位与星球半径 3 一致，d=√(x²+z²) 越大离北极越远（d≈2.3 是可见边缘）。
+ * 想手动摆位置：只改这里的 x / z（yaw 是朝向角度），保存后刷新 `/space` 或 `/dev/garden` 即可；勿改数据库 lon/lat。
+ */
 export const SPOTS = {
   cottage: { x: 0.92, z: -0.92, yaw: -28 },
   cottageDoor: { x: 0.66, z: -0.68 },
@@ -38,9 +41,9 @@ export const SPOTS = {
   sign: { x: 0.42, z: 0.86, yaw: -14 },
   lampSpot: { x: 0.62, z: -0.34 },        // 星灯默认停在书屋门前（对话入口）
   observatory: { x: -0.75, z: -2.15, yaw: 18 }, // 背面观星台（环绕探索目标）
-  seedShed: { x: -1.62, z: -1.15, yaw: 30 },     // 种子小棚（温室旁，装饰性探索目标）
-  arch: { x: 0, z: 1.22, yaw: 0 },              // 花园拱门（正前入口，纯装饰）
-  pond: { x: -1.32, z: 1.05, yaw: 0 },          // 小池塘 + 木桥（左侧前，装饰性探索目标）
+  seedShed: { x: -0.15, z: -0.95, yaw: 0 },      // 种子小棚（温室与书屋之间的后侧空地，装饰性探索目标）
+  arch: { x: 0, z: 1.35, yaw: 0 },               // 花园拱门（正前入口，纯装饰）
+  pond: { x: 0, z: 2.24, yaw: 0 },               // 小池塘 + 木桥（正前外缘，拱门之后的迎宾水景，装饰性探索目标）
 };
 
 /** 回忆小径：主花圃 → 长椅旁 → 星灯书屋门口 */
@@ -49,8 +52,8 @@ export const MEMORY_PATH: [number, number][] = [[0.08, -0.12], [0.18, -0.4], [0.
 export const GREEN_PATH: [number, number][] = [[-0.22, -0.08], [-0.42, -0.3], [-0.6, -0.48], [-0.74, -0.6]];
 /** 去背面观星台的星径：从温室后侧绕到背面 */
 export const STAR_PATH: [number, number][] = [[-0.74, -0.6], [-1.0, -1.1], [-1.05, -1.6], [-0.92, -1.95], [-0.75, -2.15]];
-/** 去种子小棚的小路：从温室门口向左下 */
-export const SEED_PATH: [number, number][] = [[-0.74, -0.6], [-1.08, -0.78], [-1.38, -0.98], [-1.62, -1.15]];
+/** 去种子小棚的小路：从温室门口向右后侧（种子小棚现位于温室与书屋之间） */
+export const SEED_PATH: [number, number][] = [[-0.74, -0.6], [-0.55, -0.72], [-0.35, -0.84], [-0.15, -0.95]];
 
 export function pathCurve(points: [number, number][]) {
   return new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, "centripetal");
