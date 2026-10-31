@@ -570,3 +570,14 @@
 2. **同一仓库有另一个会话在并行工作**（新增 `SeedShed` 种子小棚、`GardenArch` 花园拱门、`SEED_PATH` 星径、`focusBed` 花圃定位）。我在验证「土壤丘实例化」时执行了 `git checkout -- src/components/world/GardenWorld.tsx`，**误删了对方当时未提交的 GardenWorld.tsx 改动**；已从 git stash 快照 `e9a35e6`（17:46 生成）恢复该文件（含 focusBed 相机逻辑与新建筑挂载），并剔除我自己的土壤丘实验代码。恢复后 `tsc --noEmit` 通过、`/dev/garden` 渲染无 pageerror。**对方在 17:46 之后若继续改过 GardenWorld.tsx，那部分可能已丢失，需要对方核对。** 其余 4 个文件（`globals.css`、`SpaceApp.tsx`、`Props3D.tsx`、`layout.ts`）未被我改动，仍保持对方的未提交状态。
 3. **土壤丘实例化实验已放弃**：实测 n=10 反而 +35 draw、n=100 仅 −34 draw（三角面反而 +1 万），收益不稳定且引入 hideSoil 复杂分支，已回退；只保留拾取圆柱 / 接触阴影的实例化（提交 `4d3580a`）。
 4. 开发服务器仍在跑（后台任务），开发预览页 `/dev/garden`、`/dev/flowers`、`/` 不依赖数据库，可继续验证视觉与交互。
+
+### 数据库重建（用户确认后执行，2026-10-31 18:05）
+
+- 用户确认「用 db:reset 重建演示数据」后执行。**旧数据目录已无法找回**（全盘无 PG_VERSION、无 dump），因此这是重新初始化，不是恢复。
+- 程序与数据都从 `%TEMP%` 迁到了**不会被临时目录清理**的位置：
+  - PostgreSQL 16.10 二进制：`C:\Users\Precious\Desktop\数据库大作业\.pg16\pgsql\bin`；
+  - 数据目录：`C:\Users\Precious\Desktop\数据库大作业\.pgdata`；日志 `.pg.log`；
+  - 启动：`& "…\.pg16\pgsql\bin\pg_ctl.exe" -D "…\.pgdata" -l "…\.pg.log" -w start`（本地 trust 认证，5432）。
+- `npm run db:migrate` ✓（业务库 + `knowverse_sandbox` 只读沙箱）；`npm run db:seed` ✓（演示账号 demo/knowverse = 小屿、xingye、ahe/knowverse，邀请码 KV2026，公共资料与 15 道题）。
+- 实测：`users` 3 行、`plants` 13 行；API 探针 `POST /api/auth/demo` 200、`GET /space` 200、`GET /api/space` 200。
+- **实例化拾取在真实应用里验证通过**：登录 demo 后在 `/space` 点击花圃里的花，右侧「植物档案」打开并显示「函数依赖 · 生叶」与成长依据（截图 `docs/screenshots/ui/b14-space-picking.jpg`）。这补上了第十四轮「/space 点击链路未验证」的空缺。
