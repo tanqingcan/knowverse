@@ -21,19 +21,18 @@
 | G7 完整球体 | 🟢 通过 | 全周环绕（**录屏 `g7-full-orbit.webm`**）+ 四方位 vision 连续无破洞/接缝/倒置；空闲慢转（`__gardenYaw` 实测 14s 累积 0.225 rad）、按下暂停（像素差分 28.8→0.76）、编辑/浮窗/低动效不转；复位按钮「回到花园视角」拖后出现、点击后隐藏并执行 `resetView`（像素复测受空闲慢转干扰） | Round 4/8/11/19 | `g7-full-orbit.webm`、`dir-*.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑；vision 确认温室屋顶完整/小木屋/池塘+木桥贴球无穿模、**旅人坐在长椅上（225° 视角）**；玫瑰五阶段近景；资产清单 `public/assets/CREDITS.md`（9 件含许可/面数/来源）；「修改前后图」依赖前序会话存档 | Round 11/14/17 | `seam-225.png`、`b6-desktop.png`、`equator-pond.png`、CREDITS.md |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
-| G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；设置弹窗键盘路径（焦点进入/Tab×6 窗内/Esc 归还/滚动锁）；**专注浮窗：宽 880 居中、`backdrop-filter: blur(18px) saturate(1.08)` 实测 + vision 确认背后星球模糊可见、内容可读无溢出** | Round 5/8/13/16 | `test-g10*.py`、`g10-focus-blur.png` |
+| G10 天空与 UI | 🟢 通过 | **4 层天空（far/mid/near/nebula）实测**；390/768/1440 无横向溢出（vision 确认）；专注浮窗**宽 880 水平居中（centered=True）**、`backdrop-filter: blur(18px)` + vision 确认背后星球模糊；**关闭按钮可见可点（点后面板消失）**、内容溢出时 `.focus-body` 滚动；键盘 Tab 焦点陷阱/Esc 归还/滚动锁；静态降级 2D 绘本 + 低动效 | Round 5/8/13/16/20 | `test-g10*.py`、`g10-focus-blur.png` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
 | G12 构建与交付 | 🟢 通过 | typecheck 0 / **build 41/41（含新增 revert 路由）** / 单测 36/36；/space、/visit 无 pageerror；B6 四组截图（vision 确认静态降级 2D 绘本）；B8 界面章 §9 创造模式 | Round 6/12/15 | `b6-*.png`、`docs/b8-ui-chapter.md` §9 |
 
-## 交付状态汇总（Round 19）
+## 交付状态汇总（Round 20）
 
-**已通过（有证据）**：**G1 选材与玫瑰、G2 实时编辑、G4 数据库闭环、G5 异常/权限/并发、G6 模板与兼容、G7 完整球体、G12 构建与交付**（7 项）。
+**已通过（有证据）**：**G1 选材与玫瑰、G2 实时编辑、G4 数据库闭环、G5 异常/权限/并发、G6 模板与兼容、G7 完整球体、G10 天空与 UI、G12 构建与交付**（8 项）。
 
 **进行中（核心证据已具备，差 1-2 子项或受环境限制）**：
 - **G3**：`SphereSurface` 顶点全在球面（20000+ 自动检查）+ 正面/极点/8 向接缝 vision 均无破洞；仅侧面视角 vision 判读有歧义（数值已证明贴地）。
 - **G8**：温室/木屋/池塘木桥/旅人坐姿多角度 vision 确认、资产清单 CREDITS.md；差「修改前后图」（前序会话存档，本轮未重制）。
 - **G9**：`/dev/garden?n=1..100&g=3` 隔离压力（数量/坐标有限/tri 单调）+ `layout.test.ts` 28 例；`?welcome=1` 打开本命花档案已验；差「搜索定位」完整端到端。
-- **G10**：三档无横向溢出、键盘路径（Tab 焦点陷阱/Esc 归还）、浮窗毛玻璃 vision、静态降级 vision；已基本齐全。
 - **G11**：60s×30 采样 draw297/tri453k/FPS1–2、10 轮资源不累积；**GPU 60fps / 软件 ≥12fps 在本 SwiftShader 环境不达标，按规则标未验证**。
 
 **续作所需条件（准确）**：
@@ -77,6 +76,12 @@
 - **发现并修复**：移动端放置后属性面板不出现（`cp-prop: 0`）。根因是同一次 tap 的后续 click 命中了场景中的植物 → 打开档案浮窗 → 创造面板关闭。加「放置后 400ms 内忽略植物/热点选中」后修复。
 - 移动端触摸拖滑杆（`Input.dispatchTouchEvent`）：滑杆 box (61,432,258,16)，**scale 1.0 → 1.8**，无 pageerror；`cp-prop: 3`（比例/旋转/阶段）。
 - G2 全部子项（滑杆范围、一次拖动一次撤销、多步撤销重做、手机触摸、取消保留）均已实测 → **G2 通过**。
+
+### Round 20 · 天空分层 + 浮窗收口（G10 通过）
+
+- **天空**：`.sky-layer` 实测 **4 层**（`sky-far` / `sky-mid` / `sky-near` / `sky-nebula`）——分层星点已实际展示。
+- **专注浮窗**：`main.focus` 宽 880、`centered=True`（左右各 280）、`backdrop-filter: blur(18px)`；**「← 花园」关闭按钮可见可点，点击后 `main.focus` 计数 0**；`.focus-body` 内容超出时滚动（当前内容 732=732 无需滚动）。
+- 三档（1440/768/390）无横向溢出、Tab 焦点陷阱、Esc 归还焦点、滚动锁、静态降级与低动效均已在此前轮次验证 → **G10 通过**。
 
 ### Round 19 · 录屏证据 + 玫瑰三视角（G1/G7 通过）
 
