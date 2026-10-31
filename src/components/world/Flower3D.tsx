@@ -42,19 +42,45 @@ function MergedPetals({ specs, deps }: { specs: PetalSpec[]; deps: string }) {
 
 type LeafSpec = { kind: string; len: number; w: number; at: [number, number, number]; yaw: number; tilt: number; bend?: number };
 
-/** 多片叶子合并成一个 mesh（同材质、同顶点色），每株从 2–6 次 draw 降到 1 次 */
+function leavesGeo(specs: LeafSpec[]) {
+  const parts = specs.map((s) => {
+    const m = new THREE.Matrix4()
+      .multiply(new THREE.Matrix4().makeTranslation(s.at[0], s.at[1], s.at[2]))
+      .multiply(new THREE.Matrix4().makeRotationY(s.yaw))
+      .multiply(new THREE.Matrix4().makeRotationX(s.tilt));
+    return leafGeo(s.kind as any, s.len, s.w, s.bend ?? 0.25).clone().applyMatrix4(m);
+  });
+  return mergeGeometries(parts, false)!;
+}
+
+type FoliagePart = { geo: THREE.BufferGeometry; color?: string; m?: THREE.Matrix4 };
+
+/**
+ * 把「土丘 + 茎 + 叶」这类静态部件合成一个带顶点色的几何体：每株从 3–4 次 draw 降到 1 次。
+ * 统一去掉 uv、保证非索引 + 有 normal，否则 mergeGeometries 会因为属性不一致失败。
+ */
+function foliageGeo(parts: FoliagePart[]) {
+  const prepared = parts.map((p) => {
+    let g: THREE.BufferGeometry = p.geo.clone();
+    if (g.index) g = g.toNonIndexed() as THREE.BufferGeometry;
+    g.deleteAttribute("uv");
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (p.color || !g.attributes.color) {
+      const c = new THREE.Color(p.color ?? "#ffffff");
+      const n = g.attributes.position.count;
+      const arr = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+      g.setAttribute("color", new THREE.Float32BufferAttribute(arr, 3));
+    }
+    if (p.m) g.applyMatrix4(p.m);
+    return g;
+  });
+  return mergeGeometries(prepared, false)!;
+}
+
+/** 多片叶子合并成一个几何体（同材质、同顶点色）；整株的叶/茎/土丘再由 foliageGeo 合成一块 */
 function MergedLeaves({ specs, deps }: { specs: LeafSpec[]; deps: string }) {
-  const merged = useMemo(() => {
-    const parts = specs.map((s) => {
-      const m = new THREE.Matrix4()
-        .multiply(new THREE.Matrix4().makeTranslation(s.at[0], s.at[1], s.at[2]))
-        .multiply(new THREE.Matrix4().makeRotationY(s.yaw))
-        .multiply(new THREE.Matrix4().makeRotationX(s.tilt));
-      return leafGeo(s.kind as any, s.len, s.w, s.bend ?? 0.25).clone().applyMatrix4(m);
-    });
-    return mergeGeometries(parts, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deps]);
+  const merged = useMemo(() => leavesGeo(specs), [deps]); // eslint-disable-line react-hooks/exhaustive-deps
   return <mesh geometry={merged} material={vcol("leaf")} castShadow />;
 }
 
@@ -205,25 +231,26 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
 
   const body = useMemo(() => {
     if (stage === "seed") {
-      return (
-        <group>
-          <mesh geometry={sphereGeo(0.036, 16, 10)} material={matte(C.soil)} scale={[1, 0.38, 1]} position={[0, 0.004, 0]} receiveShadow />
-          <mesh geometry={sphereGeo(0.016, 12, 8)} material={matte("#C9A16E")} scale={[1, 0.7, 1.4]} position={[0.005, 0.02, 0]} rotation={[0, 0.5, 0.4]} castShadow />
-          <mesh geometry={sphereGeo(0.006, 8, 6)} material={matte("#F3DFA9")} position={[0.008, 0.028, 0.008]} />
-        </group>
-      );
+      // 土丘 + 种粒 + 高光合并成一块（顶点色代替三个材质），1 次 draw
+      const seedGeo = foliageGeo([
+        { geo: sphereGeo(0.036, 16, 10), color: C.soil, m: new THREE.Matrix4().makeTranslation(0, 0.004, 0).multiply(new THREE.Matrix4().makeScale(1, 0.38, 1)) },
+        { geo: sphereGeo(0.016, 12, 8), color: "#C9A16E", m: new THREE.Matrix4().makeTranslation(0.005, 0.02, 0)
+          .multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, 0.5, 0.4)))
+          .multiply(new THREE.Matrix4().makeScale(1, 0.7, 1.4)) },
+        { geo: sphereGeo(0.006, 8, 6), color: "#F3DFA9", m: new THREE.Matrix4().makeTranslation(0.008, 0.028, 0.008) },
+      ]);
+      return <mesh geometry={seedGeo} material={vcol("leaf")} castShadow receiveShadow />;
     }
     if (stage === "sprout") {
-      return (
-        <group>
-          <mesh geometry={sphereGeo(0.034, 16, 10)} material={matte(C.soil)} scale={[1, 0.3, 1]} receiveShadow />
-          <mesh geometry={stemGeo(0.07, bend * 0.6, 0.008)} material={matte(C.stem)} castShadow />
-          <MergedLeaves deps="sprout" specs={[
-            { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: 0, tilt: 1.15, bend: 0.15 },
-            { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: Math.PI, tilt: 1.15, bend: 0.15 },
-          ]} />
-        </group>
-      );
+      const sprout = foliageGeo([
+        { geo: sphereGeo(0.034, 16, 10), color: C.soil, m: new THREE.Matrix4().makeScale(1, 0.3, 1) },
+        { geo: stemGeo(0.07, bend * 0.6, 0.008), color: C.stem },
+        { geo: leavesGeo([
+          { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: 0, tilt: 1.15, bend: 0.15 },
+          { kind: "round", len: 0.04, w: 0.034, at: stemCurvePoint(0.07, bend * 0.6, 1).toArray(), yaw: Math.PI, tilt: 1.15, bend: 0.15 },
+        ]) },
+      ]);
+      return <mesh geometry={sprout} material={vcol("leaf")} castShadow receiveShadow />;
     }
     const h = stage === "leaf" ? H * 0.55 : stage === "bud" ? H * 0.82 : H;
     const top = stemCurvePoint(h, bend, 1);
@@ -242,13 +269,21 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
       }
     }
     if (species !== "lily" && stage === "leaf") leaves.push({ kind: "almond", len: 0.03, w: 0.018, at: top.toArray(), yaw: 0.5, tilt: 0.3 });
+    // 土丘 + 茎 + 叶合并成一块（顶点色），每株从 3–4 次 draw 降到 1 次；花头仍是独立 mesh
+    const foliageParts: FoliagePart[] = [
+      { geo: sphereGeo(0.032, 14, 8), color: C.soilDeep, m: new THREE.Matrix4().makeScale(1, 0.22, 1) },
+    ];
+    if (species === "lily") {
+      if (stage === "leaf") foliageParts.push({ geo: stemGeo(0.09, 0.01, 0.006), color: C.stem });
+    } else {
+      foliageParts.push({ geo: stemGeo(h, bend, species === "sunflower" ? 0.011 : 0.007), color: C.stem });
+    }
+    if (leaves.length > 0) foliageParts.push({ geo: leavesGeo(leaves) });
+    const foliage = foliageGeo(foliageParts);
     return (
       <group>
-        <mesh geometry={sphereGeo(0.032, 14, 8)} material={matte(C.soilDeep)} scale={[1, 0.22, 1]} receiveShadow />
-        {species !== "lily" && <mesh geometry={stemGeo(h, bend, species === "sunflower" ? 0.011 : 0.007)} material={matte(C.stem)} castShadow />}
-        {leaves.length > 0 && <MergedLeaves specs={leaves} deps={`${species}-${stage}-${seed}`} />}
+        <mesh geometry={foliage} material={vcol("leaf")} castShadow receiveShadow />
         {species === "lily" && stage !== "leaf" && <LilySpray c={c} open={open} bud={stage === "bud"} seed={seed} />}
-        {species === "lily" && stage === "leaf" && <mesh geometry={stemGeo(0.09, 0.01, 0.006)} material={matte(C.stem)} />}
         {species !== "lily" && (stage === "bud" || stage === "bloom") && (
           <group position={top}>
             {species === "rose" && <RoseHead c={c} open={open} bud={stage === "bud"} />}
