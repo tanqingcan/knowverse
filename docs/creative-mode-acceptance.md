@@ -18,14 +18,24 @@
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
 | G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
-| G7 完整球体 | 🟡 进行中 | 全周环绕/复位/慢转已实现；**vision 确认背面有连续草地+建筑/树/石、无破洞接缝倒置**；极点/接缝未逐一验 | Round 4 | `sphere-back.png` + vision |
+| G7 完整球体 | 🟡 进行中 | 全周环绕/复位；vision 确认背面连续草地无破洞；**空闲慢转已实现**：按下暂停（像素差分 28.8→0.76）、释放 3 秒恢复、编辑/浮窗/低动效不转 | Round 4/8 | `sphere-back.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
-| G10 天空与 UI | 🟡 进行中 | 深色星空已展示（vision 确认）；手机 390×844 创造模式无横向溢出、素材栏不遮挡星球（vision 确认）；768/低动效/Esc-Tab 未验 | Round 5 | `cm-mobile-creative.png` + vision |
+| G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390×844 与 **768×1024 均无横向溢出**（vision 确认工具栏可见）；**创造模式 Esc 逐级退出实测**（取消放置→收起素材栏）；低动效/浮窗模糊/Tab 焦点未验 | Round 5/8 | `cm-mobile-creative.png`、`g10-768.png`、`test-g10.py` |
 | G11 性能与回归 | ⬜ 未开始 | 已有 draw 391 实测，需按本节重测 | — | — |
 | G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
 
 ## 每轮记录
+
+### Round 8 · Esc 退出 + 空闲慢转 + 768 平板（G7/G10，提交 `e8e13dd`/`2823e06`）
+
+- 创造模式 Esc 逐级退出：取消放置（`.cp-placing` 1→0）→ 收起素材栏（1→0）；实测 `test-g10.py`。
+- 768×1024：无横向溢出（`scrollWidth > clientWidth` = false），vision 确认「创造」按钮可见可点、星球正常。
+- 空闲慢转（`Rig`）：garden + 非低动效 + 无 `paused` + 非按下时，`drag.yaw += dt*0.03`；指针按下记录 `pressing` 暂停，释放 3 秒后恢复。
+- 像素差分实测（`test-rotate.py`）：空闲 4.5 秒 **diff=28.8**（在转）；按住 4 秒 **diff=0.76**（停了，残差为呼吸/高光微动）。
+- `paused = creativeOpen || panel != null || introPlaying`，编辑与浮窗期间不自转。
+
+**未验证**：低动效（reduced）下不自转的像素证据、极点/接缝低视角。
 
 ### Round 7 · 保存失败重试 + G3 自动检查（2026-10-31）
 
