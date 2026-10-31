@@ -180,6 +180,18 @@ export function SpaceApp() {
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutMsg("已恢复服务器布局");
     }).catch((e: any) => setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`));
   };
+  // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
+  useEffect(() => {
+    if (!creativeOpen) return;
+    const f = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (placingKind) { setPlacingKind(null); return; }
+      if (selectedDecorId) { setSelectedDecorId(null); return; }
+      setCreativeOpen(false);
+    };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [creativeOpen, placingKind, selectedDecorId]);
   // 入场动画的兜底：无论 3D 是否加载完成，最多 4.5 秒后显示界面
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
