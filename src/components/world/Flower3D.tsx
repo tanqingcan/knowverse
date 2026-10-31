@@ -191,22 +191,28 @@ function IrisHead({ c, open, bud }: { c: ReturnType<typeof colorOf>; open: numbe
 function LilySpray({ c, open, bud, seed }: { c: ReturnType<typeof colorOf>; open: number; bud: boolean; seed: number }) {
   const curve = useMemo(() => new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.006, 0.12, 0), new THREE.Vector3(0.035, 0.2, 0.01), new THREE.Vector3(0.085, 0.19, 0.02), new THREE.Vector3(0.11, 0.155, 0.02)]), []);
   const tube = useMemo(() => new THREE.TubeGeometry(curve, 20, 0.0035, 6, false), [curve]);
-  const bellMat = useMemo(() => new THREE.MeshStandardMaterial({ color: c.light, roughness: 0.7, side: THREE.DoubleSide }), [c.light]);
   const n = bud ? 4 : 6;
+  // 管茎 + 6 根铃柄 → 1 个块；6 个铃铛 → 1 个块。原来每朵铃兰要 1 + 6×2 = 13 次 draw
+  const merged = useMemo(() => {
+    const stems: FoliagePart[] = [{ geo: tube, color: C.stem }];
+    const bells: FoliagePart[] = [];
+    for (let i = 0; i < n; i++) {
+      const t = 0.45 + (i / (n - 1)) * 0.53;
+      const p = curve.getPoint(t);
+      const s = (bud ? 0.6 : 0.9 + 0.5 * open) * (1.1 - (i / n) * 0.45);
+      stems.push({ geo: cylGeo(0.0018, 0.0018, 0.018, 4), color: C.stem, m: new THREE.Matrix4().makeTranslation(p.x, p.y - 0.009, p.z) });
+      bells.push({
+        geo: bellGeo(), color: bud ? C.leafLight : c.light,
+        m: new THREE.Matrix4().makeTranslation(p.x, p.y - 0.016, p.z).multiply(new THREE.Matrix4().makeScale(s, s, s)),
+      });
+    }
+    return { stems: foliageGeo(stems), bells: foliageGeo(bells) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curve, tube, n, open, bud, c.light]);
   return (
     <group rotation={[0, rand(seed, 3) * Math.PI * 2, 0]}>
-      <mesh geometry={tube} material={matte(C.stem)} castShadow />
-      {Array.from({ length: n }, (_, i) => {
-        const t = 0.45 + (i / (n - 1)) * 0.53;
-        const p = curve.getPoint(t);
-        const s = (bud ? 0.6 : 0.9 + 0.5 * open) * (1.1 - (i / n) * 0.45);
-        return (
-          <group key={i} position={p}>
-            <mesh geometry={cylGeo(0.0018, 0.0018, 0.018, 4)} material={matte(C.stem)} position={[0, -0.009, 0]} />
-            <mesh geometry={bellGeo()} material={bud ? matte(C.leafLight) : bellMat} position={[0, -0.016, 0]} scale={s} castShadow />
-          </group>
-        );
-      })}
+      <mesh geometry={merged.stems} material={vcol("leaf")} castShadow />
+      <mesh geometry={merged.bells} material={vcol("petal")} castShadow />
     </group>
   );
 }
