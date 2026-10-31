@@ -23,7 +23,7 @@
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
 | G10 天空与 UI | 🟡 进行中 | 深色星空已展示（vision 确认）；手机 390×844 创造模式无横向溢出、素材栏不遮挡星球（vision 确认）；768/低动效/Esc-Tab 未验 | Round 5 | `cm-mobile-creative.png` + vision |
 | G11 性能与回归 | ⬜ 未开始 | 已有 draw 391 实测，需按本节重测 | — | — |
-| G12 构建与交付 | ⬜ 未开始 | — | — | — |
+| G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
 
 ## 每轮记录
 
@@ -34,7 +34,9 @@
 - 实测（`test-visit.py`）：demo 发布（revision 4）→ xingye 登录 GET `/api/planets/<demoId>` → **decor 6 件**（rose/rose/soil/fence/road/rose）；xingye 自己的 `/api/planet-layout` 为 revision 0、items []（**账号隔离**）。
 - vision 确认 `visit-demo.png`：玫瑰/泥土/道路/围栏可见、明确标注只读、无编辑按钮。
 
-**未验证**：保存失败重试（模拟断网）、恢复已发布快照。
+**G12 构建**：`npm run build` → `✓ Compiled successfully in 6.7s` + `✓ Generating static pages (40/40)`，exit 0；`tsc --noEmit` 0；`vitest` 34/34；`/space` 与 `/visit` 实测均无 pageerror。
+
+**未验证**：保存失败重试（模拟断网）、恢复已发布快照；B6 四组截图/B8 界面章未更新。
 
 ### Round 5 · 初始模板（G6 起步，提交 `b0058b0`）
 
