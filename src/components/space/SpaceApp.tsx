@@ -106,6 +106,7 @@ export function SpaceApp() {
   const [layoutRev, setLayoutRev] = useState(0);
   const [layoutStatus, setLayoutStatus] = useState("draft");
   const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
+  const [importPrompt, setImportPrompt] = useState<{ local: number; server: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -150,7 +151,21 @@ export function SpaceApp() {
   // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
   useEffect(() => {
     loadLayout().then((l) => {
-      if (l.revision > 0) decorStore.setAll(l.items.map(fromLayoutItem));
+      if (l.revision > 0) {
+        // G6：旧版 localStorage 草稿检测——先备份，不静默覆盖；差异则提示一次性导入
+        try {
+          const raw = localStorage.getItem("kv-decor");
+          const local = raw ? JSON.parse(raw) : [];
+          const norm = (arr: any[]) => JSON.stringify(arr.map((d) => ({ k: d?.kind, x: +(+(d?.x ?? 0)).toFixed(3), z: +(+(d?.z ?? 0)).toFixed(3), s: +(+(d?.scale ?? 1)).toFixed(3) })));
+          const localNorm = norm(Array.isArray(local) ? local : []);
+          const serverNorm = norm(l.items);
+          if (Array.isArray(local) && local.length > 0 && localNorm !== serverNorm) {
+            localStorage.setItem("kv-decor-backup", raw!);
+            setImportPrompt({ local: local.length, server: l.items.length });
+          }
+        } catch { /* 忽略损坏的本地草稿 */ }
+        decorStore.setAll(l.items.map(fromLayoutItem));
+      }
       setLayoutRev(l.revision); setLayoutStatus(l.status);
     }).catch(() => { /* 未登录或网络失败：保留本地 localStorage 草稿 */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,6 +195,19 @@ export function SpaceApp() {
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutMsg("已恢复服务器布局");
     }).catch((e: any) => setLayoutMsg(`恢复失败：${e?.message ?? "网络错误"}`));
   };
+  // G6：旧版 localStorage 草稿一次性导入（已备份，差异提示，不静默覆盖）
+  const importLocalDraft = () => {
+    try {
+      const raw = localStorage.getItem("kv-decor-backup");
+      const arr = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(arr)) {
+        decorStore.setAll(arr.map((d: any, i: number) => ({ ...d, id: d?.id ?? `bk-${i}` })));
+        setLayoutMsg(`已导入本地草稿 ${arr.length} 件（尚未保存到服务器）`);
+      }
+    } catch { setLayoutMsg("导入失败：本地草稿损坏"); }
+    setImportPrompt(null);
+  };
+  const keepServerLayout = () => setImportPrompt(null);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -369,6 +397,7 @@ export function SpaceApp() {
           onSave={saveCreative} onPublish={publishCreative}
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
           onApplyTemplate={applyTemplate} onDiscard={discard}
+          importPrompt={importPrompt} onImportLocal={importLocalDraft} onKeepServer={keepServerLayout}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (

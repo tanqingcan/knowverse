@@ -646,6 +646,9 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .cp-foot { padding: 10px 14px 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .cp-rev { font-size: 12px; color: var(--ink-3); }
 .cp-msg { font-size: 12px; color: var(--gold-ink); }
+.cp-import { padding: 10px 14px; background: rgba(221, 181, 109, 0.12); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.cp-import-actions { display: flex; gap: 8px; }
+.cp-import-actions .btn { flex: 1; }
 .cp-foot-actions { display: flex; gap: 8px; }
 .cp-foot-actions .btn { flex: 1; }
 .tool-active { background: rgba(221, 181, 109, 0.2); }

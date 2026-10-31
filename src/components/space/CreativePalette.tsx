@@ -29,7 +29,7 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
@@ -38,6 +38,8 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   onSave?: () => void; onPublish?: () => void;
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
   onApplyTemplate?: () => void; onDiscard?: () => void;
+  importPrompt?: { local: number; server: number } | null;
+  onImportLocal?: () => void; onKeepServer?: () => void;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
@@ -51,6 +53,15 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
         <b>创造模式</b>
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="收起素材栏">收起</button>
       </div>
+      {importPrompt && (
+        <div className="cp-import" role="alert">
+          <span>检测到本地旧版草稿 {importPrompt.local} 件（已备份），服务器布局 {importPrompt.server} 件。是否导入本地草稿？</span>
+          <div className="cp-import-actions">
+            <button className="btn btn-primary btn-sm" onClick={onImportLocal}>导入本地</button>
+            <button className="btn btn-quiet btn-sm" onClick={onKeepServer}>保持服务器</button>
+          </div>
+        </div>
+      )}
       {placingKind && (
         <div className="cp-placing" role="status">
           <span>正在放置「{DECOR_CATALOG.find((c) => c.kind === placingKind)?.label ?? placingKind}」——点击球面确定，Esc 取消</span>
