@@ -75,3 +75,21 @@
 - **实测**：n=10 **347 → 266 draw**（−81）；n=100/3 圃 **565 → 391 draw**（−174，−31%）。**100 株从最初 1,320 降到 391（−70%）**。
 - 提交：`6028f72 perf(world): 花圃苔藓/木桩合批为 InstancedMesh，n=100 draw 565 -> 391`。
 - **位置重叠修复**：种子小棚（-1.62,-1.15）原重叠温室 + 树 + 灌木，池塘（-1.32,1.05）原重叠概率统计花圃槽位；改为种子小棚(-0.15,-0.95)、池塘(0,2.24)、拱门(0,1.35)，并在 `layout.ts` 顶部加坐标系说明（用户可自行改 SPOTS 的 x/z）。提交 `7c1c7c8`。
+
+## 第六回合：B3 参观 + B4 记忆（子智能体并行交付）
+
+- 新开两个子智能体 backend-visit、memory-panel 并行实现，lead 集成验证。
+
+**B3 只读参观**（`5a50423`，子智能体 backend-visit）：
+- `src/server/planets.ts` `publicPlanet()`：按 sharing_preferences 的 share_planet/share_stages 判断，返回 `{planetName, natalPlant, gardens[], plants[]}`，未公开 403。
+- `src/app/api/planets/[userId]/route.ts`（GET）+ `src/app/visit/page.tsx` 重写为 `/visit?user=<id>` 拉真实数据（保留只读/2D 降级）。
+- 验证：直接调用 publicPlanet() 实测 xingye/ahe 返回 gardens=2/plants=3 真实数据、demo 因 share_stages=false 正确隐藏植物。
+- 我补的接线：`3f010ce` 星系面板「参观示例星球」改为 `/visit?user=<第一个公开成员>`。
+
+**B4 记忆面板**（`9ae3fca`，子智能体 memory-panel）：
+- `memories` 表（迁移 `0002_fair_doomsday`，45 表）+ `src/server/memories.ts`（list/软删除/修正保留历史）+ GET/DELETE/PATCH `/api/memories` + `MemoryPanel.tsx` + `SpaceApp` 导航「回顾→记忆」+ seed 预置 3 条 demo 记忆。
+- 验证：typecheck、db:migrate、db:seed、服务层直连 DB 实测（list=3 → 删除→2 → 修正保留历史）；**GET /api/memories 经 HTTP 实测 200 返回 3 条真实数据**（lead 复核）。
+
+**如实未验证（沙箱边界，非代码问题）**：
+- 动态路由 `[id]/[userId]` 的**端到端 HTTP 200** 无法在沙箱内验证：Next dev 对动态路由 handler 会 fork 子进程（piped stdio）→ `spawn EPERM`，影响**所有**动态路由（含已有的 `/api/classes/[id]`）；非动态路由（`/api/memories`、`/api/space` 等）均 200。DELETE/PATCH 逻辑已用直连 DB 的 tsx 脚本验证。需在**非沙箱终端**跑 `npm run dev` 后复核动态路由 HTTP。
+- 记忆面板视觉、来源跳转高亮未目测（无图像输入）。
