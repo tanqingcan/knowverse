@@ -3,7 +3,7 @@
  * 参观模式（只读）：展示一位同学的星球与装饰，不能编辑。
  * 通过 /visit?user=<userId> 拉取真实数据（GET /api/planets/[userId]），
  * 只显示对方 share_planet / share_stages 打开的内容；WebGL 失败时降级为 2D 绘本（StaticGarden）。
- * 装饰 DECOR 尚无后端接口，暂不展示装饰实例。
+ * 创造模式布局：展示对方「已发布」的布局（只读），未发布不展示。
  */
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -22,6 +22,7 @@ type VisitPlanet = {
   natalPlant: { id: string; conceptName: string | null; species: string; color: string; nickname: string | null } | null;
   gardens: { id: string; name: string; subjectId: string; subjectName: string; sortOrder: number }[];
   plants: { id: string; gardenId: string; conceptId: string; conceptName: string; species: string; color: string; nickname: string | null; stage: string; isNatal: boolean }[];
+  decor: { kind: string; x: number; z: number; rot: number; scale: number; width: number | null; length: number | null; color: string | null; stage: string | null }[];
 };
 
 export default function VisitPage() {
@@ -59,6 +60,11 @@ export default function VisitPage() {
   const gardens = (data?.gardens ?? []).map((g) => ({ name: g.name }));
   const planetName = data?.planetName ?? (data ? `${data.displayName}的星球` : "");
   const displayName = data?.displayName ?? "";
+  // 参观只读：对方已发布的创造模式布局
+  const visitDecor = (data?.decor ?? []).map((d, i) => ({
+    id: `visit-${i}`, kind: d.kind, x: d.x, z: d.z, rot: d.rot, scale: d.scale,
+    width: d.width ?? undefined, length: d.length ?? undefined, color: d.color ?? undefined, stage: d.stage ?? undefined,
+  }));
 
   return (
     <div className="app is-garden">
@@ -83,6 +89,7 @@ export default function VisitPage() {
             recenterKey={0}
             intro="none"
             readOnly
+            decor={visitDecor as any}
             onFail={() => setFailed(true)}
           />
         ) : (

@@ -31,6 +31,11 @@ export type PublicPlanet = {
     stage: string;
     isNatal: boolean;
   }[];
+  /** 参观只读：对方「已发布」的创造模式布局（未发布则为空数组） */
+  decor: {
+    kind: string; x: number; z: number; rot: number; scale: number;
+    width: number | null; length: number | null; color: string | null; stage: string | null;
+  }[];
 };
 
 export async function publicPlanet(targetUserId: string): Promise<PublicPlanet> {
@@ -99,6 +104,18 @@ export async function publicPlanet(targetUserId: string): Promise<PublicPlanet> 
     );
   }
 
+  // 创造模式布局：只有对方明确「发布」过，才向参观者展示（只读）
+  let decor: PublicPlanet["decor"] = [];
+  if (sharePlanet && target.planetId) {
+    const layout = await q1<{ id: string; status: string }>(
+      `SELECT id, status FROM planet_layouts WHERE planet_id = $1`, [target.planetId]);
+    if (layout?.status === "published") {
+      decor = await q<PublicPlanet["decor"][number]>(
+        `SELECT kind, x, z, rot, scale, width, length, color, stage
+         FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
+    }
+  }
+
   return {
     userId: target.id,
     displayName: target.displayName,
@@ -106,5 +123,6 @@ export async function publicPlanet(targetUserId: string): Promise<PublicPlanet> 
     natalPlant,
     gardens,
     plants,
+    decor,
   };
 }
