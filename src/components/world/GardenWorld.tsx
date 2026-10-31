@@ -513,9 +513,25 @@ function PerfProbe() {
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
+  // H02：把「屏幕坐标 → 球冠坐标」暴露给外层 DOM 拖动。R3F 的 pointermove 在拖动期间不触发
+  // （实测 [h02] move 无日志），DOM 层 pointermove 才稳定；用相机射线与球面求交，避免拿建筑表面点。
+  const { camera, gl } = useThree();
+  const dragRay = useMemo(() => new THREE.Raycaster(), []);
+  const dragNdc = useMemo(() => new THREE.Vector2(), []);
+  const dragSphere = useMemo(() => new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), []);
+  useEffect(() => {
+    props.pointerToCap.current = (cx: number, cy: number) => {
+      const r = gl.domElement.getBoundingClientRect();
+      dragNdc.set(((cx - r.left) / Math.max(1, r.width)) * 2 - 1, -((cy - r.top) / Math.max(1, r.height)) * 2 + 1);
+      dragRay.setFromCamera(dragNdc, camera);
+      const hit = dragRay.ray.intersectSphere(dragSphere, new THREE.Vector3());
+      return hit ? pointToCap(hit) : null;
+    };
+    return () => { props.pointerToCap.current = null; };
+  }, [camera, gl, dragRay, dragNdc, dragSphere, props.pointerToCap]);
   const anchors = useRef(new Map<string, THREE.Object3D>());
   const register = useMemo(() => (k: string, o: THREE.Object3D | null) => { if (o) anchors.current.set(k, o); else anchors.current.delete(k); }, []);
   const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
@@ -611,16 +627,19 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <group position={[-5.4, -3.0, -14]}><DistantPlanet color="#F2C9B6" size={0.26} ring={false} /></group>
       <group position={[-2.2, -1.4, -16]}><DistantPlanet color="#9CAFC5" size={0.16} ring={false} /></group>
 
-      <group ref={world}>
-        <mesh geometry={planetGeo} material={planetMat} receiveShadow
-          onPointerMove={(e) => {
-            if (!props.decorDrag.current || props.mode !== "garden") return;
-            const now = performance.now();
-            if (now - props.lastDecorMove.current < 80) return;
-            props.lastDecorMove.current = now;
-            const c = pointToCap(e.point);
-            props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
-          }} />
+      {/* 拖动装饰/建筑：处理器挂在 world 组（任意子物体命中都会冒泡），并用「射线×球面」求交。
+          原先挂在星球 mesh 上、用 e.point：指针压在建筑上时星球不触发 or 拿到建筑表面点，导致拖不动（H02 审查 #1）。 */}
+      <group ref={world} onPointerMove={(e) => {
+        if (!props.decorDrag.current || props.mode !== "garden") { if (props.decorDrag.current) console.log("[h02] blocked mode=", props.mode); return; } console.log("[h02] move ok");
+        const now = performance.now();
+        if (now - props.lastDecorMove.current < 80) return;
+        props.lastDecorMove.current = now;
+        const hit = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
+        if (!hit) return;
+        const c = pointToCap(hit);
+        props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
+      }}>
+        <mesh geometry={planetGeo} material={planetMat} receiveShadow />
         {/* 创造模式放置层：比地表/草/云略大的不可见球，截获点击换算球冠坐标；仅放置时存在 */}
         {props.placingKind && (
           <mesh geometry={sphereGeo(3.12, 24, 16)} material={hitMat}
@@ -729,6 +748,8 @@ export function GardenWorld(props: WorldProps) {
   const decorDrag = useRef<string | null>(null);
   const lastDecorMove = useRef(0);
   const zoom = useRef(1);
+  // H02：Screen→球冠坐标函数（由内部 Scene 用相机+射线注册），供 DOM 层拖动使用
+  const pointerToCap = useRef<((cx: number, cy: number) => { x: number; z: number } | null) | null>(null);
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
   // 触屏：多指跟踪。双指间距用于缩放；单指环绕仍走 press 基准
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -831,7 +852,16 @@ export function GardenWorld(props: WorldProps) {
           }
           return;
         }
-        if (decorDrag.current) return;
+        if (decorDrag.current) {
+          // H02：拖动装饰/建筑走 DOM 层（R3F pointermove 在拖动期间不触发）
+          const now = performance.now();
+          if (now - lastDecorMove.current >= 80) {
+            lastDecorMove.current = now;
+            const c = pointerToCap.current?.(e.clientX, e.clientY);
+            if (c) props.onDecorMove?.(decorDrag.current, c.x, c.z);
+          }
+          return;
+        }
         const p = press.current; if (!p) return;
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         if (Math.abs(dx) + Math.abs(dy) < 6) return;
@@ -853,7 +883,7 @@ export function GardenWorld(props: WorldProps) {
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
             <PerfProbe />
-            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} />
+            <Scene {...props} labelEl={labelEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} />
           </Suspense>
         </Canvas>
       </GLBoundary>
