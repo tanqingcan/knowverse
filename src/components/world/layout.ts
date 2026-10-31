@@ -40,6 +40,7 @@ export const SPOTS = {
   observatory: { x: -0.75, z: -2.15, yaw: 18 }, // 背面观星台（环绕探索目标）
   seedShed: { x: -1.62, z: -1.15, yaw: 30 },     // 种子小棚（温室旁，装饰性探索目标）
   arch: { x: 0, z: 1.22, yaw: 0 },              // 花园拱门（正前入口，纯装饰）
+  pond: { x: -1.32, z: 1.05, yaw: 0 },          // 小池塘 + 木桥（左侧前，装饰性探索目标）
 };
 
 /** 回忆小径：主花圃 → 长椅旁 → 星灯书屋门口 */
@@ -100,7 +101,7 @@ export function scatter(beds: BedLayout[], count = 520, seed = 11, maxR = 2.35, 
   const blocked: { x: number; z: number; r: number }[] = [
     ...beds.map((b) => ({ x: b.x, z: b.z, r: b.r + 0.07 })),
     { ...SPOTS.cottage, r: 0.45 }, { ...SPOTS.greenhouse, r: 0.42 }, { ...SPOTS.bench, r: 0.16 }, { ...SPOTS.sign, r: 0.06 },
-    { ...SPOTS.seedShed, r: 0.34 }, { ...SPOTS.arch, r: 0.16 },
+    { ...SPOTS.seedShed, r: 0.34 }, { ...SPOTS.arch, r: 0.16 }, { ...SPOTS.pond, r: 0.52 },
     ...TREES.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.18 : 0.12 })),
     ...WILD.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.22 : 0.16 })),
     ...WILD_ROCKS.map((t) => ({ x: t.x, z: t.z, r: 0.12 })),

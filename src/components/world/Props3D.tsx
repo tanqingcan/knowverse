@@ -361,6 +361,37 @@ export function GardenArch({ seed = 0 }: { seed?: number }) {
   );
 }
 
+/** 小池塘 + 木桥：一片不透明浅水 + 跨过它的小木桥（装饰性探索目标，水面用不透明材质避免透明排序问题） */
+export function PondBridge() {
+  const wood = useMemo(() => matte(C.wood, { map: grainTexture("#B5835C", "#7C5435") }), []);
+  const water = useMemo(() => matte("#8FB6C9", { rough: 0.28 }), []);
+  const stones = useMemo(() => Array.from({ length: 14 }, (_, i) => {
+    const a = (i / 14) * Math.PI * 2 + rand(i, 1) * 0.4;
+    return { a, r: 0.44 + rand(i, 2) * 0.06, s: 0.022 + rand(i, 3) * 0.018 };
+  }), []);
+  return (
+    <group>
+      <Contact r={0.52} />
+      {/* 水面（不透明浅蓝，呼应雾蓝配色） */}
+      <mesh geometry={cylGeo(0.4, 0.44, 0.02, 24)} material={water} position={[0, 0.012, 0]} receiveShadow />
+      {/* 岸边石子 */}
+      {stones.map((s, i) => (
+        <mesh key={i} geometry={sphereGeo(1, 8, 6)} material={matte(i % 3 ? C.stone : "#C9C2D6")} position={[Math.cos(s.a) * s.r, 0.022, Math.sin(s.a) * s.r]} scale={[s.s, s.s * 0.5, s.s]} />
+      ))}
+      {/* 木桥（沿 z 轴跨过水面） */}
+      <mesh geometry={rbox(0.16, 0.02, 0.95, 0.01)} material={wood} position={[0, 0.06, 0]} castShadow receiveShadow />
+      {[-1, 1].map((sd) => (
+        <group key={sd} position={[sd * 0.085, 0, 0]}>
+          <mesh geometry={rbox(0.018, 0.018, 0.95, 0.006)} material={matte(C.woodDeep)} position={[0, 0.14, 0]} castShadow />
+          {[0, 1, 2, 3].map((i) => (
+            <mesh key={i} geometry={rbox(0.02, 0.07, 0.015, 0.005)} material={matte(C.woodDeep)} position={[0, 0.1, -0.38 + i * 0.25]} />
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
 /** 远处的共学星球（低细节） */
 export function DistantPlanet({ color, ring = true, size = 0.5 }: { color: string; ring?: boolean; size?: number }) {
   const g = useRef<THREE.Group>(null);

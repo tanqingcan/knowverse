@@ -255,7 +255,7 @@ export function SpaceApp() {
       const p = scenePlants.find((x) => x.id === k.slice(6));
       return p ? `${p.nickname ? `「${p.nickname}」` : ""}${p.conceptName} · ${STAGE_NAME[p.stage]}${p.reviewDue ? " · 待复习" : ""}` : null;
     }
-    return { cottage: "星灯书屋 · 学习与对话", greenhouse: "资料温室 · 我的资料", path: "回忆小径 · 历史问答", galaxy: "远处的星球 · 共学", observatory: "观星台 · 共学", seedshed: "种子小棚 · 待播的种子", arch: "花园拱门" }[k] ?? null;
+    return { cottage: "星灯书屋 · 学习与对话", greenhouse: "资料温室 · 我的资料", path: "回忆小径 · 历史问答", galaxy: "远处的星球 · 共学", observatory: "观星台 · 共学", seedshed: "种子小棚 · 待播的种子", arch: "花园拱门", pond: "小池塘 · 木桥" }[k] ?? null;
   };
 
   return (

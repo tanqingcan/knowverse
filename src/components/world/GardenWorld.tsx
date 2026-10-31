@@ -12,7 +12,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import * as THREE from "three";
 import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat } from "./geo";
 import { Flower3D } from "./Flower3D";
-import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, SeedShed, Sign, SteppingStone } from "./Props3D";
+import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
 import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
@@ -542,6 +542,11 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           <GardenArch seed={3} />
           <group ref={(o) => register("arch", o)} position={[0, 0.42, 0]} />
           <LabelHit name="arch" r={0.18} h={0.5} setHover={setHover} />
+        </OnCap>
+        <OnCap x={SPOTS.pond.x} z={SPOTS.pond.z} yaw={SPOTS.pond.yaw}>
+          <PondBridge />
+          <group ref={(o) => register("pond", o)} position={[0, 0.16, 0]} />
+          <LabelHit name="pond" r={0.5} h={0.2} setHover={setHover} />
         </OnCap>
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
         {TREES.map((t, i) => (
