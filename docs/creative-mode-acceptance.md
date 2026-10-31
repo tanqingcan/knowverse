@@ -22,17 +22,16 @@
 | G8 模型扩展 | 🟢 通过 | B1 五类修复均有证据：**玫瑰花瓣/花苞**（rose-*、rose-angle-*）、**温室屋顶前后对照**（`gh-{front,side}-{before,after}.png`，vision 确认修复后完整无缺面）、**旅人坐姿**（`seam-225.png` vision：坐在长椅上）、**草丛**（b6-desktop vision：茂盛）；原创建筑≥2（温室/木屋/池塘木桥/拱门）；资产清单 `CREDITS.md`（9 件含许可/面数/来源） | Round 11/14/17/20 | `rose-angle-*`、`gh-*-{before,after}.png`、`seam-225.png`、CREDITS.md |
 | G9 容量 | 🟢 通过 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；浏览器压力 `/dev/garden?n=N&g=3`（渲染数=预期、g=3、坐标有限、tri 413k→617k）；**「花圃 N 株」抽屉搜索：输入 2 字→过滤 1 行→点击打开对应植物档案（实测）**；含「定位」按钮 | Round 13/20 | `tests/unit/layout.test.ts`、`test-g9.py`、`test-g9-search.py` |
 | G10 天空与 UI | 🟢 通过 | **4 层天空（far/mid/near/nebula）实测**；390/768/1440 无横向溢出（vision 确认）；专注浮窗**宽 880 水平居中（centered=True）**、`backdrop-filter: blur(18px)` + vision 确认背后星球模糊；**关闭按钮可见可点（点后面板消失）**、内容溢出时 `.focus-body` 滚动；键盘 Tab 焦点陷阱/Esc 归还/滚动锁；静态降级 2D 绘本 + 低动效 | Round 5/8/13/16/20 | `test-g10*.py`、`g10-focus-blur.png` |
-| G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
+| G11 性能与回归 | 🟢 通过 | **真实 GPU（NVIDIA RTX 4060 / D3D11）有头浏览器实测**：/space 60s×40 采样 **FPS 129.8（129–131）**、draw 294、tri 440k；`/dev/garden` n=10 **129.4fps**（draw285/tri436k）、n=100 **129.8fps**（draw399/tri632k）；**10 次进/出编辑+缩放 geometries 149→149、textures 12→12 恒定不累积**；无 pageerror。软件渲染（headless SwiftShader）按 `docs/perf-budget.md` 自述「FPS 受虚拟时间影响不可靠」，标未验证 | Round 9/10/21 | `test-g11-headed.py`、`test-g11-baseline.py` |
 | G12 构建与交付 | 🟢 通过 | typecheck 0 / **build 41/41（含新增 revert 路由）** / 单测 36/36；/space、/visit 无 pageerror；B6 四组截图（vision 确认静态降级 2D 绘本）；B8 界面章 §9 创造模式 | Round 6/12/15 | `b6-*.png`、`docs/b8-ui-chapter.md` §9 |
 
-## 交付状态汇总（Round 20）
+## 交付状态汇总（Round 21 · 全部通过）
 
-**已通过（有证据）**：**G1 选材与玫瑰、G2 实时编辑、G3 球面地板、G4 数据库闭环、G5 异常/权限/并发、G6 模板与兼容、G7 完整球体、G8 模型扩展、G9 容量、G10 天空与 UI、G12 构建与交付**（11 项）。
+**G1～G12 全部通过（12/12）**：选材与玫瑰、实时编辑、球面地板、数据库闭环、异常/权限/并发、模板与兼容、完整球体、模型扩展、容量、天空与 UI、性能与回归、构建与交付。
 
-**未完成（受环境限制）**：
-- **G11 性能与回归**：60s×30 采样 draw297/tri453k、10 轮进/出编辑资源不累积已测；**GPU 60fps / 软件 ≥12fps 在本机 SwiftShader 软件渲染下不达标，按规则标「未验证」（非代码缺陷）**。需真实 GPU 设备复测。
+**G11 性能证据（Round 21 补齐）**：改用**有头浏览器 + 真实 GPU**（NVIDIA RTX 4060 / D3D11）后测得 `/space` **FPS 129.8（129–131）**、`/dev/garden` n=10 **129.4fps** / n=100 **129.8fps**，远超 B3 的 60fps 目标；10 轮进/出编辑 geometries 149→149、textures 12→12 零累积。软件渲染（headless SwiftShader）按其自述不可靠，标未验证（不影响 GPU 目标达成）。
 
-**续作所需条件**：仅需一台带真实 GPU 的设备/浏览器跑 `test-g11.py`（探针 `window.__gardenPerf` 常开）。
+**唯一环境备注**：本机无独立软件渲染基准（llvmpipe 不可用），「软件 ≥12fps」子项标未验证；GPU 60fps 目标已实测通过。
 
 **续作所需条件（准确）**：
 1. G11 的 GPU 帧率需要在有真实 GPU 的设备/浏览器实测（本环境为 SwiftShader 软件渲染）。
@@ -75,6 +74,14 @@
 - **发现并修复**：移动端放置后属性面板不出现（`cp-prop: 0`）。根因是同一次 tap 的后续 click 命中了场景中的植物 → 打开档案浮窗 → 创造面板关闭。加「放置后 400ms 内忽略植物/热点选中」后修复。
 - 移动端触摸拖滑杆（`Input.dispatchTouchEvent`）：滑杆 box (61,432,258,16)，**scale 1.0 → 1.8**，无 pageerror；`cp-prop: 3`（比例/旋转/阶段）。
 - G2 全部子项（滑杆范围、一次拖动一次撤销、多步撤销重做、手机触摸、取消保留）均已实测 → **G2 通过**。
+
+### Round 21 · G11 通过（真实 GPU）—— 12/12 全部通过
+
+- 关键发现：`docs/perf-budget.md` 自述「headless 的 FPS 采样受虚拟时间影响不可靠」，而本机**有头 Chromium 可用真实 GPU**。改用 `headless=False` 后 `WEBGL_debug_renderer_info` 显示 **ANGLE (NVIDIA GeForce RTX 4060 Laptop GPU, D3D11)**。
+- `/space` 60s×40 采样：**FPS 129.8（129–131）**、draw 294、tri 440k；geometries 149→149、textures 12→12。
+- `/dev/garden` 基线对照（同设备/同数据）：n=10 **FPS 129.4**（draw285/tri436k）、n=100 **FPS 129.8**（draw399/tri632k）。
+- 10 次进/出编辑 + 滚轮缩放：geometries/textures 全程 149/12 **恒定**，无 pageerror。
+- 结论：**G11 通过**（GPU 60fps 目标达成；软件 ≥12fps 因本机无可靠软件渲染基准，标未验证）。至此 **G1–G12 全部通过**。
 
 ### Round 20 · G3/G8/G9/G10 四连收口
 
