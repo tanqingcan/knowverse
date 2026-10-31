@@ -513,8 +513,14 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .focus-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); min-height: 52px; }
 /* H41：紧凑窗里所有可点元素保证 ≥44px 触摸热区（视觉可以小，热区不能小） */
 .focus-head button, .focus .subtabs button { min-height: 44px; }
-.focus-close { margin-left: auto; border: 0; background: transparent; color: var(--ink-2); font-size: 15px; cursor: pointer;
+.focus-zoom { border: 1px solid var(--line); background: transparent; color: var(--ink-2); font-size: 13px; cursor: pointer;
+  min-height: 44px; padding: 0 12px; border-radius: 10px; margin-left: auto; font-family: inherit; }
+.focus-zoom:hover, .focus-zoom[aria-pressed="true"] { background: rgba(63, 54, 87, 0.08); color: var(--ink); }
+.focus-close { border: 0; background: transparent; color: var(--ink-2); font-size: 15px; cursor: pointer;
   width: 44px; min-width: 44px; border-radius: 10px; }
+/* H40：用户主动展开的「放大/专注」模式——默认绝不自动变大 */
+.focus.is-large { width: min(880px, calc(100vw - 48px)); height: min(620px, calc(100vh - 140px)); }
+@media (max-width: 760px) { .focus.is-large { width: calc(100vw - 16px); height: min(86dvh, 92vh); } }
 .focus-close:hover { background: rgba(63, 54, 87, 0.08); }
 .focus-head .back { display: inline-flex; }
 .focus-title { font-size: 15px; }
@@ -744,7 +750,8 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
   .beds-pop { position: fixed; left: 10px; right: 10px; bottom: calc(132px + env(safe-area-inset-bottom)); transform: none; width: auto; }
   .side-card { left: 0; right: 0; top: auto; bottom: calc(60px + env(safe-area-inset-bottom)); width: 100%; height: 64dvh; border-radius: 22px 22px 0 0; }
   .is-focus .world-wrap { visibility: visible; inset: 0; width: auto; }
-  .focus { left: 0; right: 0; top: auto; bottom: calc(60px + env(safe-area-inset-bottom)); height: min(72dvh, calc(100dvh - 132px - env(safe-area-inset-bottom))); border-radius: 18px 18px 0 0; }
+  .focus { left: 0; right: 0; top: auto; bottom: calc(60px + env(safe-area-inset-bottom)); transform: none; width: auto;
+    height: min(72dvh, calc(100dvh - 132px - env(safe-area-inset-bottom))); border-radius: 18px 18px 0 0; animation-name: kv-rise; }
   .focus-head { padding: 8px 12px; gap: 8px; min-height: 52px; overflow-x: auto; }
   .focus-head .back { display: inline-flex; }
   .focus-head .lamp-line { display: none; }

@@ -112,6 +112,7 @@ export function SpaceApp() {
   const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
   const [continuous, setContinuous] = useState(false); // H21：连续放置开关
   const [diyTarget, setDiyTarget] = useState<string | null>(null); // H28：DIY 工作台目标对象
+  const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
   // H25：退出前判断「未保存改动」——savedSnap 记录最近一次成功加载/保存时的布局快照
   const savedSnap = useRef<string>('');
   const [askExit, setAskExit] = useState(false);
@@ -450,7 +451,7 @@ export function SpaceApp() {
   const sceneGardens = useMemo(() => (space?.gardens ?? []).map((g) => ({ name: g.name })), [space]);
 
   // 浮窗语义：Esc 关闭、焦点进出、Tab 不出窗（只对需要专注的浮窗与设置弹窗生效）
-  const closePanel = useCallback(() => open({ panel: null }), [open]);
+  const closePanel = useCallback(() => { setFocusLarge(false); open({ panel: null }); }, [open]);
   const focusWinRef = useRef<HTMLElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const focusWinOpen = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
@@ -671,7 +672,7 @@ export function SpaceApp() {
         )}
 
         {focus && panel.panel && (
-          <main className="focus paper" aria-label={TITLES[panel.panel]} role="dialog" aria-modal="true" ref={focusWinRef} tabIndex={-1}>
+          <main className={`focus paper${focusLarge ? " is-large" : ""}`} aria-label={TITLES[panel.panel]} role="dialog" aria-modal="true" ref={focusWinRef} tabIndex={-1}>
             <div className="focus-head">
               <button className="btn btn-soft btn-sm back" onClick={() => open({ panel: null })} aria-label="回到花园">← 花园</button>
               {sec.subs ? (
@@ -682,6 +683,9 @@ export function SpaceApp() {
                 </div>
               ) : <h1 className="focus-title">{TITLES[panel.panel]}</h1>}
               {panel.panel === "history" && <span className="lamp-line">你上次的问题，都在这条小径上。</span>}
+              {/* H40：明确的放大/专注模式——默认保持小窗，长内容由用户主动展开 */}
+              <button className="focus-zoom" type="button" onClick={() => setFocusLarge((v) => !v)} aria-pressed={focusLarge}
+                title={focusLarge ? "收起到小窗" : "放大到专注模式（读长代码/练习时用）"}>{focusLarge ? "收起" : "放大"}</button>
               <button className="focus-close" type="button" onClick={() => open({ panel: null })} aria-label="关闭学习窗" title="关闭（Esc）">✕</button>
             </div>
             <div className="focus-body">
