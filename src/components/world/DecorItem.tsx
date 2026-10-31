@@ -28,7 +28,10 @@ function Procedural({ kind, seed, lights, stage, signText, signSub }: { kind: De
     case "seedshed": return <SeedShed lights={lights} />;
     case "arch": return <GardenArch seed={3} />;
     case "pond": return <PondBridge />;
-    case "sign": return <Sign text={signText ?? "晚星"} sub={signSub ?? ""} w={0.24} h={0.11} post={0.1} />; // surface 类由 GardenWorld 的 SphereSurface 单独渲染
+    case "sign": return <Sign text={signText ?? "晚星"} sub={signSub ?? ""} w={0.24} h={0.11} post={0.1} />;
+    // H04：群组由 GardenWorld 的实例化草地/野花按密度渲染，不在这里出单株
+    case "grassGroup":
+    case "wildflowerGroup": return null;
   }
 }
 

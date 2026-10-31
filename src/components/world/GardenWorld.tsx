@@ -54,6 +54,11 @@ const TILT_MAX = 0.62;
 
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
 
+/** H04：群组密度倍率夹在 0.2–3，避免 0 或过大导致看不到/卡顿 */
+function clampDensity(v: number) {
+  return Number.isFinite(v) ? Math.max(0.2, Math.min(3, v)) : 1;
+}
+
 /**
  * 建筑热点表（H02/H08）：建筑改为可编辑实例后，热点随实例位置走（不再是 SPOTS 固定渲染）。
  * clickable=true 的建筑保留原业务入口（对话/资料/观测台）；false 的只做悬停标签。
@@ -537,8 +542,11 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
   const plantMap = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   // 内圈（花园）保持原来的密度；外圈铺满整个可见球面，转到侧面/背面也有草
-  const grass = useMemo(() => [...scatter(beds, 380, 11, 2.35), ...scatter(beds, 340, 23, 4.05, 2.4)], [beds]);
-  const blooms = useMemo(() => [...scatter(beds, 140, 29, 2.35), ...scatter(beds, 120, 31, 4.05, 2.4)], [beds]);
+  // H04：草/野花是「全星球群组」，操作单元 = 整组密度（scale 当倍率，0.2–3），不逐株进入编辑。
+  const grassDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "grassGroup")?.scale ?? 1);
+  const bloomDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "wildflowerGroup")?.scale ?? 1);
+  const grass = useMemo(() => [...scatter(beds, Math.round(380 * grassDensity), 11, 2.35), ...scatter(beds, Math.round(340 * grassDensity), 23, 4.05, 2.4)], [beds, grassDensity]);
+  const blooms = useMemo(() => [...scatter(beds, Math.round(140 * bloomDensity), 29, 2.35), ...scatter(beds, Math.round(120 * bloomDensity), 31, 4.05, 2.4)], [beds, bloomDensity]);
   const terrain = useMemo(() => paintTerrain(beds), [beds]);
   const planetGeo = useMemo(() => planetGeometry(), []);
   const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);

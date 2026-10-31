@@ -34,6 +34,9 @@ export const DEFAULT_HOME_LAYOUT: DecorPlacement[] = [
   { id: "home-bench", kind: "chair", x: SPOTS.bench.x, z: SPOTS.bench.z, rot: SPOTS.bench.yaw, scale: 1 },
   { id: "home-lamp", kind: "lamp", x: SPOTS.lamp.x, z: SPOTS.lamp.z, rot: 0, scale: 1 },
   { id: "home-sign", kind: "sign", x: SPOTS.sign.x, z: SPOTS.sign.z, rot: SPOTS.sign.yaw, scale: 1.5 },
+  // H04：全星球群组（scale 当密度倍率：1 = 原来的 380 丛草 / 260 朵野花）
+  { id: "home-grass", kind: "grassGroup", x: 0, z: 0, rot: 0, scale: 1 },
+  { id: "home-wildflowers", kind: "wildflowerGroup", x: 0, z: 0, rot: 0, scale: 1 },
 ];
 
 /** 所有「初始离散对象」的实例 id，H03/H14 迁移时用于区分「初始实例」与「用户新增」 */

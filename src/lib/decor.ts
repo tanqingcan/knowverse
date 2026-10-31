@@ -8,7 +8,8 @@ import { useEffect, useRef, useState } from "react";
 /** 建筑类（H02）：原固定建筑改为可编辑实例，kind 与室内/装饰共用一套布局数据 */
 export type DecorKind =
   | "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road"
-  | "cottage" | "greenhouse" | "observatory" | "seedshed" | "arch" | "pond" | "sign";
+  | "cottage" | "greenhouse" | "observatory" | "seedshed" | "arch" | "pond" | "sign"
+  | "grassGroup" | "wildflowerGroup"; // H04：程序化群组（整组密度可调，不逐株编辑）
 /** 建筑类 kind（与场景热点名一致，点击打开业务入口或热点） */
 export const BUILDING_KINDS = ["cottage", "greenhouse", "observatory", "seedshed", "arch", "pond", "sign"] as const;
 export type BuildingKind = (typeof BUILDING_KINDS)[number];
@@ -41,6 +42,9 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
   { kind: "arch", label: "花园拱门", load: 0.8 },
   { kind: "pond", label: "小池塘", load: 1.4 },
   { kind: "sign", label: "木牌", load: 0.3 },
+  // H04：全星球群组（缩放参数当密度用；不可逐株选中，避免几千个实例进入编辑器）
+  { kind: "grassGroup", label: "草地（群组）", load: 0 },
+  { kind: "wildflowerGroup", label: "野花（群组）", load: 0 },
 ];
 
 /** 团队可维护的默认布局模板（创造模式「从模板开始 / 恢复默认模板」用；只含用户装饰，不动系统固定物件） */

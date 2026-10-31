@@ -83,6 +83,9 @@ export const DECOR_CATEGORY: Record<DecorKind, AssetCategory> = {
   arch: "building",
   pond: "water",
   sign: "sign",
+  // H04：群组参数也进布局（整组密度），不可逐株编辑
+  grassGroup: "ground",
+  wildflowerGroup: "flora",
 };
 
 export const SCENE_ASSETS: SceneAssetDef[] = [
@@ -207,7 +210,9 @@ export const SCENE_ASSETS: SceneAssetDef[] = [
     source: `Decor3D/${d.kind}`,
     limits: { x: [-4.2, 4.2], z: [-4.2, 4.2], yaw: [-180, 180], scale: [0.2, 5] },
     colorParts: d.surface ? ["surface"] : ["primary"],
-    semantics: "decor", editable: true, placeable: true,
+    semantics: "decor", editable: true,
+    // H04：群组不作为可放置素材（由「星球环境」整组密度调整）
+    placeable: d.kind !== "grassGroup" && d.kind !== "wildflowerGroup",
   })),
 
   /* ───────── 环境：天空 / 恒星 / 星球本体（H04，语义与地表家具分开） ───────── */

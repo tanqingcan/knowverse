@@ -27,16 +27,21 @@ const CATEGORY: Record<DecorKind, string> = {
   chair: "建筑", stone: "建筑", rock: "建筑",
   // H02：建筑类也可从素材栏放置（与原固定建筑同一套数据）
   cottage: "建筑", greenhouse: "建筑", observatory: "建筑", seedshed: "建筑", arch: "建筑", pond: "建筑", sign: "建筑",
+  // H04：群组不逐项放置，走底部「星球环境」的整组密度滑杆
+  grassGroup: "地板", wildflowerGroup: "花卉",
 };
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
   onRemove?: () => void;
   onDuplicate?: () => void;
+  /** H04：草/野花「全星球群组」的密度（操作单元 = 整组，不逐株） */
+  groupDensities?: { grass: number; blooms: number };
+  onGroupDensity?: (kind: "grassGroup" | "wildflowerGroup", v: number) => void;
   revision?: number; status?: string; message?: string | null;
   onSave?: () => void; onPublish?: () => void;
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
@@ -112,7 +117,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
       </div>
       <div className="cp-groups">
         {CATEGORY_ORDER.map((cat) => {
-          const items = DECOR_CATALOG.filter((c) => CATEGORY[c.kind] === cat && hit(c));
+          const items = DECOR_CATALOG.filter((c) => c.kind !== "grassGroup" && c.kind !== "wildflowerGroup" && CATEGORY[c.kind] === cat && hit(c));
           if (!items.length) return null;
           return (
             <div key={cat} className="cp-group">
@@ -130,6 +135,13 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
         })}
       </div>
       <div className="cp-foot">
+        {groupDensities && (
+          <div className="cp-env" aria-label="星球环境与群组">
+            <div className="cp-env-title">星球环境（天空/恒星/星球本体不可编辑；草与野花按整组调整）</div>
+            <label className="cp-prop">草地密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.grass} onChange={(e) => onGroupDensity?.("grassGroup", +e.target.value)} /><span>{groupDensities.grass.toFixed(1)}</span></label>
+            <label className="cp-prop">野花密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.blooms} onChange={(e) => onGroupDensity?.("wildflowerGroup", +e.target.value)} /><span>{groupDensities.blooms.toFixed(1)}</span></label>
+          </div>
+        )}
         <div className="cp-rev">当前布局：revision {revision ?? 0} · {status === "published" ? "已发布" : "草稿"}</div>
         {message && <div className="cp-msg" role="status">{message}</div>}
         <div className="cp-foot-actions">

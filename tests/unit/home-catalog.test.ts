@@ -31,13 +31,15 @@ describe("H01 全场景素材目录", () => {
     }
   });
 
-  it("可放置素材完整覆盖 DECOR_CATALOG 的 14 种", () => {
+  it("可放置素材覆盖 DECOR_CATALOG（H04 起群组不可放置，故减去 2）", () => {
+    const groups = DECOR_CATALOG.filter((d) => d.kind === "grassGroup" || d.kind === "wildflowerGroup");
     for (const d of DECOR_CATALOG) {
       const a = assetById(`decor.${d.kind}`);
       expect(a, `缺少 decor.${d.kind}`).toBeTruthy();
-      expect(a!.placeable).toBe(true);
+      if (groups.some((g) => g.kind === d.kind)) expect(a!.placeable).toBeFalsy();
+      else expect(a!.placeable).toBe(true);
     }
-    expect(PLACEABLE_ASSETS.length).toBe(DECOR_CATALOG.length);
+    expect(PLACEABLE_ASSETS.length).toBe(DECOR_CATALOG.length - groups.length);
   });
 
   it("环境类与地表编辑分离：环境不可编辑且不进入可编辑清单", () => {
@@ -61,8 +63,9 @@ describe("H01 全场景素材目录", () => {
   it("目录统计合理（地表实例 + 可放置 + 环境）", () => {
     const s = catalogStats();
     expect(s.total).toBe(SCENE_ASSETS.length);
-    // H02 起 DECOR_CATALOG 增加 7 种建筑 kind，可放置素材 = 目录长度（14 装饰 + 7 建筑）
-    expect(s.placeable).toBe(DECOR_CATALOG.length);
+    // H02 起目录增加 7 种建筑；H04 起增加 2 种群组（不可放置）
+    const groupKinds = DECOR_CATALOG.filter((d) => d.kind === "grassGroup" || d.kind === "wildflowerGroup").length;
+    expect(s.placeable).toBe(DECOR_CATALOG.length - groupKinds);
     expect(s.placeable).toBeGreaterThanOrEqual(21);
     expect(s.editable).toBeGreaterThanOrEqual(20);
     expect(s.byCat.building).toBeGreaterThanOrEqual(5);

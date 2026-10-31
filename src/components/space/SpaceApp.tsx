@@ -447,6 +447,14 @@ export function SpaceApp() {
           onUpdate={(patch) => { if (selectedDecorId) { decorStore.update(selectedDecorId, patch); } }}
           onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
           onDuplicate={duplicateDecor}
+          groupDensities={{
+            grass: decorStore.decor.find((d) => d.kind === "grassGroup")?.scale ?? 1,
+            blooms: decorStore.decor.find((d) => d.kind === "wildflowerGroup")?.scale ?? 1,
+          }}
+          onGroupDensity={(kind, v) => {
+            const it = decorStore.decor.find((d) => d.kind === kind);
+            if (it) decorStore.update(it.id, { scale: v });
+          }}
           revision={layoutRev} status={layoutStatus} message={layoutMsg}
           onSave={saveCreative} onPublish={publishCreative}
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
