@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FlowerBody, FlowerDefs, hashSeed } from "@/components/art/Flower";
 import { STAGE_NAME } from "@/lib/flora";
 import { layoutBeds, MEMORY_PATH, GREEN_PATH, SPOTS, TREES, type WorldPlant } from "./layout";
+import { homePoses } from "@/lib/home/home-layout";
 import type { Celebration, Hotspot } from "./GardenWorld";
 import type { Pose } from "./Characters3D";
 
@@ -123,8 +124,11 @@ function StarLampIcon({ x, y }: { x: number; y: number }) {
 export function StaticGarden(props: {
   plants: WorldPlant[]; gardens: { name: string }[]; selectedId?: string | null; onSelect?: (id: string) => void; onHotspot?: (h: Hotspot) => void;
   celebrate?: Celebration; reduced?: boolean; compact?: boolean; pose: Pose; signText: string;
+  /** H15：同份布局——2D 绘本的建筑位置也从布局实例推导，不回落到 SPOTS 固定位置 */
+  decor?: { kind: string; x: number; z: number; rot: number }[] | null;
 }) {
   const { plants, gardens, selectedId, onSelect, onHotspot } = props;
+  const poses = useMemo(() => homePoses(props.decor ?? undefined), [props.decor]);
   const [glow, setGlow] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
@@ -146,8 +150,9 @@ export function StaticGarden(props: {
     }
     return d;
   };
-  const memPts: [number, number][] = [[0.02, 0.05], ...MEMORY_PATH.slice(1), [SPOTS.cottage.x - 0.16, SPOTS.cottage.z + 0.04]];
-  const greenPts: [number, number][] = [[-0.08, 0.05], ...GREEN_PATH.slice(1), [SPOTS.greenhouse.x + 0.05, SPOTS.greenhouse.z + 0.05]];
+  // H15：小路端点跟随当前建筑（同份布局）
+  const memPts: [number, number][] = [[0.02, 0.05], ...MEMORY_PATH.slice(1), [poses.cottage.x - 0.16, poses.cottage.z + 0.04]];
+  const greenPts: [number, number][] = [[-0.08, 0.05], ...GREEN_PATH.slice(1), [poses.greenhouse.x + 0.05, poses.greenhouse.z + 0.05]];
 
   // 前后排序：越远越先画
   type Item = { key: string; z: number; el: React.ReactNode };
@@ -163,11 +168,11 @@ export function StaticGarden(props: {
       </g>
     ) });
   };
-  hs("cottage", "星灯书屋：学习与对话", <Cottage lit />, SPOTS.cottage.x, SPOTS.cottage.z, 0.95);
-  hs("greenhouse", "资料温室：我的资料", <Greenhouse />, SPOTS.greenhouse.x, SPOTS.greenhouse.z, 0.95);
-  { const p = P(SPOTS.lamp.x, SPOTS.lamp.z); items.push({ key: "lamp", z: SPOTS.lamp.z, el: <g transform={`translate(${p.x} ${p.y}) scale(${p.s})`}><Lamp /></g> }); }
-  { const p = P(SPOTS.bench.x, SPOTS.bench.z); items.push({ key: "bench", z: SPOTS.bench.z, el: <g transform={`translate(${p.x} ${p.y}) scale(${p.s})`}><Bench />{(props.pose !== "tend" && props.pose !== "celebrate") && <g transform="translate(0 -8) scale(1.1)"><Traveler pose={props.pose} /></g>}</g> }); }
-  if (props.signText) { const p = P(SPOTS.sign.x, SPOTS.sign.z); items.push({ key: "sign", z: SPOTS.sign.z, el: (
+  hs("cottage", "星灯书屋：学习与对话", <Cottage lit />, poses.cottage.x, poses.cottage.z, 0.95);
+  hs("greenhouse", "资料温室：我的资料", <Greenhouse />, poses.greenhouse.x, poses.greenhouse.z, 0.95);
+  { const p = P(poses.lamp.x, poses.lamp.z); items.push({ key: "lamp", z: poses.lamp.z, el: <g transform={`translate(${p.x} ${p.y}) scale(${p.s})`}><Lamp /></g> }); }
+  { const p = P(poses.bench.x, poses.bench.z); items.push({ key: "bench", z: poses.bench.z, el: <g transform={`translate(${p.x} ${p.y}) scale(${p.s})`}><Bench />{(props.pose !== "tend" && props.pose !== "celebrate") && <g transform="translate(0 -8) scale(1.1)"><Traveler pose={props.pose} /></g>}</g> }); }
+  if (props.signText) { const p = P(poses.sign.x, poses.sign.z); items.push({ key: "sign", z: poses.sign.z, el: (
     <g transform={`translate(${p.x} ${p.y}) scale(${p.s})`}><path d="M0 0 V -40" stroke="#8C5F40" strokeWidth={5} /><rect x={-58} y={-82} width={116} height={46} rx={8} fill="#D4A87C" stroke="#8C5F40" strokeWidth={3} />
       <text x={0} y={-60} textAnchor="middle" fontSize={20} fontFamily="var(--font-title)" fill="#4A3426">{props.signText}</text><text x={0} y={-42} textAnchor="middle" fontSize={12} fill="#6B4C36">本命花</text></g>
   ) }); }
@@ -217,7 +222,8 @@ export function StaticGarden(props: {
     : hover ? { cottage: "星灯书屋 · 学习与对话", greenhouse: "资料温室 · 我的资料", path: "回忆小径 · 历史问答", galaxy: "远处的星球 · 共学" }[hover] : null;
   const lampPos = (() => {
     const t = selectedId ? beds.find((b) => b.plants.some((p) => p.id === selectedId)) : null;
-    return t ? P(t.x + 0.2, t.z - 0.15) : P(SPOTS.lampSpot.x, SPOTS.lampSpot.z);
+    // H15：星灯停靠点跟随书房（homePoses 已按实例推导）
+    return t ? P(t.x + 0.2, t.z - 0.15) : P(poses.lampSpot.x, poses.lampSpot.z);
   })();
 
   return (

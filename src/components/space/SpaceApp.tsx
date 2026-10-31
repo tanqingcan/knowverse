@@ -449,6 +449,7 @@ export function SpaceApp() {
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
               onHotspot={onHotspot} celebrate={celebrate} reduced={reduced} compact={focus} pose={pose}
+              decor={decorStore.decor}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} />
           )}
         </section>

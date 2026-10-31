@@ -93,7 +93,7 @@ export default function VisitPage() {
             onFail={() => setFailed(true)}
           />
         ) : (
-          <StaticGarden plants={scenePlants} gardens={gardens} celebrate={null} reduced={false} compact={false} pose="idle" signText={planetName} />
+          <StaticGarden plants={scenePlants} gardens={gardens} celebrate={null} reduced={false} compact={false} pose="idle" signText={planetName} decor={visitDecor} />
         )}
       </section>
       <header className="topnav">
