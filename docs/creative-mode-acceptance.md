@@ -33,6 +33,8 @@
 
 **唯一环境备注**：本机无独立软件渲染基准（llvmpipe 不可用），「软件 ≥12fps」子项标未验证；GPU 60fps 目标已实测通过。
 
+**生产模式终验（Round 21）**：`npm run build` exit 0；`npm run start` 后 `/space` **200**、`/visit?user=<demo>` **200 且 canvas=1、empty=0**（3D 场景正常）；dev 模式下 `/api/planets/[userId]` 的 500 是已知的 `spawn EPERM`（dev fork 限制），生产模式不受影响。
+
 **续作所需条件（准确）**：
 1. G11 的 GPU 帧率需要在有真实 GPU 的设备/浏览器实测（本环境为 SwiftShader 软件渲染）。
 2. G8「修改前后图」需取前序会话的 before 截图存档（`docs/progress-sphere.md` 有基线描述）。
