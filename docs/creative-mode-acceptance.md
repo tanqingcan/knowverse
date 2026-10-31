@@ -23,7 +23,7 @@
 | G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
 | G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；**设置弹窗键盘路径实测：焦点自动进入、Tab×6 始终在窗内（焦点陷阱）、Esc 关闭并归还焦点到「设置」、滚动锁恢复**；浮窗 `backdrop-filter: blur(18px)` + `@supports` 降级已在 CSS | Round 5/8/13 | `test-g10.py`、`test-g10-keys.py` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
-| G12 构建与交付 | 🟢 通过 | typecheck 0 / build 40/40 / 单测 36/36；/space、/visit 无 pageerror；**B6 四组截图（桌面/手机/静态降级/低动效）已产出并 vision 确认静态降级为 2D 绘本**；**B8 界面章已补「创造模式」章节** | Round 6/12 | `b6-{desktop,mobile,static,lowmotion}.png`、`docs/b8-ui-chapter.md` §9 |
+| G12 构建与交付 | 🟢 通过 | typecheck 0 / **build 41/41（含新增 revert 路由）** / 单测 36/36；/space、/visit 无 pageerror；B6 四组截图（vision 确认静态降级 2D 绘本）；B8 界面章 §9 创造模式 | Round 6/12/15 | `b6-*.png`、`docs/b8-ui-chapter.md` §9 |
 
 ## 每轮记录
 
