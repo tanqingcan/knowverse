@@ -811,3 +811,28 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+
+/* ── H43/H45：星落动画（最多一颗星 + 3 个光点，700ms，一次打开最多一次） ── */
+.star-fall { position: fixed; inset: 0; z-index: 24; pointer-events: none; overflow: hidden; }
+.star-core { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFF6D8, #F2B84B 62%, #D98E2B);
+  box-shadow: 0 0 24px 6px rgba(242, 184, 75, 0.55);
+  animation: star-drop 700ms cubic-bezier(.22, .9, .25, 1) forwards; }
+@keyframes star-drop {
+  0%   { transform: translateY(-42vh) scale(.45); opacity: 0; }
+  22%  { opacity: 1; }
+  72%  { transform: translateY(-3vh) scale(1); opacity: 1; }
+  86%  { transform: translateY(0) scale(1.14); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 0; }
+}
+.star-halo { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 235, 180, 0.6), rgba(255, 235, 180, 0) 70%);
+  animation: halo-out 700ms ease-out forwards; }
+@keyframes halo-out { 0% { opacity: 0; transform: scale(.2); } 58% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.55); } }
+.star-sp { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%;
+  background: #FFE9B0; box-shadow: 0 0 10px rgba(242, 184, 75, 0.85); animation: sp-fly 700ms ease-out forwards; }
+.star-sp.s1 { --dx: 46px; --dy: -34px; }
+.star-sp.s2 { --dx: -42px; --dy: -26px; }
+.star-sp.s3 { --dx: 18px; --dy: 38px; }
+@keyframes sp-fly { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 55% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.9); } }
+@media (prefers-reduced-motion: reduce) { .star-fall { display: none; } }

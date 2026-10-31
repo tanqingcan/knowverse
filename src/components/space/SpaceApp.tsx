@@ -113,6 +113,10 @@ export function SpaceApp() {
   const [continuous, setContinuous] = useState(false); // H21：连续放置开关
   const [diyTarget, setDiyTarget] = useState<string | null>(null); // H28：DIY 工作台目标对象
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
+  // H43/H44/H45：星落动画——最多一颗星 + 3 个光点，可取消；低动效直接开窗
+  const [starFall, setStarFall] = useState(false);
+  const starTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<PanelState>({ panel: null });
   // H25：退出前判断「未保存改动」——savedSnap 记录最近一次成功加载/保存时的布局快照
   const savedSnap = useRef<string>('');
   const [askExit, setAskExit] = useState(false);
@@ -377,7 +381,26 @@ export function SpaceApp() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "error" ? 7000 : 5200);
   }, []);
 
-  const open = useCallback((p: PanelState) => { setPanel(p); }, []);
+  // H44：清掉未完成的星落计时器（关闭/切路由/连续点开时不留残余）
+  const cancelStar = useCallback(() => {
+    if (starTimer.current) { clearTimeout(starTimer.current); starTimer.current = null; }
+    setStarFall(false);
+  }, []);
+  const open = useCallback((p: PanelState) => {
+    const prev = panelRef.current.panel;
+    setPanel(p);
+    panelRef.current = p;
+    const opening = !!p.panel && FOCUS_PANELS.includes(p.panel) && !prev;
+    if (!opening) { cancelStar(); return; }
+    // H44：低动效/系统减少动效时直接打开，不强制看动画
+    const reduced = typeof window !== "undefined" &&
+      (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.body.classList.contains("reduced-motion"));
+    if (reduced) { cancelStar(); return; }
+    if (starTimer.current) clearTimeout(starTimer.current);
+    setStarFall(true);
+    starTimer.current = setTimeout(() => { setStarFall(false); starTimer.current = null; }, 700);
+  }, [cancelStar]);
+  useEffect(() => () => { if (starTimer.current) clearTimeout(starTimer.current); }, []);
   const openPanelKey = useCallback((k: PanelKey | null) => {
     if (k === "chat") open({ panel: "chat", conversationId: lastConv.current ?? space?.user.lastConversationId ?? null });
     else open({ panel: k });
@@ -466,7 +489,7 @@ export function SpaceApp() {
   const showIntro = introPlaying && use3d;
   const ctx = { space, reload, open, panel, setPanelPatch, onGrowth, toast, reduced, wide, setWide, replay, replaying: !!override, setBusy };
   const natal = space.plants.find((p) => p.isNatal);
-  const focus = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
+  const focus = !!panel.panel && FOCUS_PANELS.includes(panel.panel) && !starFall;
   const section = sectionOf(panel.panel === "settings" ? null : panel.panel);
   const sec = SECTIONS.find((s) => s.key === section)!;
   const selectedPlant = panel.panel === "dossier" ? panel.plantId ?? null : null;
@@ -671,6 +694,13 @@ export function SpaceApp() {
           </aside>
         )}
 
+        {starFall && (
+          <div className="star-fall" aria-hidden="true">
+            <span className="star-core" />
+            <span className="star-halo" />
+            <i className="star-sp s1" /><i className="star-sp s2" /><i className="star-sp s3" />
+          </div>
+        )}
         {focus && panel.panel && (
           <main className={`focus paper${focusLarge ? " is-large" : ""}`} aria-label={TITLES[panel.panel]} role="dialog" aria-modal="true" ref={focusWinRef} tabIndex={-1}>
             <div className="focus-head">
