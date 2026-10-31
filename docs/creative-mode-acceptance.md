@@ -16,7 +16,7 @@
 | G2 实时编辑 | 🟡 进行中 | 比例/宽长/旋转/阶段控件已实现；撤销/重做按钮+快照栈（**单步撤销实测通过，多步栈有 bug 待修**）；触摸未做 | Round 2/3 | `.dsh-tools/test-undo.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
-| G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409、**跨账号隔离**（xingye 布局为空 vs demo 已发布）、**参观只读已发布**（xingye 见 demo 6 件装饰、vision 确认只读无编辑按钮）已实测；保存失败重试未模拟 | Round 3/6 | `test-g5.py`、`test-visit.py`、`visit-demo.png` |
+| G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
 | G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位/慢转已实现；**vision 确认背面有连续草地+建筑/树/石、无破洞接缝倒置**；极点/接缝未逐一验 | Round 4 | `sphere-back.png` + vision |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
@@ -26,6 +26,12 @@
 | G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
 
 ## 每轮记录
+
+### Round 7 · 保存失败重试（G5 收口，2026-10-31）
+
+- `test-save-fail.py` 用 Playwright `page.route` 把 `PUT /api/planet-layout` 模拟成 500：点保存 → 提示「保存失败：模拟服务器故障」，**本地草稿仍 7 件（未丢）**；解除拦截后重试 → 「已保存到服务器（revision 5）」。
+- G5 四项（409 冲突 / 失败保留+重试 / 跨账号隔离 / 参观只读）全部有实测证据 → 标记通过。
+- 环境修复：`npm run build` 会用生产产物覆盖 `.next`，导致 dev server 客户端 chunk 失效（创造按钮不出）；已删除 `.next` 并重启 dev server 恢复正常。
 
 ### Round 6 · 参观只读 + 跨账号隔离（G5，提交 `0e61599`）
 
