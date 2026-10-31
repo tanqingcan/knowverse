@@ -300,6 +300,14 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
   padding: 3px 9px; font-size: 12px; color: inherit; cursor: pointer; font-family: inherit; min-height: 30px; }
 .selbar-btn:hover { background: rgba(180, 140, 100, 0.14); }
 .selbar-del:hover { color: #B4574E; border-color: rgba(180, 87, 78, 0.5); }
+/* H22：选中对象的紧凑属性浮层（移动/旋转/缩放），不重开左侧大侧栏 */
+.sel-edit { position: absolute; right: 16px; bottom: calc(104px + env(safe-area-inset-bottom)); z-index: 9; width: 232px;
+  padding: 10px 12px; border-radius: 14px; background: rgba(255, 247, 232, 0.97); box-shadow: var(--shadow-soft);
+  display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink); }
+.sel-edit-title { font-weight: 600; }
+.sel-edit-row { display: flex; align-items: center; gap: 8px; }
+.sel-edit-row input[type="range"] { flex: 1; }
+.sel-edit-row span { min-width: 38px; text-align: right; opacity: 0.7; }
 
 /* ── H16/H17：创造模式沉浸式底部操作栏 ── */
 /* 进入创造后隐藏原顶栏（今日建议/业务工具栏由 JSX 不渲染），视觉只留星球 + 底部快捷栏 */

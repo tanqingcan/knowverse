@@ -45,6 +45,8 @@ export type WorldProps = {
   onDecorRemove?: (id: string) => void;    // H05：紧凑操作条的「删除」
   onDecorTransformStart?: () => void;      // H12：拖动起手快照（一次拖动只算一步）
   onDecorTransformEnd?: () => void;        // H12：拖动结束提交
+  onDecorUpdate?: (id: string, patch: Partial<DecorPlacement>) => void; // H22：紧凑属性浮层（移动/旋转/缩放）
+  onDecorDiy?: (id: string) => void;       // H22：DIY 入口（H28 起接工作台）
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
@@ -846,6 +848,9 @@ export function GardenWorld(props: WorldProps) {
   const selEl = useRef<HTMLDivElement>(null);
   const selItem = props.selectedDecorId ? (props.decor ?? []).find((d) => d.id === props.selectedDecorId) : undefined;
   const selLabel = selItem ? (DECOR_CATALOG.find((c) => c.kind === selItem.kind)?.label ?? selItem.kind) : "";
+  // H22：移动/旋转/缩放 打开紧凑属性浮层（不再回到左侧大侧栏）
+  const [selEdit, setSelEdit] = useState<null | "move" | "rotate" | "scale">(null);
+  useEffect(() => { if (!selItem) setSelEdit(null); }, [selItem]);
   const press = useRef<{ x: number; y: number; yaw: number; tilt: number } | null>(null);
   // 触屏：多指跟踪。双指间距用于缩放；单指环绕仍走 press 基准
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -1001,8 +1006,31 @@ export function GardenWorld(props: WorldProps) {
         <div ref={selEl} className="world-selbar" role="group" aria-label={`选中对象：${selLabel}`}>
           <span className="selbar-name">{selLabel}</span>
           <span className="selbar-scale">{selItem.scale.toFixed(2)}×</span>
+          <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "move" ? null : "move")} aria-pressed={selEdit === "move"} title="移动（也可直接拖动对象）">移动</button>
+          <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "rotate" ? null : "rotate")} aria-pressed={selEdit === "rotate"} title="旋转">旋转</button>
+          <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "scale" ? null : "scale")} aria-pressed={selEdit === "scale"} title="缩放">缩放</button>
           <button className="selbar-btn" type="button" onClick={() => props.onDecorDuplicate?.(selItem.id)} title="复制一份（Ctrl+D）">复制</button>
+          <button className="selbar-btn" type="button" onClick={() => props.onDecorDiy?.(selItem.id)} title="DIY 工作台">DIY</button>
           <button className="selbar-btn selbar-del" type="button" onClick={() => props.onDecorRemove?.(selItem.id)} title="删除">删除</button>
+        </div>
+      )}
+      {/* H22：紧凑属性浮层——按当前维度只显示相关滑杆，不重新打开大侧栏 */}
+      {selItem && selEdit && (
+        <div className="sel-edit" role="group" aria-label={`${selLabel} 属性`}>
+          <span className="sel-edit-title">{selLabel} · {selEdit === "move" ? "移动" : selEdit === "rotate" ? "旋转" : "缩放"}</span>
+          {selEdit === "move" && (
+            <>
+              <label className="sel-edit-row">左右 <input type="range" min={-4} max={4} step={0.05} value={selItem.x} onChange={(e) => props.onDecorUpdate?.(selItem.id, { x: +e.target.value })} /><span>{selItem.x.toFixed(2)}</span></label>
+              <label className="sel-edit-row">前后 <input type="range" min={-4} max={4} step={0.05} value={selItem.z} onChange={(e) => props.onDecorUpdate?.(selItem.id, { z: +e.target.value })} /><span>{selItem.z.toFixed(2)}</span></label>
+            </>
+          )}
+          {selEdit === "rotate" && (
+            <label className="sel-edit-row">角度 <input type="range" min={-180} max={180} step={5} value={selItem.rot} onChange={(e) => props.onDecorUpdate?.(selItem.id, { rot: +e.target.value })} /><span>{Math.round(selItem.rot)}°</span></label>
+          )}
+          {selEdit === "scale" && (
+            <label className="sel-edit-row">比例 <input type="range" min={0.5} max={2} step={0.05} value={selItem.scale} onChange={(e) => props.onDecorUpdate?.(selItem.id, { scale: +e.target.value })} /><span>{selItem.scale.toFixed(2)}×</span></label>
+          )}
+          <button className="selbar-btn" type="button" onClick={() => setSelEdit(null)}>收起</button>
         </div>
       )}
     </div>

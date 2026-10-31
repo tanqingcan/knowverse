@@ -492,6 +492,8 @@ export function SpaceApp() {
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
               onDecorTransformStart={() => decorStore.beginTransform()}
               onDecorTransformEnd={() => decorStore.endTransform()}
+              onDecorUpdate={(id, patch) => decorStore.update(id, patch)}
+              onDecorDiy={(id) => { setSelectedDecorId(id); toast("DIY 工作台将在下一组任务提供（H28–H38）"); }}
               placingPreview={copyFrom
                 ? { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage }
                 : placingKind
