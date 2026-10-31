@@ -28,9 +28,16 @@ export function loadVariants(): DiyVariants {
   }
 }
 
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
 export function saveVariant(kind: string, parts: Record<string, string>): DiyVariants {
   const all = loadVariants();
-  if (parts && Object.keys(parts).length) all[kind] = { ...parts };
+  // H56：变体存前先过滤——非法颜色不能混进来（否则下次 loadVariants 才发现，语义不一致）
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(parts || {})) {
+    if (typeof v === "string" && HEX.test(v)) clean[k] = v.toLowerCase();
+  }
+  if (Object.keys(clean).length) all[kind] = clean;
   try {
     if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(all));
   } catch { /* 隐私模式等写失败忽略 */ }
