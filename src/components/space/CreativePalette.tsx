@@ -2,6 +2,21 @@
 /** 创造模式素材栏：分类 + 搜索 + 选中反馈。选中后进入「放置预览」，点击球面确定，Esc 取消。 */
 import React, { useState } from "react";
 import { DECOR_CATALOG, type DecorKind } from "@/lib/decor";
+import { FlowerSvg } from "@/components/art/Flower";
+
+/** 花卉类用真实花形缩略图，其余用色点 */
+const FLOWER_MAP: Partial<Record<DecorKind, { species: string; color: string }>> = {
+  rose: { species: "rose", color: "rose" },
+  flower: { species: "sunflower", color: "gold" },
+  flower2: { species: "iris", color: "mist" },
+  flower3: { species: "lily", color: "cream" },
+  pot: { species: "rose", color: "rose" },
+};
+function KindThumb({ kind }: { kind: DecorKind }) {
+  const f = FLOWER_MAP[kind];
+  if (f) return <span className="cp-thumb"><FlowerSvg uid={`cp-${kind}`} species={f.species} color={f.color} stage="bloom" size={22} crop /></span>;
+  return <span className="cp-thumb cp-dot" style={{ background: kindColor(kind) }} />;
+}
 
 const CATEGORY: Record<DecorKind, string> = {
   rose: "花卉", flower: "花卉", flower2: "花卉", flower3: "花卉", pot: "花卉",
@@ -77,7 +92,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
               <div className="cp-items">
                 {items.map((c) => (
                   <button key={c.kind} className={`cp-item ${placingKind === c.kind ? "sel" : ""}`} onClick={() => onSelect(c.kind)} aria-pressed={placingKind === c.kind}>
-                    <span className="cp-dot" style={{ background: kindColor(c.kind) }} />
+                    <KindThumb kind={c.kind} />
                     <span>{c.label}</span>
                   </button>
                 ))}
