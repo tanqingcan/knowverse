@@ -19,6 +19,7 @@ import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
 import { DECOR_CATALOG, isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
+import { doorOf, homePoses } from "@/lib/home/home-layout";
 import { DecorItem } from "./DecorItem";
 import { SphereSurface } from "./Surface3D";
 
@@ -351,11 +352,25 @@ function Wildflowers({ items }: { items: ReturnType<typeof scatter> }) {
 }
 
 /** 回忆小径的石板（也是“回顾”入口的点击区域） */
-function MemoryPath({ setHover, onHotspot }: { setHover: (k: string | null) => void; onHotspot?: (h: Hotspot) => void }) {
-  const stones = useMemo(() => pathCurve(MEMORY_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), []);
-  const g2 = useMemo(() => pathCurve(GREEN_PATH).getSpacedPoints(6).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.7 + rand(i, 9) * 0.3, i: i + 20 })), []);
-  const g3 = useMemo(() => pathCurve(STAR_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 11) * 0.28, i: i + 40 })), []);
-  const g4 = useMemo(() => pathCurve(SEED_PATH).getSpacedPoints(5).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 13) * 0.26, i: i + 60 })), []);
+function MemoryPath({ setHover, onHotspot, poses }: { setHover: (k: string | null) => void; onHotspot?: (h: Hotspot) => void; poses: Record<string, { x: number; z: number; yaw: number }> }) {
+  // H09：四条小路按当前建筑位置重建端点（书房/温室门口、观测台、种子棚），建筑搬走后不会留下旧印迹。
+  const paths = useMemo(() => {
+    const cDef = { x: SPOTS.cottage.x, z: SPOTS.cottage.z, yaw: SPOTS.cottage.yaw };
+    const gDef = { x: SPOTS.greenhouse.x, z: SPOTS.greenhouse.z, yaw: SPOTS.greenhouse.yaw };
+    const cDoor = doorOf(poses.cottage, cDef, SPOTS.cottageDoor);
+    const gDoor = doorOf(poses.greenhouse, gDef, SPOTS.greenhouseDoor);
+    const toPair = (p: { x: number; z: number }): [number, number] => [p.x, p.z];
+    return {
+      memory: [...MEMORY_PATH.slice(0, -1), toPair(cDoor)],
+      green: [...GREEN_PATH.slice(0, -1), toPair(gDoor)],
+      star: [toPair(gDoor), ...STAR_PATH.slice(1, -1), [poses.observatory.x, poses.observatory.z] as [number, number]],
+      seed: [toPair(gDoor), ...SEED_PATH.slice(1, -1), [poses.seedshed.x, poses.seedshed.z] as [number, number]],
+    };
+  }, [poses]);
+  const stones = useMemo(() => pathCurve(paths.memory).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), [paths]);
+  const g2 = useMemo(() => pathCurve(paths.green).getSpacedPoints(6).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.7 + rand(i, 9) * 0.3, i: i + 20 })), [paths]);
+  const g3 = useMemo(() => pathCurve(paths.star).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 11) * 0.28, i: i + 40 })), [paths]);
+  const g4 = useMemo(() => pathCurve(paths.seed).getSpacedPoints(5).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 13) * 0.26, i: i + 60 })), [paths]);
   return (
     <>
       {stones.map((s) => (
@@ -573,7 +588,11 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const bloomDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "wildflowerGroup")?.scale ?? 1);
   const grass = useMemo(() => [...scatter(beds, Math.round(380 * grassDensity), 11, 2.35), ...scatter(beds, Math.round(340 * grassDensity), 23, 4.05, 2.4)], [beds, grassDensity]);
   const blooms = useMemo(() => [...scatter(beds, Math.round(140 * bloomDensity), 29, 2.35), ...scatter(beds, Math.round(120 * bloomDensity), 31, 4.05, 2.4)], [beds, bloomDensity]);
-  const terrain = useMemo(() => paintTerrain(beds), [beds]);
+  // H09：场景锚点（门口/道路端点/地表印迹/星灯停靠）统一从布局实例推导，建筑搬走后跟着走
+  const poses = useMemo(() => homePoses(props.decor), [props.decor]);
+  const terrain = useMemo(() => paintTerrain(beds, poses), [beds, poses]);
+  // H09：poses 变化会重绘地表纹理；旧 CanvasTexture 必须 dispose，否则拖动建筑时纹理数单调增长（实测 12→20）
+  useEffect(() => () => { (terrain as unknown as { dispose?: () => void })?.dispose?.(); }, [terrain]);
   const planetGeo = useMemo(() => planetGeometry(), []);
   const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);
   const [lights, setLights] = useState(props.intro === "none" || reduced ? 1 : 0.05);
@@ -715,7 +734,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         ))}
 
         {/* H02/H03：建筑不再按 SPOTS 固定渲染，改为布局数据里的可编辑实例（见下方 decor 循环） */}
-        <MemoryPath setHover={setHover} onHotspot={props.onHotspot} />
+        <MemoryPath setHover={setHover} onHotspot={props.onHotspot} poses={poses} />
         <OnCap x={0.38} z={-0.48}><group ref={(o) => register("path", o)} position={[0, 0.12, 0]} /></OnCap>
         {/* 长椅/路灯/观测台/种子棚/拱门/池塘/木牌同样来自布局数据（H02 无双轨） */}
         {/* 内圈与外圈野生树木/灌木：按几何类型合批（FloraField 内 5 个 InstancedMesh） */}

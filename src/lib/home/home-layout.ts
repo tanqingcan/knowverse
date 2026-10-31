@@ -46,3 +46,50 @@ export const INITIAL_ITEM_IDS = new Set(DEFAULT_HOME_LAYOUT.map((d) => d.id));
 export function isInitialItem(id: string): boolean {
   return INITIAL_ITEM_IDS.has(id);
 }
+
+export type HomePose = { x: number; z: number; yaw: number };
+
+/**
+ * H09：把布局里的实例位置换算成「场景锚点」——门口、道路端点、地表印迹、星灯停靠、角色路径都读这里，
+ * 建筑被搬走/旋转后这些附件跟着走，不再用 `SPOTS` 固定值。找不到实例时回落到 `SPOTS` 默认位。
+ */
+export function homePoses(decor: { kind: string; x: number; z: number; rot: number }[] | undefined): Record<string, HomePose> {
+  const fallback: Record<string, HomePose> = {
+    cottage: { x: SPOTS.cottage.x, z: SPOTS.cottage.z, yaw: SPOTS.cottage.yaw },
+    greenhouse: { x: SPOTS.greenhouse.x, z: SPOTS.greenhouse.z, yaw: SPOTS.greenhouse.yaw },
+    observatory: { x: SPOTS.observatory.x, z: SPOTS.observatory.z, yaw: SPOTS.observatory.yaw },
+    seedshed: { x: SPOTS.seedShed.x, z: SPOTS.seedShed.z, yaw: SPOTS.seedShed.yaw },
+    arch: { x: SPOTS.arch.x, z: SPOTS.arch.z, yaw: SPOTS.arch.yaw },
+    pond: { x: SPOTS.pond.x, z: SPOTS.pond.z, yaw: SPOTS.pond.yaw },
+    bench: { x: SPOTS.bench.x, z: SPOTS.bench.z, yaw: SPOTS.bench.yaw },
+    lamp: { x: SPOTS.lamp.x, z: SPOTS.lamp.z, yaw: 0 },
+    sign: { x: SPOTS.sign.x, z: SPOTS.sign.z, yaw: SPOTS.sign.yaw },
+    lampSpot: { x: SPOTS.lampSpot.x, z: SPOTS.lampSpot.z, yaw: 0 },
+  };
+  const out: Record<string, HomePose> = { ...fallback };
+  // 实例 kind → 场景锚点名（"chair" 是素材栏里的长椅 kind）
+  const KIND_TO_SPOT: Record<string, string> = { cottage: "cottage", greenhouse: "greenhouse", observatory: "observatory", seedshed: "seedshed", arch: "arch", pond: "pond", chair: "bench", lamp: "lamp", sign: "sign" };
+  for (const d of decor ?? []) {
+    const spot = KIND_TO_SPOT[d.kind];
+    if (spot) out[spot] = { x: d.x, z: d.z, yaw: d.rot };
+  }
+  // 星灯停靠点跟着书房走：保持原来的相对偏移（门口前），并随书房朝向旋转
+  const c = out.cottage;
+  const baseDX = SPOTS.lampSpot.x - SPOTS.cottage.x;
+  const baseDZ = SPOTS.lampSpot.z - SPOTS.cottage.z;
+  const dyaw = ((c.yaw - SPOTS.cottage.yaw) * Math.PI) / 180;
+  out.lampSpot = {
+    x: c.x + baseDX * Math.cos(dyaw) - baseDZ * Math.sin(dyaw),
+    z: c.z + baseDX * Math.sin(dyaw) + baseDZ * Math.cos(dyaw),
+    yaw: 0,
+  };
+  return out;
+}
+
+/** 由建筑的「门口相对偏移」算出当前门口位置（用于道路端点） */
+export function doorOf(pose: HomePose, defSpot: HomePose, doorDef: { x: number; z: number }): { x: number; z: number } {
+  const dx = doorDef.x - defSpot.x;
+  const dz = doorDef.z - defSpot.z;
+  const dyaw = ((pose.yaw - defSpot.yaw) * Math.PI) / 180;
+  return { x: pose.x + dx * Math.cos(dyaw) - dz * Math.sin(dyaw), z: pose.z + dx * Math.sin(dyaw) + dz * Math.cos(dyaw) };
+}

@@ -13,7 +13,9 @@ function toPx(x: number, z: number) {
 }
 const U = S / (2 * PLANET_R); // 每单位多少像素（极点附近近似）
 
-export function paintTerrain(beds: BedLayout[]) {
+export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: number; z: number; yaw: number }>) {
+  // H09：建筑地表印迹按实例位置绘制（poses 由布局推导），不再固定用 SPOTS，避免搬走后留下旧印
+  const at = (k: string, dx: number, dz: number) => (poses ? { x: poses[k].x, z: poses[k].z } : { x: dx, z: dz });
   const cv = document.createElement("canvas"); cv.width = cv.height = S;
   const g = cv.getContext("2d")!;
   let s = 3;
@@ -56,10 +58,16 @@ export function paintTerrain(beds: BedLayout[]) {
     g.globalAlpha = a; g.fillStyle = rg; g.beginPath(); g.arc(p.px, p.py, R, 0, Math.PI * 2); g.fill();
   };
   for (const b of beds) ring(b.x, b.z, b.r + 0.16, "#7F8F62", 0.35);
-  ring(SPOTS.cottage.x, SPOTS.cottage.z, 0.55, "#D8CBA8", 0.55);
-  ring(SPOTS.greenhouse.x, SPOTS.greenhouse.z, 0.52, "#D8CBA8", 0.5);
-  ring(SPOTS.bench.x, SPOTS.bench.z, 0.22, "#D8CBA8", 0.5);
-  ring(SPOTS.observatory.x, SPOTS.observatory.z, 0.44, "#D8CBA8", 0.5);
+  {
+    const c = at("cottage", SPOTS.cottage.x, SPOTS.cottage.z);
+    const gh = at("greenhouse", SPOTS.greenhouse.x, SPOTS.greenhouse.z);
+    const b = at("bench", SPOTS.bench.x, SPOTS.bench.z);
+    const o = at("observatory", SPOTS.observatory.x, SPOTS.observatory.z);
+    ring(c.x, c.z, 0.55, "#D8CBA8", 0.55);
+    ring(gh.x, gh.z, 0.52, "#D8CBA8", 0.5);
+    ring(b.x, b.z, 0.22, "#D8CBA8", 0.5);
+    ring(o.x, o.z, 0.44, "#D8CBA8", 0.5);
+  }
 
   // 沙色小路（软边 + 碎石点）
   const drawPath = (pts: [number, number][], width: number) => {
