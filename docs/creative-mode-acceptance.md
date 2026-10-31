@@ -17,7 +17,7 @@
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现；**自动检查 20000+ 顶点半径=PLANET_R+lift 且有限**；vision：正面泥土沿球面弯曲、**极点附近地表连续无破洞/泥土贴地无悬空/无倒置**；侧面视角 vision 判读歧义待复核 | Round 2-9 | `tests/unit/surface.test.ts`、`g3-front.png`、`g3-pole.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
-| G6 模板与兼容 | 🟡 进行中 | 默认模板 +「从模板开始」+「放弃修改」；**旧版 localStorage 导入：备份 kv-decor-backup + 差异提示（本地1件/服务器7件）+ 导入/保持选择实测**；首次二选一、恢复已发布版本未做 | Round 5/10 | `test-template.py`、`test-import.py` |
+| G6 模板与兼容 | 🟢 通过 | 默认模板 +「从模板开始」+「放弃修改」；旧版导入（备份+差异提示+选择）；**首次二选一（ahe 新账号实测弹出并套模板 6 件）**；**恢复已发布版本（published_items 快照，3 件草稿→revert 回 2 件已发布）**；**布局保存不改学习数据（plants/gardens/natal 前后一致）** | Round 5/10/15 | `test-template.py`、`test-import.py`、`test-first.py`、`test-revert.py`、`test-learning-unchanged.py` |
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位；**四方位截图（0/90/180/270°）vision 均确认连续地表+景物+无破洞接缝**；空闲慢转：按下暂停（28.8→0.76）、释放 3 秒恢复、编辑/低动效不转 | Round 4/8/11 | `dir-{0,90,180,270}.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑（前序会话）；**vision 确认温室屋顶完整/小木屋/池塘+木桥均贴球无穿模、风格协调**；玫瑰五阶段近景；**资产清单见 `public/assets/CREDITS.md`（9 件 CC-BY/CC0 含三角面/来源）**；「修改前后图」依赖前序会话存档、本轮未重制 | Round 11/14 | `b6-desktop.png`、`equator-pond.png`、`public/assets/CREDITS.md` |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
@@ -55,6 +55,14 @@
 - `equator-view.py` 把镜头下压到赤道附近：vision 确认**圆形小池塘 + 木桥跨越其上、周围有花草、物件与球面贴合无悬空穿模**；同视角可见亭状小建筑与围栏。
 - `b6-desktop.png`：vision 确认**温室（透明玻璃+内部植物）、小木屋（棕色屋顶/圆窗）、草丛茂盛、屋顶完整、无悬空穿模、风格协调**。
 - 资产清单：`public/assets/CREDITS.md` 已列 9 件外部素材（作者/许可/三角面/来源），程序化建筑为原创。
+
+### Round 15 · G6 收口（恢复已发布 + 首次二选一）
+
+- **迁移 `0004_fancy_changeling`**：`planet_layouts.published_items jsonb`（发布时固化快照）。
+- `publishLayout` 发布时写快照；新增 `POST /api/planet-layout/revert` 用快照替换草稿（revision+1）。
+- 实测（`test-revert.py`）：发布 2 件（rev6）→ 改 3 件草稿（rev7）→ revert → 回到 2 件 `[rose, soil]`（rev8, draft, hasPublished true）。
+- 首次二选一（`test-first.py`）：ahe 新账号（revision 0、草稿空）打开创造 → 提示「保持默认 / 从模板开始创造」→ 点模板后草稿变 6 件模板素材。
+- 学习数据不被布局影响（`test-learning-unchanged.py`）：布局保存前后 `/api/space` 的 plants 7 / gardens 2 / natal id 完全一致。
 
 ### Round 14 · 手机触摸（G2）
 
