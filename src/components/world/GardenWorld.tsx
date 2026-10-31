@@ -12,9 +12,9 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import * as THREE from "three";
 import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat } from "./geo";
 import { Flower3D } from "./Flower3D";
-import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenBed, Greenhouse, Lamp, Observatory, Sign, SteppingStone } from "./Props3D";
+import { Bench, BlossomTree, Bush, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
-import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
+import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
@@ -29,7 +29,7 @@ export type WorldProps = {
   selectedId?: string | null; onSelect?: (id: string) => void; onHotspot?: (h: Hotspot) => void;
   mode: "garden" | "focus"; reduced: boolean; celebrate?: Celebration; onGrowthShown?: (c: NonNullable<Celebration>) => void;
   pose: Pose; lampState: "idle" | "think" | "celebrate" | "guide";
-  signText: string; signSub?: string; recenterKey: number; onDragged?: (b: boolean) => void;
+  signText: string; signSub?: string; recenterKey: number; focusBed?: { x: number; z: number; key: number } | null; onDragged?: (b: boolean) => void;
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
@@ -250,6 +250,7 @@ function MemoryPath({ setHover, onHotspot }: { setHover: (k: string | null) => v
   const stones = useMemo(() => pathCurve(MEMORY_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), []);
   const g2 = useMemo(() => pathCurve(GREEN_PATH).getSpacedPoints(6).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.7 + rand(i, 9) * 0.3, i: i + 20 })), []);
   const g3 = useMemo(() => pathCurve(STAR_PATH).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 11) * 0.28, i: i + 40 })), []);
+  const g4 = useMemo(() => pathCurve(SEED_PATH).getSpacedPoints(5).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 13) * 0.26, i: i + 60 })), []);
   return (
     <>
       {stones.map((s) => (
@@ -262,6 +263,7 @@ function MemoryPath({ setHover, onHotspot }: { setHover: (k: string | null) => v
       ))}
       {g2.map((s) => <OnCap key={s.i} x={s.x} z={s.z}><SteppingStone s={s.s} seed={s.i} /></OnCap>)}
       {g3.map((s) => <OnCap key={s.i} x={s.x} z={s.z}><SteppingStone s={s.s} seed={s.i} /></OnCap>)}
+      {g4.map((s) => <OnCap key={s.i} x={s.x} z={s.z}><SteppingStone s={s.s} seed={s.i} /></OnCap>)}
     </>
   );
 }
@@ -271,6 +273,14 @@ function Hit({ name, r, h, y = 0, setHover, onHotspot }: { name: Hotspot; r: num
     <mesh geometry={cylGeo(r, r, h, 10)} material={hitMat} position={[0, y + h / 2, 0]}
       onPointerOver={(e) => { e.stopPropagation(); setHover(name); }} onPointerOut={() => setHover(null)}
       onClick={(e) => { if (e.delta > 6) return; e.stopPropagation(); onHotspot?.(name); }} />
+  );
+}
+
+/** 只悬停、不点击的命中区：装饰性建筑有标签、没有假功能入口 */
+function LabelHit({ name, r, h, y = 0, setHover }: { name: string; r: number; h: number; y?: number; setHover: (k: string | null) => void }) {
+  return (
+    <mesh geometry={cylGeo(r, r, h, 10)} material={hitMat} position={[0, y + h / 2, 0]}
+      onPointerOver={(e) => { e.stopPropagation(); setHover(name); }} onPointerOut={() => setHover(null)} />
   );
 }
 
@@ -523,6 +533,16 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           <group ref={(o) => register("observatory", o)} position={[0, 0.3, 0]} />
           <Hit name="observatory" r={0.3} h={0.36} setHover={setHover} onHotspot={props.onHotspot} />
         </OnCap>
+        <OnCap x={SPOTS.seedShed.x} z={SPOTS.seedShed.z} yaw={SPOTS.seedShed.yaw}>
+          <SeedShed lights={L} />
+          <group ref={(o) => register("seedshed", o)} position={[0, 0.32, 0]} />
+          <LabelHit name="seedshed" r={0.3} h={0.4} setHover={setHover} />
+        </OnCap>
+        <OnCap x={SPOTS.arch.x} z={SPOTS.arch.z} yaw={SPOTS.arch.yaw}>
+          <GardenArch seed={3} />
+          <group ref={(o) => register("arch", o)} position={[0, 0.42, 0]} />
+          <LabelHit name="arch" r={0.18} h={0.5} setHover={setHover} />
+        </OnCap>
         <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
         {TREES.map((t, i) => (
           <OnCap key={i} x={t.x} z={t.z}>{t.kind === "tree" ? <BlossomTree seed={t.seed} blossom={(t as any).tint} /> : <Bush seed={t.seed} />}</OnCap>
@@ -612,6 +632,18 @@ export function GardenWorld(props: WorldProps) {
   const resetView = () => { drag.current = { yaw: 0, tilt: 0 }; zoom.current = 1; };
   useEffect(() => { resetView(); props.onDragged?.(false); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.recenterKey]);
+  // 「花圃定位」：点花圃标题把镜头转到该圃。yaw = -atan2(x,z) 让该圃转到画面中央，再稍微拉近。
+  useEffect(() => {
+    if (!props.focusBed) return;
+    const { x, z } = props.focusBed;
+    const yaw = -Math.atan2(x, z);
+    const d = Math.hypot(x, z);
+    drag.current = { yaw, tilt: Math.max(TILT_MIN, Math.min(TILT_MAX, 0.1)) };
+    zoom.current = d < 0.5 ? 0.95 : 0.88;
+    lastAct.current = performance.now();
+    props.onDragged?.(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.focusBed?.key]);
   // 键盘：←/→ 环绕、↑/↓ 俯仰、+/- 缩放、R 复位
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

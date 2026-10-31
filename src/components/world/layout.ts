@@ -38,6 +38,8 @@ export const SPOTS = {
   sign: { x: 0.42, z: 0.86, yaw: -14 },
   lampSpot: { x: 0.62, z: -0.34 },        // 星灯默认停在书屋门前（对话入口）
   observatory: { x: -0.75, z: -2.15, yaw: 18 }, // 背面观星台（环绕探索目标）
+  seedShed: { x: -1.62, z: -1.15, yaw: 30 },     // 种子小棚（温室旁，装饰性探索目标）
+  arch: { x: 0, z: 1.22, yaw: 0 },              // 花园拱门（正前入口，纯装饰）
 };
 
 /** 回忆小径：主花圃 → 长椅旁 → 星灯书屋门口 */
@@ -46,6 +48,8 @@ export const MEMORY_PATH: [number, number][] = [[0.08, -0.12], [0.18, -0.4], [0.
 export const GREEN_PATH: [number, number][] = [[-0.22, -0.08], [-0.42, -0.3], [-0.6, -0.48], [-0.74, -0.6]];
 /** 去背面观星台的星径：从温室后侧绕到背面 */
 export const STAR_PATH: [number, number][] = [[-0.74, -0.6], [-1.0, -1.1], [-1.05, -1.6], [-0.92, -1.95], [-0.75, -2.15]];
+/** 去种子小棚的小路：从温室门口向左下 */
+export const SEED_PATH: [number, number][] = [[-0.74, -0.6], [-1.08, -0.78], [-1.38, -0.98], [-1.62, -1.15]];
 
 export function pathCurve(points: [number, number][]) {
   return new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, "centripetal");
@@ -96,11 +100,12 @@ export function scatter(beds: BedLayout[], count = 520, seed = 11, maxR = 2.35, 
   const blocked: { x: number; z: number; r: number }[] = [
     ...beds.map((b) => ({ x: b.x, z: b.z, r: b.r + 0.07 })),
     { ...SPOTS.cottage, r: 0.45 }, { ...SPOTS.greenhouse, r: 0.42 }, { ...SPOTS.bench, r: 0.16 }, { ...SPOTS.sign, r: 0.06 },
+    { ...SPOTS.seedShed, r: 0.34 }, { ...SPOTS.arch, r: 0.16 },
     ...TREES.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.18 : 0.12 })),
     ...WILD.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.22 : 0.16 })),
     ...WILD_ROCKS.map((t) => ({ x: t.x, z: t.z, r: 0.12 })),
   ];
-  const pathPts = [...pathCurve(MEMORY_PATH).getSpacedPoints(30), ...pathCurve(GREEN_PATH).getSpacedPoints(20)];
+  const pathPts = [...pathCurve(MEMORY_PATH).getSpacedPoints(30), ...pathCurve(GREEN_PATH).getSpacedPoints(20), ...pathCurve(STAR_PATH).getSpacedPoints(20), ...pathCurve(SEED_PATH).getSpacedPoints(12)];
   const out: { x: number; z: number; s: number; tone: number; yaw: number }[] = [];
   let guard = 0;
   const ring = maxR * maxR - minR * minR;

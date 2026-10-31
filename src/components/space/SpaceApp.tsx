@@ -95,6 +95,7 @@ export function SpaceApp() {
   const [replayLabel, setReplayLabel] = useState<string | null>(null);
   const [recenterKey, setRecenterKey] = useState(0);
   const [dragged, setDragged] = useState(false);
+  const [bedFocus, setBedFocus] = useState<{ x: number; z: number; key: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -254,7 +255,7 @@ export function SpaceApp() {
       const p = scenePlants.find((x) => x.id === k.slice(6));
       return p ? `${p.nickname ? `「${p.nickname}」` : ""}${p.conceptName} · ${STAGE_NAME[p.stage]}${p.reviewDue ? " · 待复习" : ""}` : null;
     }
-    return { cottage: "星灯书屋 · 学习与对话", greenhouse: "资料温室 · 我的资料", path: "回忆小径 · 历史问答", galaxy: "远处的星球 · 共学" }[k] ?? null;
+    return { cottage: "星灯书屋 · 学习与对话", greenhouse: "资料温室 · 我的资料", path: "回忆小径 · 历史问答", galaxy: "远处的星球 · 共学", observatory: "观星台 · 共学", seedshed: "种子小棚 · 待播的种子", arch: "花园拱门" }[k] ?? null;
   };
 
   return (
@@ -269,7 +270,7 @@ export function SpaceApp() {
               onSelect={(id) => open({ panel: "dossier", plantId: id })} onHotspot={onHotspot}
               mode={focus ? "focus" : "garden"} reduced={reduced} celebrate={celebrate} pose={pose} lampState={lampState}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
-              recenterKey={recenterKey} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
+              recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
@@ -296,7 +297,7 @@ export function SpaceApp() {
         </header>
 
         {!focus && (
-          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} />
+          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} />
         )}
 
         {!focus && panel.panel === "dossier" && (
@@ -403,7 +404,7 @@ function ModeNotice({ space }: { space: Space }) {
 }
 
 /** 花园模式的界面层：今日建议、场景入口、工具栏、收起的时间轴 */
-function GardenHUD({ narrow, dragged, onRecenter, selectedPlant, replayLabel, hidden }: { narrow: boolean; dragged: boolean; onRecenter: () => void; selectedPlant: string | null; replayLabel: string | null; hidden: boolean }) {
+function GardenHUD({ narrow, dragged, onRecenter, onLocateBed, selectedPlant, replayLabel, hidden }: { narrow: boolean; dragged: boolean; onRecenter: () => void; onLocateBed: (x: number, z: number) => void; selectedPlant: string | null; replayLabel: string | null; hidden: boolean }) {
   const { space, open } = React.useContext(Ctx)!;
   const [bedsOpen, setBedsOpen] = useState(false);
   const [bedQuery, setBedQuery] = useState("");
@@ -474,6 +475,9 @@ function GardenHUD({ narrow, dragged, onRecenter, selectedPlant, replayLabel, hi
                   <div className="label">
                     <span>{g.name}</span>
                     <em>{all.length} 株</em>
+                    {bed && (
+                      <button className="link locate" type="button" onClick={() => { onLocateBed(bed.x, bed.z); setBedsOpen(false); }} aria-label={`定位到${g.name}`}>定位</button>
+                    )}
                     {bed && bed.overflow > 0 && (
                       <span className="overflow">星球上摆下 {bed.plants.length} 株，另有 {bed.overflow} 株待扩容</span>
                     )}

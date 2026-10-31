@@ -293,6 +293,74 @@ export function Observatory({ lights = 1 }: { lights?: number }) {
   );
 }
 
+/** 种子小棚：倚在花园一侧的木制斜顶小棚，前脸开敞，架子上摆着待播的种子罐（纯装饰性探索目标，入口未接通） */
+export function SeedShed({ lights = 1 }: { lights?: number }) {
+  const wood = useMemo(() => matte(C.wood, { map: grainTexture("#C08A62", "#7C5435") }), []);
+  const plank = useMemo(() => matte(C.woodLight, { map: grainTexture("#D4A87C", "#9A6B46") }), []);
+  const pots: [number, number, number, string, string][] = [
+    [-0.13, 0.145, -0.08, "#C88A6E", "#C6DCA4"], [0.0, 0.145, -0.09, "#9DBB80", "#7E9A6E"], [0.13, 0.145, -0.08, "#B9A2CC", "#C6DCA4"],
+    [-0.07, 0.225, -0.08, "#9DBB80", "#94B77C"], [0.07, 0.225, -0.09, "#C88A6E", "#C6DCA4"],
+  ];
+  return (
+    <group>
+      <Contact r={0.36} />
+      {/* 石板地台 */}
+      <mesh geometry={rbox(0.56, 0.05, 0.42, 0.02)} material={matte(C.stone)} position={[0, 0.025, 0]} castShadow receiveShadow />
+      {/* 后墙 + 侧墙（木板） */}
+      <mesh geometry={rbox(0.46, 0.26, 0.022, 0.012)} material={wood} position={[0, 0.18, -0.17]} castShadow />
+      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} material={plank} position={[-0.23, 0.18, 0]} castShadow />
+      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} material={plank} position={[0.23, 0.18, 0]} castShadow />
+      {/* 斜顶（前低后高） */}
+      <group position={[0, 0.31, 0.02]} rotation={[0.22, 0, 0]}>
+        <mesh geometry={rbox(0.56, 0.02, 0.4, 0.008)} material={matte(C.roofDeep)} castShadow />
+      </group>
+      {/* 前柱 */}
+      {[-1, 1].map((sd) => (
+        <mesh key={sd} geometry={rbox(0.02, 0.3, 0.02, 0.008)} material={matte(C.woodDeep)} position={[sd * 0.23, 0.19, 0.17]} castShadow />
+      ))}
+      {/* 架板：两层，摆种子罐 */}
+      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} material={plank} position={[0, 0.13, -0.06]} castShadow />
+      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} material={plank} position={[0, 0.21, -0.06]} castShadow />
+      {pots.map(([x, y, z, potC, sproutC], i) => (
+        <group key={i} position={[x, y, z]}>
+          <mesh geometry={cylGeo(0.016, 0.014, 0.028, 8)} material={matte(potC)} position={[0, 0.014, 0]} />
+          <mesh geometry={sphereGeo(0.011, 8, 6)} material={matte(sproutC)} position={[0, 0.032, 0]} />
+        </group>
+      ))}
+      {/* 门口暖灯 */}
+      <group position={[0.19, 0.3, 0.15]}>
+        <mesh geometry={sphereGeo(0.014, 8, 6)} material={glowMat("#FFDFA8", 0.5 + 1.2 * lights)} />
+        <Halo size={0.22} opacity={0.45 * lights} />
+      </group>
+      <pointLight color="#FFD49A" intensity={0.4 * lights} distance={0.8} decay={2} position={[0.19, 0.3, 0.15]} />
+    </group>
+  );
+}
+
+/** 花园拱门：木制圆拱 + 攀援的小花，立在花园入口（纯装饰，无入口功能） */
+export function GardenArch({ seed = 0 }: { seed?: number }) {
+  const arch = useMemo(() => new THREE.TorusGeometry(0.14, 0.015, 8, 22, Math.PI), []);
+  const wood = matte(C.woodDeep);
+  const blooms = useMemo(() => Array.from({ length: 8 }, (_, i) => {
+    const a = (i + 0.6) / 8 * Math.PI;
+    return { x: Math.cos(a) * 0.14, y: 0.3 + Math.sin(a) * 0.14, z: (rand(i + seed, 1) - 0.5) * 0.03, s: 0.016 + rand(i + seed, 2) * 0.014, c: ["#EBB2BB", "#F2C9B6", "#E4A1AA"][i % 3] };
+  }), [seed]);
+  return (
+    <group>
+      <Contact r={0.22} />
+      {[-1, 1].map((sd) => (
+        <mesh key={sd} geometry={rbox(0.03, 0.3, 0.03, 0.012)} material={wood} position={[sd * 0.14, 0.15, 0]} castShadow />
+      ))}
+      <mesh geometry={arch} material={wood} position={[0, 0.3, 0]} castShadow />
+      {blooms.map((b, i) => (
+        <mesh key={i} geometry={sphereGeo(1, 10, 8)} material={matte(b.c)} position={[b.x, b.y, b.z]} scale={b.s} castShadow />
+      ))}
+      <mesh geometry={sphereGeo(0.012, 8, 6)} material={glowMat("#FFE9B8", 0.7)} position={[0, 0.47, 0]} />
+      <Halo size={0.18} opacity={0.5} position={[0, 0.47, 0]} />
+    </group>
+  );
+}
+
 /** 远处的共学星球（低细节） */
 export function DistantPlanet({ color, ring = true, size = 0.5 }: { color: string; ring?: boolean; size?: number }) {
   const g = useRef<THREE.Group>(null);
