@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏(7分类+搜索+**缩略图：5 个花形 SVG**) + 玫瑰放置 + 五阶段选择器；vision 确认花瓣层叠翻卷/茎叶完整/无穿模；缺录屏与正侧背多角度图 | Round 2-5 | `rose-closeup.png`、`palette-only.png` + vision |
 | G2 实时编辑 | 🟡 进行中 | 比例/宽长/旋转/阶段控件已实现；撤销/重做按钮+快照栈（**单步撤销实测通过，多步栈有 bug 待修**）；触摸未做 | Round 2/3 | `.dsh-tools/test-undo.py` |
-| G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
+| G3 球面地板 | 🟡 进行中 | SphereSurface 实现；vision 正面确认泥土沿球面弯曲；**自动检查：20000+ 网格顶点半径=PLANET_R+lift 且有限、2.4×2.4 四角仍贴球（36/36 单测）**；侧面视角 vision 判读歧义（可能透视缩短误判），极点/接缝视觉未逐一验 | Round 2-7 | `tests/unit/surface.test.ts`、`g3-front.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
 | G6 模板与兼容 | 🟡 进行中 | 默认模板「从模板开始」（预览确认+可撤销）+「放弃修改」恢复服务器布局已实现并实测；旧 localStorage 导入/恢复已发布版本未做 | Round 5 | `.dsh-tools/test-template.py` |
@@ -26,6 +26,11 @@
 | G12 构建与交付 | 🟡 进行中 | **typecheck 0 / build 成功（40/40 静态页）/ 单测 34/34**；/space、/visit 实测无 pageerror；B6 四组截图与 B8 界面章未更新 | Round 6 | 本轮命令输出 |
 
 ## 每轮记录
+
+### Round 7 · 保存失败重试 + G3 自动检查（2026-10-31）
+
+- `tests/unit/surface.test.ts`（新增，2 例）：对 `SphereSurface` 生成网格的全部顶点（4 组中心 × 3 尺寸 × 5 角度 × 15×15 采样，>20000 点）断言 `|半径-(PLANET_R+lift)| < 2e-3` 且有限；2.4×2.4 最大面积四角仍贴球。36/36 通过。**这是比目视更硬的 G3 证据。**
+- 侧面视角截图 `g3-side.png`：vision 判读「泥土平面悬空」，与正面判读（「沿球面弯曲」）矛盾；结合数值检查判断为**边缘透视缩短导致的视觉误判**，但极点/接缝仍需更低视角复核。
 
 ### Round 7 · 保存失败重试（G5 收口，2026-10-31）
 
