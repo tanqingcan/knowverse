@@ -283,11 +283,36 @@ export function SpaceApp() {
     return () => window.removeEventListener("keydown", f);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creativeOpen, selectedDecorId]);
+  // H18/H19：1–9 切槽、E 打开全量素材库；输入框/文本域聚焦时不拦截
+  useEffect(() => {
+    if (!creativeOpen) return;
+    const f = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key >= "1" && e.key <= "9") {
+        const k = hotbar[Number(e.key) - 1];
+        if (!k) return;
+        e.preventDefault();
+        setCopyFrom(null);
+        setPlacingKind((prev) => (prev === k ? null : k));
+        return;
+      }
+      if (e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        setLibOpen(true);
+      }
+    };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [creativeOpen, hotbar]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
     const f = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // H19：全量素材库打开时 Esc 先关库
+      if (libOpen) { setLibOpen(false); return; }
       // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
       if (placingKind) { setPlacingKind(null); setCopyFrom(null); return; }
       if (selectedDecorId) { setSelectedDecorId(null); return; }
@@ -295,8 +320,7 @@ export function SpaceApp() {
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, placingKind, selectedDecorId]);
-  // 入场动画的兜底：无论 3D 是否加载完成，最多 4.5 秒后显示界面
+  }, [creativeOpen, placingKind, selectedDecorId, libOpen]);
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
   useEffect(() => { if (panel.panel === "chat" && panel.conversationId) lastConv.current = panel.conversationId; }, [panel]);
@@ -505,6 +529,13 @@ export function SpaceApp() {
             onRedo={() => decorStore.redo()}
             canUndo={decorStore.canUndo}
             canRedo={decorStore.canRedo}
+            onWheelSlot={(dir) => {
+              // H18：滚轮在栏上切槽；在画布上仍由 .world 的 onWheel 缩放，互不串扰
+              const cur = placingKind ? hotbar.indexOf(placingKind as DecorKind) : -1;
+              const next = ((cur + dir) % hotbar.length + hotbar.length) % hotbar.length;
+              setCopyFrom(null);
+              setPlacingKind(hotbar[next]);
+            }}
           />
         )}
 

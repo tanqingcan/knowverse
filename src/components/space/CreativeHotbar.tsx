@@ -4,7 +4,7 @@
  * 取代「左侧 260px 常驻大面板」：进入创造后只在底部留一条 9 槽快捷栏 + 小型退出/保存入口，
  * 全量素材库通过「全部素材」按钮/E 键按需打开（H19）。
  */
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { DECOR_CATALOG, type DecorKind } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
 
@@ -30,7 +30,7 @@ export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number 
   return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
 }
 
-export function CreativeHotbar({ slots, activeKind, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo }: {
+export function CreativeHotbar({ slots, activeKind, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
   slots: DecorKind[];
   activeKind: DecorKind | null;
   picking?: boolean;
@@ -43,13 +43,30 @@ export function CreativeHotbar({ slots, activeKind, picking, message, onPick, on
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  /** H18：在操作栏上滚轮切槽（画布上的滚轮仍归镜头缩放，互不串扰） */
+  onWheelSlot?: (dir: 1 | -1) => void;
 }) {
+  // H18：滚轮必须用原生非 passive 监听才能可靠 preventDefault + 阻断向画布传播
+  const barRef = useRef<HTMLDivElement>(null);
+  const cbRef = useRef(onWheelSlot);
+  cbRef.current = onWheelSlot;
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const h = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cbRef.current?.(e.deltaY > 0 ? 1 : -1);
+    };
+    el.addEventListener("wheel", h, { passive: false });
+    return () => el.removeEventListener("wheel", h);
+  }, []);
   return (
     <div className="hotbar-wrap" role="region" aria-label="创造模式操作栏">
       <div className="hb-side">
         <button className="hb-lib" type="button" onClick={onOpenLibrary} title="打开全部素材库（E）">全部素材</button>
       </div>
-      <div className="hotbar" role="toolbar" aria-label="素材快捷栏（1–9 切换）">
+      <div className="hotbar" ref={barRef} role="toolbar" aria-label="素材快捷栏（1–9 切换；滚轮切槽）">
         {slots.map((kind, i) => {
           const active = activeKind === kind;
           return (
