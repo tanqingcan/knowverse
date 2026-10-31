@@ -608,7 +608,15 @@ export function SpaceApp() {
           return (
             <DiyWorkbench
               item={it}
-              onApply={(parts, stage) => { decorStore.update(it.id, stage ? { parts, stage } : { parts }); setDiyTarget(null); setLayoutMsg("已应用 DIY 配色（可撤销回滚）"); }}
+              onApply={(parts, stage) => {
+                // H31 遗留补修（H60 审计发现）：与当前值完全相同时不写空历史
+                const sameParts = JSON.stringify(parts) === JSON.stringify(it.parts ?? {});
+                const sameStage = !stage || stage === it.stage;
+                if (sameParts && sameStage) { setDiyTarget(null); setLayoutMsg("配色没有变化，未产生新的撤销步骤"); return; }
+                decorStore.update(it.id, stage ? { parts, stage } : { parts });
+                setDiyTarget(null);
+                setLayoutMsg("已应用 DIY 配色（可撤销回滚）");
+              }}
               onCancel={() => setDiyTarget(null)}
               onSaveVariant={(parts) => { saveVariant(it.kind, parts); setLayoutMsg("已保存为你的素材变体（新放置同类素材时复用）"); }}
             />
