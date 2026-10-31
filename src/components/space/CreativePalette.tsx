@@ -14,11 +14,13 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, revision, status, message, onSave, onPublish, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; scale: number; width?: number; length?: number } | null;
   onUpdate?: (patch: { scale?: number; width?: number; length?: number }) => void;
   onRemove?: () => void;
+  revision?: number; status?: string; message?: string | null;
+  onSave?: () => void; onPublish?: () => void;
   onSelect: (kind: DecorKind) => void; onCancel: () => void; onClose: () => void;
 }) {
   const [kw, setKw] = useState("");
@@ -73,6 +75,14 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
             </div>
           );
         })}
+      </div>
+      <div className="cp-foot">
+        <div className="cp-rev">当前布局：revision {revision ?? 0} · {status === "published" ? "已发布" : "草稿"}</div>
+        {message && <div className="cp-msg" role="status">{message}</div>}
+        <div className="cp-foot-actions">
+          <button className="btn btn-ghost btn-sm" onClick={onSave}>保存到服务器</button>
+          <button className="btn btn-primary btn-sm" onClick={onPublish}>发布</button>
+        </div>
       </div>
     </aside>
   );

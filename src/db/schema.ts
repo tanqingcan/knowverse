@@ -674,3 +674,43 @@ export const outboxEvents = pgTable("outbox_events", {
   deliveredAt: ts("delivered_at"),
   attempts: integer("attempts").notNull().default(0),
 }, (t) => [index("outbox_undelivered_idx").on(t.id).where(sql`${t.deliveredAt} is null`)]);
+
+/* ───────────────────────── 创造模式：星球布局持久化 ───────────────────────── */
+
+/**
+ * 星球布局（创造模式）：每个星球一份「工作布局」，revision 每次保存 +1（乐观并发用 baseRevision 校验）。
+ * status: draft | published；publishedRevision 记录最近一次发布的 revision。
+ * 只存可重建参数（kind/位置/姿态/尺寸/颜色/阶段/排序），不存 Three.js 对象或逐帧网格。
+ */
+export const planetLayouts = pgTable("planet_layouts", {
+  id: id(),
+  planetId: uuid("planet_id").notNull().references(() => planets.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull().default(1),
+  status: text("status").notNull().default("draft"),
+  publishedRevision: integer("published_revision"),
+  createdAt: createdAt(),
+  updatedAt: ts("updated_at").defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("planet_layouts_planet_uq").on(t.planetId),
+  check("planet_layouts_status_ck", sql`${t.status} in ('draft','published')`),
+  check("planet_layouts_revision_ck", sql`${t.revision} >= 1`),
+]);
+
+export const planetLayoutItems = pgTable("planet_layout_items", {
+  id: id(),
+  layoutId: uuid("layout_id").notNull().references(() => planetLayouts.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  x: real("x").notNull(),
+  z: real("z").notNull(),
+  rot: real("rot").notNull().default(0),
+  scale: real("scale").notNull().default(1),
+  width: real("width"),
+  length: real("length"),
+  color: text("color"),
+  stage: text("stage"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+}, (t) => [
+  index("planet_layout_items_layout_idx").on(t.layoutId, t.sortOrder),
+  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road')`),
+]);

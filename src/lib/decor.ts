@@ -139,5 +139,7 @@ export function useDecor() {
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
     remove: (id: string) => commit(removeDecor(list, id)),
     reset: () => commit([]),
+    /** 用服务端布局整体替换本地列表（G4：加载已保存布局） */
+    setAll: (next: DecorPlacement[]) => commit(next),
   };
 }

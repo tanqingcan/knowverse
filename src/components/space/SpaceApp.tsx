@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
+import { loadLayout, saveLayout, publishLayout, fromLayoutItem } from "@/lib/layout-api";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
@@ -101,6 +102,9 @@ export function SpaceApp() {
   const [creativeOpen, setCreativeOpen] = useState(false);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
+  const [layoutRev, setLayoutRev] = useState(0);
+  const [layoutStatus, setLayoutStatus] = useState("draft");
+  const [layoutMsg, setLayoutMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -141,6 +145,23 @@ export function SpaceApp() {
   }, [reload]);
 
   useEffect(() => { if (space) writeUrl(panel); }, [panel, space]);
+
+  // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
+  useEffect(() => {
+    loadLayout().then((l) => {
+      if (l.revision > 0) decorStore.setAll(l.items.map(fromLayoutItem));
+      setLayoutRev(l.revision); setLayoutStatus(l.status);
+    }).catch(() => { /* 未登录或网络失败：保留本地 localStorage 草稿 */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const saveCreative = useCallback(async () => {
+    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor); setLayoutRev(r.revision); setLayoutStatus(r.status); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
+    catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
+  }, [layoutRev, decorStore.decor]);
+  const publishCreative = useCallback(async () => {
+    try { setLayoutMsg("发布中…"); const r = await publishLayout(layoutRev); setLayoutStatus(r.status); setLayoutMsg(`已发布（revision ${r.revision}）`); }
+    catch (e: any) { setLayoutMsg(`发布失败：${e?.message ?? "网络错误"}`); }
+  }, [layoutRev]);
   // 入场动画的兜底：无论 3D 是否加载完成，最多 4.5 秒后显示界面
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
@@ -313,6 +334,8 @@ export function SpaceApp() {
           selected={decorStore.decor.find((d) => d.id === selectedDecorId) ?? null}
           onUpdate={(patch) => selectedDecorId && decorStore.update(selectedDecorId, patch)}
           onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
+          revision={layoutRev} status={layoutStatus} message={layoutMsg}
+          onSave={saveCreative} onPublish={publishCreative}
           onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }} />
 
         {!focus && panel.panel === "dossier" && (
