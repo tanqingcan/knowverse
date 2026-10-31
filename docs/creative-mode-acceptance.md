@@ -12,7 +12,7 @@
 
 | # | 状态 | 版本/commit | 复现步骤 | 证据路径 |
 |---|---|---|---|---|
-| G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏+玫瑰放置+五阶段选择器；**vision_understand 近景确认：花瓣多层叠放/自然翻卷/茎叶完整/无穿模**；缩略图未做 | Round 2-4 | `rose-closeup.png` + vision |
+| G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏(7分类+搜索+**缩略图：5 个花形 SVG**) + 玫瑰放置 + 五阶段选择器；vision 确认花瓣层叠翻卷/茎叶完整/无穿模；缺录屏与正侧背多角度图 | Round 2-5 | `rose-closeup.png`、`palette-only.png` + vision |
 | G2 实时编辑 | 🟡 进行中 | 比例/宽长/旋转/阶段控件已实现；撤销/重做按钮+快照栈（**单步撤销实测通过，多步栈有 bug 待修**）；触摸未做 | Round 2/3 | `.dsh-tools/test-undo.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现+放置成功；**vision 确认泥土边缘沿球面弯曲、无悬空穿模**；背面/极点/接缝未逐一验 | Round 2-4 | `cm-place-multi.png` + vision |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
@@ -21,7 +21,7 @@
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位/慢转已实现；**vision 确认背面有连续草地+建筑/树/石、无破洞接缝倒置**；极点/接缝未逐一验 | Round 4 | `sphere-back.png` + vision |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例 + 0/1/10/30/50/100 | tests/unit/layout.test.ts | 待补本轮证据 |
-| G10 天空与 UI | 🟡 进行中 | 天空星点分层 + 居中浮窗 + 毛玻璃 | 前序会话 | 待补本轮证据 |
+| G10 天空与 UI | 🟡 进行中 | 深色星空已展示（vision 确认）；手机 390×844 创造模式无横向溢出、素材栏不遮挡星球（vision 确认）；768/低动效/Esc-Tab 未验 | Round 5 | `cm-mobile-creative.png` + vision |
 | G11 性能与回归 | ⬜ 未开始 | 已有 draw 391 实测，需按本节重测 | — | — |
 | G12 构建与交付 | ⬜ 未开始 | — | — | — |
 
@@ -34,7 +34,11 @@
 - 实测（`test-template.py`）：从模板开始后草稿变为 6 件模板素材；放弃修改后恢复服务器布局；无 pageerror。
 - vision 确认（`template-applied.png`）：玫瑰/泥土/道路/围栏/路灯布局自然、无穿模悬空、画面柔和。
 
-**未完成**：旧 localStorage 一次性导入预览、恢复上一已发布版本（需 published 快照）、首次进入的二选一流程。
+**同轮补充**
+- G1 缩略图：素材栏花卉类渲染真实花形 SVG（rose/flower/flower2/flower3/pot，共 5 个），其余为色点；实测 DOM `svg thumbs: 5`，vision 确认缩略图存在（`2c586bb`）。
+- G10 手机：390×844 创造模式可打开素材栏、无横向溢出（`document.scrollWidth > clientWidth` = false），vision 确认素材栏不遮挡星球、文字按钮清晰（`cm-mobile-creative.png`）。
+
+**未完成**：旧 localStorage 一次性导入预览、恢复上一已发布版本（需 published 快照）、首次进入的二选一流程；768/低动效/Esc-Tab 未验。
 
 ### Round 4 · 撤销/重做修复 + 视觉工具接入（2026-10-31）
 
