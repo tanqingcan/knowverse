@@ -105,16 +105,23 @@ export function SpaceApp() {
   const [creativeOpen, setCreativeOpen] = useState(false);
   // H16/H17：创造模式用底部 9 槽快捷栏替代左侧大面板；全量素材库按需打开（E / 「全部素材」）
   const [libOpen, setLibOpen] = useState(false);
-  const [hotbar, setHotbar] = useState<DecorKind[]>(DEFAULT_HOTBAR);
+  const [hotbar, setHotbar] = useState<(DecorKind | null)[]>(DEFAULT_HOTBAR);
+  const [activeSlot, setActiveSlot] = useState(0);   // H20：当前槽（「放入槽位」的目标）
+  const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
   useEffect(() => {
     try {
       const raw = localStorage.getItem(HOTBAR_KEY);
       if (raw) {
         const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length === 9 && arr.every((k) => DECOR_CATALOG.some((c) => c.kind === k))) setHotbar(arr);
+        // H20：允许空槽（null）；材质 ID 用 kind，绝不用场景实例 ID
+        if (Array.isArray(arr) && arr.length === 9 && arr.every((k) => k === null || DECOR_CATALOG.some((c) => c.kind === k))) setHotbar(arr);
       }
     } catch { /* 忽略损坏的快捷栏配置 */ }
   }, []);
+  // H20：槽位个人配置持久化（改完即存，刷新后保持）
+  useEffect(() => {
+    try { localStorage.setItem(HOTBAR_KEY, JSON.stringify(hotbar)); } catch { /* 隐私模式等写失败忽略 */ }
+  }, [hotbar]);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
   const [layoutRev, setLayoutRev] = useState(0);
@@ -521,7 +528,8 @@ export function SpaceApp() {
             activeKind={(placingKind as DecorKind) ?? null}
             picking={!!placingKind}
             message={layoutMsg}
-            onPick={(k) => { setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
+            currentSlot={activeSlot}
+            onPick={(k) => { setActiveSlot(hotbar.indexOf(k)); setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
             onOpenLibrary={() => setLibOpen(true)}
             onSave={() => void saveCreative()}
             onExit={() => { setCreativeOpen(false); setPlacingKind(null); setSelectedDecorId(null); }}
@@ -562,7 +570,17 @@ export function SpaceApp() {
           showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
           onFirstDefault={() => setFirstDismissed(true)}
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
-          onSelect={(k) => { setCopyFrom(null); setPlacingKind(k); setLibOpen(false); }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => setLibOpen(false)} />
+          slotMode={slotMode} activeSlot={activeSlot} onToggleSlotMode={() => setSlotMode((v) => !v)}
+          onClearSlot={() => { setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? null : v))); setLayoutMsg(`已清空第 ${activeSlot + 1} 槽`); }}
+          onSelect={(k) => {
+            // H20：库内「放入槽位」模式下点素材 = 放入当前槽（可覆盖已有素材），否则正常进入放置
+            if (slotMode) {
+              setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? k : v)));
+              setSlotMode(false); setLibOpen(false); setLayoutMsg(`已放入第 ${activeSlot + 1} 槽`);
+              return;
+            }
+            setCopyFrom(null); setPlacingKind(k); setLibOpen(false);
+          }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setLibOpen(false); setSlotMode(false); }} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">

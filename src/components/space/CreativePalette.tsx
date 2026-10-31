@@ -33,12 +33,17 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, slotMode, activeSlot, onToggleSlotMode, onClearSlot, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; x?: number; z?: number; scale: number; width?: number; length?: number; rot?: number; stage?: string; color?: string } | null;
   onUpdate?: (patch: { x?: number; z?: number; scale?: number; width?: number; length?: number; rot?: number; stage?: string; color?: string }) => void;
   onRemove?: () => void;
   onDuplicate?: () => void;
+  /** H20：素材库内「放入槽位」模式——点素材写入当前槽（覆盖已有），而不是直接放置 */
+  slotMode?: boolean;
+  activeSlot?: number;
+  onToggleSlotMode?: () => void;
+  onClearSlot?: () => void;
   /** H04：草/野花「全星球群组」的密度（操作单元 = 整组，不逐株） */
   groupDensities?: { grass: number; blooms: number };
   onGroupDensity?: (kind: "grassGroup" | "wildflowerGroup", v: number) => void;
@@ -60,7 +65,13 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   return (
     <aside className="creative-palette paper" aria-label="创造模式素材栏">
       <div className="cp-head">
-        <b>创造模式</b>
+        <b>全部素材</b>
+        {/* H20：明确的「放入槽位」按钮——点它进入选材模式，再点素材写入当前槽 */}
+        <button className={`btn btn-sm ${slotMode ? "btn-primary" : "btn-quiet"}`} onClick={onToggleSlotMode} aria-pressed={slotMode}>
+          {slotMode ? `选材放入第 ${(activeSlot ?? 0) + 1} 槽…` : `放入第 ${(activeSlot ?? 0) + 1} 槽`}
+        </button>
+        {/* H20：空槽规则——可把当前槽清空（空槽在快捷栏显示为「+」） */}
+        <button className="btn btn-quiet btn-sm" onClick={onClearSlot} title="把当前槽清空">清空槽</button>
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="收起素材栏">收起</button>
       </div>
       {showFirstEntry && (

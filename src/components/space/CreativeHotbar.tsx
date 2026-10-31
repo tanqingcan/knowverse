@@ -30,8 +30,10 @@ export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number 
   return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
 }
 
-export function CreativeHotbar({ slots, activeKind, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
-  slots: DecorKind[];
+export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
+  /** H20：槽位可为空（null），配置存 localStorage；材质 ID 用 kind，不用场景实例 ID */
+  slots: (DecorKind | null)[];
+  currentSlot?: number;
   activeKind: DecorKind | null;
   picking?: boolean;
   message?: string | null;
@@ -68,14 +70,16 @@ export function CreativeHotbar({ slots, activeKind, picking, message, onPick, on
       </div>
       <div className="hotbar" ref={barRef} role="toolbar" aria-label="素材快捷栏（1–9 切换；滚轮切槽）">
         {slots.map((kind, i) => {
-          const active = activeKind === kind;
+          const active = kind !== null && activeKind === kind;
+          const cur = currentSlot === i;
           return (
-            <button key={`${kind}-${i}`} type="button" className={`hb-slot ${active ? "is-active" : ""}`}
-              aria-pressed={active} aria-label={`${i + 1} ${labelOf(kind)}`}
-              title={`${i + 1} · ${labelOf(kind)}`} onClick={() => onPick(kind)}>
+            <button key={`${kind ?? "empty"}-${i}`} type="button" className={`hb-slot ${active ? "is-active" : ""} ${cur ? "is-current" : ""} ${kind ? "" : "is-empty"}`}
+              aria-pressed={active} aria-label={`${i + 1} ${kind ? labelOf(kind) : "空槽"}`}
+              title={`${i + 1} · ${kind ? labelOf(kind) : "空槽（在素材库里「放入槽位」）"}`}
+              onClick={() => kind && onPick(kind)}>
               <span className="hb-num" aria-hidden="true">{i + 1}</span>
-              <KindThumb kind={kind} />
-              <span className="hb-name">{labelOf(kind)}</span>
+              {kind ? <KindThumb kind={kind} /> : <span className="hb-empty" aria-hidden="true">+</span>}
+              <span className="hb-name">{kind ? labelOf(kind) : "空"}</span>
             </button>
           );
         })}
