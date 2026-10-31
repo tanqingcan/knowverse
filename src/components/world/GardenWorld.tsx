@@ -18,7 +18,7 @@ import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH,
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
-import type { DecorPlacement } from "@/lib/decor";
+import { isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
 import { DecorItem } from "./DecorItem";
 import { SphereSurface } from "./Surface3D";
 
@@ -40,6 +40,7 @@ export type WorldProps = {
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
+  editing?: boolean; // 创造模式（H02/H08）：编辑时点击建筑只选中，不触发业务热点
   perf?: boolean; // 开发用：显示 FPS / draw calls / 三角面
   onFail: () => void;
 };
@@ -52,6 +53,20 @@ const TILT_MIN = -0.34;
 const TILT_MAX = 0.62;
 
 const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
+
+/**
+ * 建筑热点表（H02/H08）：建筑改为可编辑实例后，热点随实例位置走（不再是 SPOTS 固定渲染）。
+ * clickable=true 的建筑保留原业务入口（对话/资料/观测台）；false 的只做悬停标签。
+ */
+const BUILDING_HIT: Record<string, { name: string; r: number; h: number; labelY: number; clickable: boolean }> = {
+  cottage: { name: "cottage", r: 0.34, h: 0.9, labelY: 0.95, clickable: true },
+  greenhouse: { name: "greenhouse", r: 0.32, h: 0.45, labelY: 0.48, clickable: true },
+  observatory: { name: "observatory", r: 0.3, h: 0.36, labelY: 0.3, clickable: true },
+  seedshed: { name: "seedshed", r: 0.3, h: 0.4, labelY: 0.32, clickable: false },
+  arch: { name: "arch", r: 0.18, h: 0.5, labelY: 0.42, clickable: false },
+  pond: { name: "pond", r: 0.5, h: 0.2, labelY: 0.16, clickable: false },
+  sign: { name: "sign", r: 0.2, h: 0.3, labelY: 0.2, clickable: false },
+};
 
 /** 世界坐标点 → 球冠平面坐标 (x,z)，与 capToAzPolar 互逆 */
 function pointToCap(p: THREE.Vector3) {
@@ -625,41 +640,10 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             reduced={reduced} onSelect={props.onSelect} setHover={setHover} register={register} />
         ))}
 
-        <OnCap x={SPOTS.cottage.x} z={SPOTS.cottage.z} yaw={SPOTS.cottage.yaw}>
-          <group scale={0.86}><Cottage lights={L} /></group>
-          <group ref={(o) => register("cottage", o)} position={[0, 0.95, 0]} />
-          <Hit name="cottage" r={0.34} h={0.9} setHover={setHover} onHotspot={props.onHotspot} />
-        </OnCap>
-        <OnCap x={SPOTS.greenhouse.x} z={SPOTS.greenhouse.z} yaw={SPOTS.greenhouse.yaw}>
-          <Greenhouse lights={L} />
-          <group ref={(o) => register("greenhouse", o)} position={[0, 0.48, 0]} />
-          <Hit name="greenhouse" r={0.32} h={0.45} setHover={setHover} onHotspot={props.onHotspot} />
-        </OnCap>
+        {/* H02/H03：建筑不再按 SPOTS 固定渲染，改为布局数据里的可编辑实例（见下方 decor 循环） */}
         <MemoryPath setHover={setHover} onHotspot={props.onHotspot} />
         <OnCap x={0.38} z={-0.48}><group ref={(o) => register("path", o)} position={[0, 0.12, 0]} /></OnCap>
-        <OnCap x={SPOTS.bench.x} z={SPOTS.bench.z} yaw={SPOTS.bench.yaw}><Bench /></OnCap>
-        <OnCap x={SPOTS.lamp.x} z={SPOTS.lamp.z}><Lamp lights={L} /></OnCap>
-        <OnCap x={SPOTS.observatory.x} z={SPOTS.observatory.z} yaw={SPOTS.observatory.yaw}>
-          <Observatory lights={L} />
-          <group ref={(o) => register("observatory", o)} position={[0, 0.3, 0]} />
-          <Hit name="observatory" r={0.3} h={0.36} setHover={setHover} onHotspot={props.onHotspot} />
-        </OnCap>
-        <OnCap x={SPOTS.seedShed.x} z={SPOTS.seedShed.z} yaw={SPOTS.seedShed.yaw}>
-          <SeedShed lights={L} />
-          <group ref={(o) => register("seedshed", o)} position={[0, 0.32, 0]} />
-          <LabelHit name="seedshed" r={0.3} h={0.4} setHover={setHover} />
-        </OnCap>
-        <OnCap x={SPOTS.arch.x} z={SPOTS.arch.z} yaw={SPOTS.arch.yaw}>
-          <GardenArch seed={3} />
-          <group ref={(o) => register("arch", o)} position={[0, 0.42, 0]} />
-          <LabelHit name="arch" r={0.18} h={0.5} setHover={setHover} />
-        </OnCap>
-        <OnCap x={SPOTS.pond.x} z={SPOTS.pond.z} yaw={SPOTS.pond.yaw}>
-          <PondBridge />
-          <group ref={(o) => register("pond", o)} position={[0, 0.16, 0]} />
-          <LabelHit name="pond" r={0.5} h={0.2} setHover={setHover} />
-        </OnCap>
-        <OnCap x={SPOTS.sign.x} z={SPOTS.sign.z} yaw={SPOTS.sign.yaw}><group scale={1.5}><Sign text={props.signText} sub={props.signSub} w={0.24} h={0.11} post={0.1} /></group></OnCap>
+        {/* 长椅/路灯/观测台/种子棚/拱门/池塘/木牌同样来自布局数据（H02 无双轨） */}
         {/* 内圈与外圈野生树木/灌木：按几何类型合批（FloraField 内 5 个 InstancedMesh） */}
         <FloraField items={[...TREES.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: (t as any).tint })), ...WILD.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: t.tint }))]} />
         {WILD_ROCKS.map((r, i) => (
@@ -669,6 +653,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         {(props.decor ?? []).map((d, i) => {
           const isSurface = d.kind === "soil" || d.kind === "road";
           const isSel = props.selectedDecorId === d.id;
+          const isBld = isBuildingKind(d.kind);
+          const hit = isBld ? BUILDING_HIT[d.kind as BuildingKind] : undefined;
           if (isSurface) {
             return (
               <group key={d.id}
@@ -679,13 +665,20 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             );
           }
           return (
-            <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" ? 1 : 0}>
+            <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
                 onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}
                 onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
-                <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} />
-                {isSel && <mesh geometry={torusGeo(0.18, 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
+                <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} signText={props.signText} signSub={props.signSub} />
+                {isSel && <mesh geometry={torusGeo(isBld ? 0.5 : 0.18, isBld ? 0.012 : 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
               </group>
+              {/* 建筑热点：非编辑模式下保留原业务/标签入口（H08）；编辑模式点击只选中，不打开业务 */}
+              {hit && !props.editing && (
+                hit.clickable
+                  ? <Hit name={hit.name as Hotspot} r={hit.r * d.scale} h={hit.h * d.scale} setHover={setHover} onHotspot={props.onHotspot} />
+                  : <LabelHit name={hit.name} r={hit.r * d.scale} h={hit.h * d.scale} setHover={setHover} />
+              )}
+              {hit && <group ref={(o) => register(hit.name, o)} position={[0, hit.labelY, 0]} />}
             </OnCap>
           );
         })}

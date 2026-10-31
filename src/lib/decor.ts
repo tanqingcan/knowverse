@@ -5,7 +5,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-export type DecorKind = "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road";
+/** 建筑类（H02）：原固定建筑改为可编辑实例，kind 与室内/装饰共用一套布局数据 */
+export type DecorKind =
+  | "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road"
+  | "cottage" | "greenhouse" | "observatory" | "seedshed" | "arch" | "pond" | "sign";
+/** 建筑类 kind（与场景热点名一致，点击打开业务入口或热点） */
+export const BUILDING_KINDS = ["cottage", "greenhouse", "observatory", "seedshed", "arch", "pond", "sign"] as const;
+export type BuildingKind = (typeof BUILDING_KINDS)[number];
+export function isBuildingKind(k: string): k is BuildingKind {
+  return (BUILDING_KINDS as readonly string[]).includes(k);
+}
 /** surface 类（土壤/道路）：用 width(沿局部 x)/length(沿局部 z) 描述面积，scale 不用于放大面积 */
 export type DecorPlacement = { id: string; kind: DecorKind; x: number; z: number; rot: number; scale: number; color?: string; width?: number; length?: number; stage?: string };
 
@@ -24,6 +33,14 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
   { kind: "rose", label: "玫瑰", load: 0.4 },
   { kind: "soil", label: "泥土/花圃地", load: 0.5, surface: true },
   { kind: "road", label: "石径", load: 0.5, surface: true },
+  // 建筑类（H02）：原固定建筑也进素材目录，可选中/移动/旋转/缩放/复制
+  { kind: "cottage", label: "暖光书屋", load: 2 },
+  { kind: "greenhouse", label: "资料温室", load: 2 },
+  { kind: "observatory", label: "观测台", load: 1.6 },
+  { kind: "seedshed", label: "种子小棚", load: 1.2 },
+  { kind: "arch", label: "花园拱门", load: 0.8 },
+  { kind: "pond", label: "小池塘", load: 1.4 },
+  { kind: "sign", label: "木牌", load: 0.3 },
 ];
 
 /** 团队可维护的默认布局模板（创造模式「从模板开始 / 恢复默认模板」用；只含用户装饰，不动系统固定物件） */

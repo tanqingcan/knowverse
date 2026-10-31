@@ -1,0 +1,2 @@
+ALTER TABLE "planet_layout_items" DROP CONSTRAINT "planet_layout_items_kind_ck";--> statement-breakpoint
+ALTER TABLE "planet_layout_items" ADD CONSTRAINT "planet_layout_items_kind_ck" CHECK ("planet_layout_items"."kind" in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road','cottage','greenhouse','observatory','seedshed','arch','pond','sign'));

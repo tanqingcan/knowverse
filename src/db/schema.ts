@@ -714,5 +714,5 @@ export const planetLayoutItems = pgTable("planet_layout_items", {
   createdAt: createdAt(),
 }, (t) => [
   index("planet_layout_items_layout_idx").on(t.layoutId, t.sortOrder),
-  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road')`),
+  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road','cottage','greenhouse','observatory','seedshed','arch','pond','sign')`),
 ]);

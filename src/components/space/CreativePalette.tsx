@@ -25,6 +25,8 @@ const CATEGORY: Record<DecorKind, string> = {
   soil: "地板", road: "道路",
   lamp: "灯具",
   chair: "建筑", stone: "建筑", rock: "建筑",
+  // H02：建筑类也可从素材栏放置（与原固定建筑同一套数据）
+  cottage: "建筑", greenhouse: "建筑", observatory: "建筑", seedshed: "建筑", arch: "建筑", pond: "建筑", sign: "建筑",
 };
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];

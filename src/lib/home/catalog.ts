@@ -75,6 +75,14 @@ export const DECOR_CATEGORY: Record<DecorKind, AssetCategory> = {
   rose: "flora",
   soil: "ground",
   road: "path",
+  // 建筑类（H02）：原固定建筑改为可编辑实例后也进装饰目录
+  cottage: "building",
+  greenhouse: "building",
+  observatory: "building",
+  seedshed: "building",
+  arch: "building",
+  pond: "water",
+  sign: "sign",
 };
 
 export const SCENE_ASSETS: SceneAssetDef[] = [

@@ -61,7 +61,9 @@ describe("H01 全场景素材目录", () => {
   it("目录统计合理（地表实例 + 可放置 + 环境）", () => {
     const s = catalogStats();
     expect(s.total).toBe(SCENE_ASSETS.length);
-    expect(s.placeable).toBe(14);
+    // H02 起 DECOR_CATALOG 增加 7 种建筑 kind，可放置素材 = 目录长度（14 装饰 + 7 建筑）
+    expect(s.placeable).toBe(DECOR_CATALOG.length);
+    expect(s.placeable).toBeGreaterThanOrEqual(21);
     expect(s.editable).toBeGreaterThanOrEqual(20);
     expect(s.byCat.building).toBeGreaterThanOrEqual(5);
     expect(s.byCat.environment).toBe(4);

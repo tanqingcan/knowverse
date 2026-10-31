@@ -11,7 +11,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
-import { DEFAULT_TEMPLATE } from "@/lib/decor";
+import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind } from "@/lib/decor";
+import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
 import { Sky } from "@/components/ui/Sky";
 import { useDecor } from "@/lib/decor";
 import { FlowerSvg } from "@/components/art/Flower";
@@ -154,6 +155,12 @@ export function SpaceApp() {
   // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
   useEffect(() => {
     loadLayout().then((l) => {
+      if (l.revision === 0) {
+        // H02/H03：首次进入用「初始首页布局」作为可编辑实例数据（建筑不再按 SPOTS 固定渲染）。
+        // 合并：建筑等初始实例 + 本地旧装饰草稿（只保留非建筑项，避免重复/双轨）。
+        const localDecor = loadDecor().filter((d) => !isBuildingKind(d.kind));
+        decorStore.setAll([...DEFAULT_HOME_LAYOUT, ...localDecor]);
+      }
       if (l.revision > 0) {
         // G6：旧版 localStorage 草稿检测——先备份，不静默覆盖；差异则提示一次性导入
         try {
@@ -167,7 +174,14 @@ export function SpaceApp() {
             setImportPrompt({ local: local.length, server: l.items.length });
           }
         } catch { /* 忽略损坏的本地草稿 */ }
-        decorStore.setAll(l.items.map(fromLayoutItem));
+        // H02/H14：旧布局（只含装饰、没有建筑实例）一次性兼容迁移——补入初始建筑，不覆盖用户装饰。
+        const hasBuildings = l.items.some((it) => isBuildingKind(it.kind));
+        if (hasBuildings) {
+          decorStore.setAll(l.items.map(fromLayoutItem));
+        } else {
+          decorStore.setAll([...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
+          setLayoutMsg("已按新版补入初始建筑（保存后生效）");
+        }
       }
       setLayoutRev(l.revision); setLayoutStatus(l.status); setLayoutHasPublished(!!l.hasPublished);
     }).catch(() => { /* 未登录或网络失败：保留本地 localStorage 草稿 */ });
@@ -377,6 +391,7 @@ export function SpaceApp() {
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying}
+              editing={creativeOpen}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}

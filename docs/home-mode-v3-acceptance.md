@@ -15,7 +15,7 @@
 | 编号 | 要求（摘要） | 研究 | 第一遍 | 审查 | 第二遍 | 复审 | 证据 | 状态 |
 |---|---|---|---|---|---|---|---|---|
 | H01 | 全场景素材类型与已实例登记（ID/名称/类别/来源/姿态/范围/可改色/语义） | 已读 three `Editor.js`（signals/objectAdded）+ KolyaVol 场景树/属性面板；见 references | `catalog.ts` 57 资产（建筑6/家具2/灯2/牌1/水1/系统3/植物19/石12/地面2/道路5/环境4），可放置 14，`assetById/catalogStats` | **3 缺陷**：①固定路灯误标 placeable→可放置变 15（类型/实例双记录，H02 禁止）②装饰→类别用 includes 链，新 kind 静默兜底 ③群组未显式标记 | ①去掉 `light.lamp.placeable`，灯素材归 `decor.lamp` ②抽 `DECOR_CATEGORY: Record<DecorKind,AssetCategory>` 穷尽 ③加 `group:true`（草地/野花） | 42/42 单测 + tsc 0；`home-catalog.test.ts` 6 例（唯一性/建筑全可编辑/14 覆盖/环境分离/穷尽映射/统计） | `docs/home-mode-v3/H01.md`、`tests/unit/home-catalog.test.ts`、`src/lib/home/catalog.ts` | **双轮通过** |
-| H02 | 所有建筑（含原有）可点选/移动/旋转/缩放/复制，无双轨 | 未开始 | — | — | — | — | — | 未开始 |
+| H02 | 所有建筑（含原有）可点选/移动/旋转/缩放/复制，无双轨 | 已读 three Editor.js 对象信号 / drei TransformControls dragging-changed / PivotControls 局部锚点 | 建筑进 `DecorKind`+目录；`DEFAULT_HOME_LAYOUT` 9 实例；**删除 9 个 SPOTS 固定分支**；`editing` 区分选中/业务；迁移 0005 扩充 kind 白名单。证据：选中种子小棚(540,250)、浏览点(720,160)开书屋面板、无 pageerror、42/42 | **6 缺陷**：①**拖动建筑不移动**（moved:False）②木牌文字硬编码 ③热点不随缩放 ④复制标签 key 冲突 ⑤迁移只写本地 ⑥观测台/池塘/长椅/路灯未扫描到 | 已修 ②（signText/signSub 透传）③（Hit×scale）；①④⑤⑥未修 | tsc 0、42/42；**拖动复测仍失败** | `docs/home-mode-v3/H02.md`、`.dsh-tools/h02-*.py` | 第二遍实现中 |
 | H03 | 初始布置变为可编辑实例，模板只负责首次创建；删固定渲染分支 | 未开始 | — | — | — | — | — | 未开始 |
 | H04 | 天空/恒星/星球本体作为环境设置登记，与地表家具分开 | 未开始 | — | — | — | — | — | 未开始 |
 | H05 | 点选初始建筑出现选中轮廓、名称、紧凑操作条 | 未开始 | — | — | — | — | — | 未开始 |

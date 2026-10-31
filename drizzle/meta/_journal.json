@@ -36,6 +36,13 @@
       "when": 1793460816813,
       "tag": "0004_fancy_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793466031514,
+      "tag": "0005_friendly_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }
