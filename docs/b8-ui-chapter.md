@@ -66,3 +66,23 @@
 
 - 图号（如「图 3.6-1 星球全景」「图 3.6-2 花圃弹层」）与排版模板；
 - 截图素材：`.dsh-tools/`（`b16-*`、`b3-pond-n10.png`、`space-pond.png`、`locate-after.png` 等）与 `docs/screenshots/ui/` 由团队筛选入正式图。
+
+## 9 创造模式（本轮真实实现，2026-10-31）
+
+**入口与状态**：花园工具栏「创造」按钮独立入口（不埋在设置长页）；状态 `browse ↔ edit`，编辑期不触碰学习状态/知识点/证据；未保存改动只在本地草稿（localStorage 缓存 + 服务端权威）。
+
+**素材栏 `CreativePalette`**：7 分类（花卉/树木/建筑/围栏/地板/道路/灯具）+ 搜索 + 选中反馈 + **花形缩略图**（rose/flower/flower2/flower3/pot 用 `FlowerSvg`）；可收起；手机 390×844 不遮挡星球、无横向溢出。
+
+**放置与编辑**：点素材进入放置预览（横幅 + Esc 取消）→ 点球面放置（半径 3.12 放置层，`onPointerUp`）；对象有稳定 id/kind/球面位置/朝向/尺寸/颜色/阶段；放置后自动选中，属性面板提供**比例滑杆 0.5–2.0**（体积类）、**宽/长/旋转**（surface 类）、玫瑰**五阶段**选择、删除；**撤销/重做**（快照历史在 `useDecor`，多步实测通过）。
+
+**球面贴地**：`SphereSurface` 把 width×length 网格的**每个顶点**按 `capFrame` 投影到球面（+0.02 微高），非切线平面；`tests/unit/surface.test.ts` 断言 20000+ 顶点半径=PLANET_R+lift 且有限，2.4×2.4 四角仍贴球。
+
+**数据库持久化**：`planet_layouts(planet_id, revision, status, published_revision)` + `planet_layout_items`；`GET/PUT /api/planet-layout`、`POST /api/planet-layout/publish`；服务端校验 kind/数值/数量，事务 + revision 乐观并发（旧 revision→409）；保存返回 revision，刷新/重登/跨浏览器上下文可还原；重置清空 localStorage 后仍从服务端恢复。
+
+**模板与兼容**：`DEFAULT_TEMPLATE` +「从模板开始」（确认、可撤销）+「放弃修改」（恢复服务器布局）；旧版本地草稿检测→备份 `kv-decor-backup` + 差异提示（本地 N 件/服务器 M 件）→ 导入或保持，不静默覆盖。
+
+**参观只读**：`/api/planets/[userId]` 返回对方**已发布**布局的 `decor`；`/visit` 只读渲染，无编辑入口。
+
+**完整球体**：四方位（0/90/180/270°）连续地表 + 景物；空闲慢转（按下暂停/释放 3 秒恢复/编辑浮窗/低动效不自转）。
+
+**视觉证据**（本仓库实测）：`docs/creative-mode-acceptance.md` 附 G1–G12 表与截图索引（`rose-{seed,sprout,leaf,bud,bloom}.png`、`dir-{0,90,180,270}.png`、`visit-demo.png`、`g3-pole.png`、`b6-{desktop,mobile,static,lowmotion}.png` 等）。
