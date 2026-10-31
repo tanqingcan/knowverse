@@ -35,8 +35,8 @@ const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道�
 
 export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
-  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string } | null;
-  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string }) => void;
+  selected?: { id: string; kind: string; scale: number; width?: number; length?: number; rot?: number; stage?: string; color?: string } | null;
+  onUpdate?: (patch: { scale?: number; width?: number; length?: number; rot?: number; stage?: string; color?: string }) => void;
   onRemove?: () => void;
   onDuplicate?: () => void;
   /** H04：草/野花「全星球群组」的密度（操作单元 = 整组，不逐株） */
@@ -106,6 +106,8 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
               </select>
             </label>
           )}
+          {/* H07：按实例改色（克隆材质，不串色）；完整的分区 DIY 工作台见 H28–H34 */}
+          <label className="cp-prop">颜色 <input type="color" value={selected.color ?? "#C56E6E"} onChange={(e) => onUpdate?.({ color: e.target.value })} aria-label="对象颜色" /><button className="btn btn-quiet btn-sm" type="button" onClick={() => onUpdate?.({ color: undefined })} title="恢复默认颜色">默认</button></label>
           <div className="cp-prop-actions">
             <button className="btn btn-quiet btn-sm" onClick={onDuplicate} title="复制一份（Ctrl+D）">复制</button>
             <button className="btn btn-quiet btn-sm" onClick={onRemove}>删除</button>
