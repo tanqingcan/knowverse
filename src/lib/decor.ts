@@ -167,8 +167,12 @@ export function useDecor() {
   /** commit：把当前 list 记入历史（record=true），再写入新列表。
    *  coalesce=true 时，400ms 内的连续调用合并为一次历史（滑杆拖动=一次撤销，G2）。 */
   const lastRecord = useRef(0);
+  const transforming = useRef(false); // H12：变换进行中标记（拖动/滑杆），期间不逐帧记历史
+  const transformBefore = useRef<DecorPlacement[] | null>(null); // H12：变换前快照（用于判断空变换）
   const commit = (next: DecorPlacement[], record = true, coalesce = false) => {
-    if (record) {
+    // H12：变换（拖动/缩放滑杆）期间不再逐帧记历史——由 beginTransform 在起手时快照一次，
+    // 因此「一次拖动 = 一步撤销」，不再依赖 400ms 时间窗近似。
+    if (record && !transforming.current) {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       const skip = coalesce && now - lastRecord.current < 400;
       lastRecord.current = now;
@@ -180,6 +184,27 @@ export function useDecor() {
       }
     }
     saveDecor(next); setList(next);
+  };
+  /** H12：变换开始——把「变换前」的完整快照压进历史，之后到 endTransform 为止的更新都不再记历史 */
+  const beginTransform = () => {
+    if (transforming.current) return;
+    transforming.current = true;
+    transformBefore.current = list;
+    history.current.push(list);
+    if (history.current.length > 50) history.current.shift();
+    future.current = [];
+    setVer((v) => v + 1);
+  };
+  /** H12：变换结束——恢复普通记录模式；若本次变换没有任何实际变化则回退掉那个空快照（避免「点一下没动」也占一步撤销） */
+  const endTransform = () => {
+    if (!transforming.current) return;
+    transforming.current = false;
+    const snap = transformBefore.current;
+    transformBefore.current = null;
+    if (snap && JSON.stringify(snap) === JSON.stringify(list) && history.current.length) {
+      history.current.pop();
+      setVer((v) => v + 1);
+    }
   };
   const undo = () => {
     const prev = history.current.pop(); if (!prev) return;
@@ -206,6 +231,8 @@ export function useDecor() {
     },
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch), true, true),
+    beginTransform,
+    endTransform,
     remove: (id: string) => commit(removeDecor(list, id)),
     /** 复制实例（H02/H06）：新 id + 轻微偏移避免完全重叠，返回新 id 供选中 */
     duplicate: (id: string) => {

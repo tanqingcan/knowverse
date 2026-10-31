@@ -43,6 +43,8 @@ export type WorldProps = {
   onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
   onDecorDuplicate?: (id: string) => void; // H05：紧凑操作条的「复制」
   onDecorRemove?: (id: string) => void;    // H05：紧凑操作条的「删除」
+  onDecorTransformStart?: () => void;      // H12：拖动起手快照（一次拖动只算一步）
+  onDecorTransformEnd?: () => void;        // H12：拖动结束提交
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
@@ -764,7 +766,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           return (
             <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
-                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.decorDrag.current = d.id; }}
+                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.onDecorTransformStart?.(); props.decorDrag.current = d.id; }}
                 onPointerUp={(e) => {
                   if (props.mode !== "garden" || props.readOnly || e.delta >= 6) return;
                   e.stopPropagation();
@@ -858,6 +860,8 @@ export function GardenWorld(props: WorldProps) {
       press.current = { x: rest.x, y: rest.y, yaw: drag.current.yaw, tilt: drag.current.tilt };
     } else {
       press.current = null;
+      // H12：对象拖动结束——提交「一次拖动 = 一步历史」
+      if (decorDrag.current) props.onDecorTransformEnd?.();
       decorDrag.current = null;
     }
   };

@@ -432,6 +432,8 @@ export function SpaceApp() {
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
+              onDecorTransformStart={() => decorStore.beginTransform()}
+              onDecorTransformEnd={() => decorStore.endTransform()}
               placingPreview={copyFrom
                 ? { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage }
                 : placingKind
