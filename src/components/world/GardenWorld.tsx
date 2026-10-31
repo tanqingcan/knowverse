@@ -34,6 +34,8 @@ export type WorldProps = {
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
+  placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
+  onPlace?: (x: number, z: number) => void; // 点击球面放置回调
   readOnly?: boolean;
   perf?: boolean; // 开发用：显示 FPS / draw calls / 三角面
   onFail: () => void;
@@ -579,6 +581,12 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             props.lastDecorMove.current = now;
             const c = pointToCap(e.point);
             props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
+          }}
+          onClick={(e) => {
+            if (props.mode !== "garden" || props.readOnly || !props.placingKind || e.delta > 6) return;
+            const c = pointToCap(e.point);
+            e.stopPropagation();
+            props.onPlace?.(c.x, c.z);
           }} />
         <CloudRing R={PLANET_R} />
         <Grass items={grass} />

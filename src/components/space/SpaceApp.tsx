@@ -30,6 +30,7 @@ import { CardsPanel } from "./panels/CardsPanel";
 import { GalaxyPanel } from "./panels/GalaxyPanel";
 import { MemoryPanel } from "./panels/MemoryPanel";
 import { SettingsPanel } from "./panels/SettingsPanel";
+import { CreativePalette } from "./CreativePalette";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false, loading: () => null });
 const GardenWorld = dynamic(() => import("@/components/world/GardenWorld").then((m) => m.GardenWorld), { ssr: false, loading: () => null });
@@ -97,6 +98,8 @@ export function SpaceApp() {
   const [recenterKey, setRecenterKey] = useState(0);
   const [dragged, setDragged] = useState(false);
   const [bedFocus, setBedFocus] = useState<{ x: number; z: number; key: number } | null>(null);
+  const [creativeOpen, setCreativeOpen] = useState(false);
+  const [placingKind, setPlacingKind] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [growthCard, setGrowthCard] = useState<GrowthCard>(null);
@@ -273,6 +276,8 @@ export function SpaceApp() {
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
+              placingKind={placingKind}
+              onPlace={(x, z) => { if (placingKind) { decorStore.place(placingKind as any, x, z); setPlacingKind(null); } }}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
@@ -298,8 +303,11 @@ export function SpaceApp() {
         </header>
 
         {!focus && (
-          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} />
+          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} creativeOpen={creativeOpen} onToggleCreative={() => { setCreativeOpen(!creativeOpen); setPlacingKind(null); }} />
         )}
+
+        <CreativePalette open={creativeOpen && !focus} placingKind={placingKind}
+          onSelect={(k) => setPlacingKind(k)} onCancel={() => setPlacingKind(null)} onClose={() => { setCreativeOpen(false); setPlacingKind(null); }} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">
@@ -406,7 +414,7 @@ function ModeNotice({ space }: { space: Space }) {
 }
 
 /** 花园模式的界面层：今日建议、场景入口、工具栏、收起的时间轴 */
-function GardenHUD({ narrow, dragged, onRecenter, onLocateBed, selectedPlant, replayLabel, hidden }: { narrow: boolean; dragged: boolean; onRecenter: () => void; onLocateBed: (x: number, z: number) => void; selectedPlant: string | null; replayLabel: string | null; hidden: boolean }) {
+function GardenHUD({ narrow, dragged, onRecenter, onLocateBed, selectedPlant, replayLabel, hidden, creativeOpen, onToggleCreative }: { narrow: boolean; dragged: boolean; onRecenter: () => void; onLocateBed: (x: number, z: number) => void; selectedPlant: string | null; replayLabel: string | null; hidden: boolean; creativeOpen: boolean; onToggleCreative: () => void }) {
   const { space, open } = React.useContext(Ctx)!;
   const [bedsOpen, setBedsOpen] = useState(false);
   const [bedQuery, setBedQuery] = useState("");
@@ -456,6 +464,7 @@ function GardenHUD({ narrow, dragged, onRecenter, onLocateBed, selectedPlant, re
           <div className="tool-wrap">
             <button className="tool" aria-expanded={bedsOpen} aria-haspopup="true" onClick={() => setBedsOpen(!bedsOpen)}><SceneIcon k="bed" /><span>花圃<em>{space.plants.length} 株</em></span></button>
           </div>
+          <button className={`tool ${creativeOpen ? "tool-active" : ""}`} aria-pressed={creativeOpen} onClick={onToggleCreative}><SceneIcon k="greenhouse" /><span>创造<em>布置</em></span></button>
           {dragged && <button className="tool tool-plain" onClick={onRecenter}>回到花园视角</button>}
         </div>
         {bedsOpen && (

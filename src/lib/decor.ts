@@ -73,6 +73,12 @@ export function addDecor(list: DecorPlacement[], kind: DecorKind): DecorPlacemen
   const spot = nextSpot(list);
   return [...list, { id: uid(), kind, x: spot.x, z: spot.z, rot: 0, scale: 1 }];
 }
+/** 在指定球冠坐标放置（创造模式：点击球面确定） */
+export function addDecorAt(list: DecorPlacement[], kind: DecorKind, x: number, z: number): DecorPlacement[] {
+  const d: DecorPlacement = { id: uid(), kind, x, z, rot: 0, scale: 1 };
+  if (kind === "soil" || kind === "road") { d.width = 0.7; d.length = 0.7; }
+  return [...list, d];
+}
 export function updateDecor(list: DecorPlacement[], id: string, patch: Partial<DecorPlacement>): DecorPlacement[] {
   return list.map((d) => (d.id === id ? { ...d, ...patch } : d));
 }
@@ -128,6 +134,7 @@ export function useDecor() {
   return {
     decor: list,
     add: (kind: DecorKind) => commit(addDecor(list, kind)),
+    place: (kind: DecorKind, x: number, z: number) => commit(addDecorAt(list, kind, x, z)),
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch)),
     remove: (id: string) => commit(removeDecor(list, id)),
