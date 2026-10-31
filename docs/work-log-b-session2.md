@@ -59,3 +59,12 @@
 1. image-capable 模型逐项复核种子小棚/拱门/池塘木桥的比例、配色、遮挡与球面贴合；逐圃点按「定位」核对是否对准；
 2. Round 3 已满足「2–3 个新节点」（种子小棚 + 拱门 + 池塘木桥 = 3 个）；剩余 Round 6 的 B3/B4 接口契约（交 A/C/D）；
 3. 移动端 `390×844` 复核底部抽屉与「定位」按钮（`touch.py` 触屏模拟）。
+
+## 第四回合：装饰合批（按协调会话 `docs/lead-render-suggestions.md` 实施）
+
+- 云海 `CloudRing`（46 mesh）、前景低云 `FrontClouds`（16 mesh）各改单个 `InstancedMesh` + 实例色。
+- 树木/灌木 `TREES`(11) + `WILD`(16) 新组件 `FloraField`：按几何类型 5 个 `InstancedMesh`（树干/树冠/灌木球/灌木花/接触阴影），`setColorAt` 处理 tint/blossom 色，矩阵 = `capFrame` pos/quat × 种子旋转。删掉逐 mesh 的 `BlossomTree`/`Bush` 渲染。
+- **实测**（`/dev/garden?perf=1&reduced=1`，SwiftShader）：n=10 **487 → 347 draw**（−140）；n=100/3 圃 **848 → 565 draw**（−283，−33%，达 <600 目标）。三角面因 InstancedMesh 整组计入而略升（n=10 430,158），draw 是瓶颈、可接受。
+- 验证：`tsc` 通过、单测 34/34、无 pageerror、截图 `b8-flora-final.png` 像素正常（mean 148/137/116）。
+- 提交：`a0cd20a perf(world): 树木/灌木/云海/前景云按几何合批为 InstancedMesh，n=100 draw 848 -> 565`。
+- 未做：`GardenBed` 苔藓/木桩合批（建议里 ~−70，可选）；未逐帧比对树木外观（同几何同色，静止画面应一致，但未逐像素确认）。
