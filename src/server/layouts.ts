@@ -6,6 +6,7 @@
  * 服务端校验 kind、数值范围、数量与有限性，不信任前端。
  */
 import { q, q1, withTx } from "@/db";
+import { validateParts } from "@/lib/home/diy-parts";
 import type { CurrentUser } from "./auth";
 import { AppError, notFound } from "./errors";
 
@@ -42,7 +43,7 @@ export async function getLayout(user: CurrentUser) {
      FROM planet_layouts WHERE planet_id = $1`, [planetId]);
   if (!layout) return { planetId, revision: 0, status: "draft" as const, publishedRevision: null, hasPublished: false, items: [] as LayoutItemInput[] };
   const items = await q(
-    `SELECT kind, x, z, rot, scale, width, length, color, stage
+    `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
   return { planetId, revision: layout.revision as number, status: layout.status as string, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, items: items as LayoutItemInput[] };
 }
@@ -61,6 +62,12 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
       width: it.width == null ? null : num(it.width, 0.05, 4, "width"),
       length: it.length == null ? null : num(it.length, 0.05, 4, "length"),
       color: it.color ?? null, stage: it.stage ?? null, sortOrder: i,
+      // H34：服务端校验 DIY 分区——部位必须属于该 kind、颜色必须 #rrggbb；旧数据无 parts 则为 null
+      parts: (() => {
+        const r = validateParts(it.kind, (it as { parts?: unknown }).parts);
+        if (!r.ok) throw new AppError("bad_parts", r.error, 400);
+        return r.value;
+      })(),
     };
   });
   return withTx(async (c) => {
@@ -77,9 +84,9 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
     }
     for (const it of clean) {
       await c.query(
-        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-        [layoutId, it.kind, it.x, it.z, it.rot, it.scale, it.width, it.length, it.color, it.stage, it.sortOrder]);
+        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [layoutId, it.kind, it.x, it.z, it.rot, it.scale, it.width, it.length, it.color, it.stage, it.parts ?? null, it.sortOrder]);
     }
     return { planetId, revision: nextRevision, status: "draft" as const };
   });
@@ -92,7 +99,7 @@ export async function publishLayout(user: CurrentUser, baseRevision: number) {
     if (!r.rowCount) throw notFound("布局");
     if (baseRevision !== r.rows[0].revision) throw new AppError("conflict", "布局已被其他窗口修改，请重载", 409);
     const items = await c.query(
-      `SELECT kind, x, z, rot, scale, width, length, color, stage
+      `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
        FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [r.rows[0].id]);
     // 发布时把当前布局固化成快照：参观只读与「恢复上一已发布版本」都用它
     await c.query(
@@ -116,9 +123,9 @@ export async function revertToPublished(user: CurrentUser) {
     let i = 0;
     for (const it of snap) {
       await c.query(
-        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-        [r.rows[0].id, it.kind, it.x, it.z, it.rot ?? 0, it.scale ?? 1, it.width ?? null, it.length ?? null, it.color ?? null, it.stage ?? null, i++]);
+        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [r.rows[0].id, it.kind, it.x, it.z, it.rot ?? 0, it.scale ?? 1, it.width ?? null, it.length ?? null, it.color ?? null, it.stage ?? null, (it as { parts?: Record<string, string> | null }).parts ?? null, i++]);
     }
     return { planetId, revision: nextRev, status: "draft" as const, items: snap };
   });

@@ -710,6 +710,8 @@ export const planetLayoutItems = pgTable("planet_layout_items", {
   length: real("length"),
   color: text("color"),
   stage: text("stage"),
+  /** H34：DIY 分区颜色（按部位名存 #rrggbb）；旧数据为 null → 使用模型默认色 */
+  parts: jsonb("parts"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: createdAt(),
 }, (t) => [

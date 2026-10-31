@@ -7,6 +7,8 @@ export type LayoutItem = {
   rot?: number; scale?: number;
   width?: number | null; length?: number | null;
   color?: string | null; stage?: string | null;
+  /** H34：DIY 分区颜色（旧数据无此字段 → null） */
+  parts?: Record<string, string> | null;
 };
 export type LayoutResponse = {
   planetId: string; revision: number; status: string;
@@ -17,6 +19,7 @@ let seq = 0;
 export const toLayoutItem = (d: DecorPlacement): LayoutItem => ({
   kind: d.kind, x: d.x, z: d.z, rot: d.rot, scale: d.scale,
   width: d.width ?? null, length: d.length ?? null, color: d.color ?? null, stage: d.stage ?? null,
+  parts: d.parts ?? null,
 });
 export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
   id: `s-${Date.now().toString(36)}-${(seq++).toString(36)}`,
@@ -24,6 +27,7 @@ export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
   rot: it.rot ?? 0, scale: it.scale ?? 1,
   width: it.width ?? undefined, length: it.length ?? undefined,
   color: it.color ?? undefined, stage: it.stage ?? undefined,
+  parts: it.parts ?? undefined,
 });
 
 export function loadLayout() { return api<LayoutResponse>("/api/planet-layout"); }

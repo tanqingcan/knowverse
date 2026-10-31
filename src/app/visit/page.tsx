@@ -22,7 +22,7 @@ type VisitPlanet = {
   natalPlant: { id: string; conceptName: string | null; species: string; color: string; nickname: string | null } | null;
   gardens: { id: string; name: string; subjectId: string; subjectName: string; sortOrder: number }[];
   plants: { id: string; gardenId: string; conceptId: string; conceptName: string; species: string; color: string; nickname: string | null; stage: string; isNatal: boolean }[];
-  decor: { kind: string; x: number; z: number; rot: number; scale: number; width: number | null; length: number | null; color: string | null; stage: string | null }[];
+  decor: { kind: string; x: number; z: number; rot: number; scale: number; width: number | null; length: number | null; color: string | null; stage: string | null; parts?: Record<string, string> | null }[];
 };
 
 export default function VisitPage() {
@@ -64,6 +64,7 @@ export default function VisitPage() {
   const visitDecor = (data?.decor ?? []).map((d, i) => ({
     id: `visit-${i}`, kind: d.kind, x: d.x, z: d.z, rot: d.rot, scale: d.scale,
     width: d.width ?? undefined, length: d.length ?? undefined, color: d.color ?? undefined, stage: d.stage ?? undefined,
+    parts: d.parts ?? undefined,
   }));
 
   return (
