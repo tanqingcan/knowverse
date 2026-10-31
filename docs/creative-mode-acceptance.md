@@ -13,7 +13,7 @@
 | # | 状态 | 版本/commit | 复现步骤 | 证据路径 |
 |---|---|---|---|---|
 | G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏(7分类+搜索+5 花形缩略图)+玫瑰放置+五阶段；**五阶段截图齐全（seed/sprout/leaf/bud/bloom）+ vision 确认：开花多层花瓣/深玫瑰红到粉渐变/茎叶完整/无穿模闪烁；花苞像未开放花蕾带花萼**；缺入口录屏 | Round 2-11 | `rose-{seed,sprout,leaf,bud,bloom}.png` + vision |
-| G2 实时编辑 | 🟡 进行中 | 比例 0.5–2.0/宽长/旋转/阶段控件；撤销/重做（历史在 useDecor，**多步 8→7→6 实测通过**）；**手机触摸实测：tap 打开素材栏→选玫瑰→tap 球面成功放置**；缺手机端「缩放滑杆拖动」逐帧记录 | Round 2/3/14 | `test-undo.py`、`test-touch.py` |
+| G2 实时编辑 | 🟡 进行中 | **比例滑杆 min0.5/max2.0/step0.05 实测**（10 次 ArrowRight → 1.0→1.5）；**一次拖动=一次撤销**（400ms 合并，一次撤销回 1.0）；多步撤销/重做 8→7→6；手机 touch 放置；缺「手机端滑杆拖动」逐帧记录 | Round 2/3/14/16 | `test-g2-slider.py`、`test-g2-dragundo.py`、`test-undo.py`、`test-touch.py` |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 实现；**自动检查 20000+ 顶点半径=PLANET_R+lift 且有限**；vision：正面泥土沿球面弯曲、**极点附近地表连续无破洞/泥土贴地无悬空/无倒置**；侧面视角 vision 判读歧义待复核 | Round 2-9 | `tests/unit/surface.test.ts`、`g3-front.png`、`g3-pole.png` |
 | G4 数据库闭环 | 🟢 通过 | 2 玫瑰(scale 1/1.6)+泥土(w1.2 l0.9 rot30)+围栏+道路 → PUT rev3 → 同上下文/重登/新浏览器上下文均恢复 5 件且参数一致；清 localStorage 后从服务端恢复 | 见 Round 3 | `.dsh-tools/test-g4.py`、`test-g4-paths.py` |
 | G5 异常/权限/并发 | 🟢 通过 | 旧 revision→409；**保存失败保留草稿（7 件不减）+ 重试成功（revision 5）**；跨账号隔离（xingye 布局空 vs demo 已发布）；参观只读已发布（vision 确认只读无编辑）；写接口均按 session user.id 作用域 | Round 3/6/7 | `test-g5.py`、`test-visit.py`、`test-save-fail.py`、`visit-demo.png` |
@@ -21,7 +21,7 @@
 | G7 完整球体 | 🟡 进行中 | 全周环绕/复位；**四方位截图（0/90/180/270°）vision 均确认连续地表+景物+无破洞接缝**；空闲慢转：按下暂停（28.8→0.76）、释放 3 秒恢复、编辑/低动效不转 | Round 4/8/11 | `dir-{0,90,180,270}.png`、`test-rotate.py` |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑（前序会话）；**vision 确认温室屋顶完整/小木屋/池塘+木桥均贴球无穿模、风格协调**；玫瑰五阶段近景；**资产清单见 `public/assets/CREDITS.md`（9 件 CC-BY/CC0 含三角面/来源）**；「修改前后图」依赖前序会话存档、本轮未重制 | Round 11/14 | `b6-desktop.png`、`equator-pond.png`、`public/assets/CREDITS.md` |
 | G9 容量 | 🟡 进行中 | 布局单测 28 例（0/1/10/30/50/100 × 1/3/7/12 圃）；**浏览器压力（/dev/garden?n=N&g=3 隔离数据）：N=1/10/30/50/100 实际渲染数=预期、g=3、坐标有限、tri 413k→617k**；搜索定位沿用 B4 已验证实现 | Round 13 | `tests/unit/layout.test.ts`、`test-g9.py` |
-| G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；**设置弹窗键盘路径实测：焦点自动进入、Tab×6 始终在窗内（焦点陷阱）、Esc 关闭并归还焦点到「设置」、滚动锁恢复**；浮窗 `backdrop-filter: blur(18px)` + `@supports` 降级已在 CSS | Round 5/8/13 | `test-g10.py`、`test-g10-keys.py` |
+| G10 天空与 UI | 🟡 进行中 | 深色星空（vision）；390/768/1440 无横向溢出；创造模式 Esc 逐级退出；设置弹窗键盘路径（焦点进入/Tab×6 窗内/Esc 归还/滚动锁）；**专注浮窗：宽 880 居中、`backdrop-filter: blur(18px) saturate(1.08)` 实测 + vision 确认背后星球模糊可见、内容可读无溢出** | Round 5/8/13/16 | `test-g10*.py`、`g10-focus-blur.png` |
 | G11 性能与回归 | 🟡 进行中 | 本机（headless Chromium + **SwiftShader 软件渲染，无 GPU**）60s×30 采样：draw 297、tri 453k、**FPS 1–2**；10 次进/出编辑+缩放后 geometries 158、textures 12 **恒定不累积**；GPU 60fps / 软件 ≥12fps 目标本环境**未达标（软件渲染）**，按规则标未验证 | Round 9/10 | `test-g11.py` |
 | G12 构建与交付 | 🟢 通过 | typecheck 0 / **build 41/41（含新增 revert 路由）** / 单测 36/36；/space、/visit 无 pageerror；B6 四组截图（vision 确认静态降级 2D 绘本）；B8 界面章 §9 创造模式 | Round 6/12/15 | `b6-*.png`、`docs/b8-ui-chapter.md` §9 |
 
@@ -55,6 +55,12 @@
 - `equator-view.py` 把镜头下压到赤道附近：vision 确认**圆形小池塘 + 木桥跨越其上、周围有花草、物件与球面贴合无悬空穿模**；同视角可见亭状小建筑与围栏。
 - `b6-desktop.png`：vision 确认**温室（透明玻璃+内部植物）、小木屋（棕色屋顶/圆窗）、草丛茂盛、屋顶完整、无悬空穿模、风格协调**。
 - 资产清单：`public/assets/CREDITS.md` 已列 9 件外部素材（作者/许可/三角面/来源），程序化建筑为原创。
+
+### Round 16 · 滑杆/撤销合并 + 浮窗毛玻璃（G2/G10）
+
+- **比例滑杆范围实测**（`test-g2-slider.py`）：`min=0.5 / max=2 / step=0.05`，10 次 ArrowRight → scale 1.0→1.5；满足「至少覆盖 0.5～2.0」。
+- **一次拖动=一次撤销**（`test-g2-dragundo.py`）：`update` 在 400ms 内合并历史，10 连按后**一次撤销直接回到 1.0**。
+- **专注浮窗毛玻璃**（`g10-blur.py`）：`main.focus` 计算样式 `backdrop-filter: blur(18px) saturate(1.08)`、`background: rgba(255,247,232,0.86)`、宽 880 居中；vision 确认「浮窗水平居中、背后是被模糊处理的星球画面、内容可读、无横向溢出」。
 
 ### Round 15 · G6 收口（恢复已发布 + 首次二选一）
 
