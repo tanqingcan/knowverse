@@ -90,6 +90,11 @@
 - `memories` 表（迁移 `0002_fair_doomsday`，45 表）+ `src/server/memories.ts`（list/软删除/修正保留历史）+ GET/DELETE/PATCH `/api/memories` + `MemoryPanel.tsx` + `SpaceApp` 导航「回顾→记忆」+ seed 预置 3 条 demo 记忆。
 - 验证：typecheck、db:migrate、db:seed、服务层直连 DB 实测（list=3 → 删除→2 → 修正保留历史）；**GET /api/memories 经 HTTP 实测 200 返回 3 条真实数据**（lead 复核）。
 
-**如实未验证（沙箱边界，非代码问题）**：
-- 动态路由 `[id]/[userId]` 的**端到端 HTTP 200** 无法在沙箱内验证：Next dev 对动态路由 handler 会 fork 子进程（piped stdio）→ `spawn EPERM`，影响**所有**动态路由（含已有的 `/api/classes/[id]`）；非动态路由（`/api/memories`、`/api/space` 等）均 200。DELETE/PATCH 逻辑已用直连 DB 的 tsx 脚本验证。需在**非沙箱终端**跑 `npm run dev` 后复核动态路由 HTTP。
-- 记忆面板视觉、来源跳转高亮未目测（无图像输入）。
+**动态路由 HTTP 验证（第七回合补，已闭环）**：
+- 动态路由在 dev 模式 fork 子进程（piped stdio）→ `spawn EPERM`（沙箱边界，影响所有 `[id]` 含已有的 `/api/classes/[id]`）。改用 **`npm run build` + `npm run start`（生产模式，路由在 build 期预编译、运行期不 fork）** 后，全部动态路由端到端 HTTP 实测通过：
+  - `GET /api/planets/[userId]`（xingye/ahe 当前 uuid）→ **200**，返回 planetName/gardens(2)/plants(3)/natalPlant 真实数据；
+  - `GET /api/memories` → **200** 返回 3 条；
+  - `PATCH /api/memories/[id]` → **200**（原记录→corrected + 新增 active，active 数不变）；
+  - `DELETE /api/memories/[id]` → **200**（软删除，active 3→2）。
+  - 事后 `npm run db:seed` 已把 demo 恢复为 3 条 active 记忆的干净态。
+- 仍无法在本会话验证：**视觉构图 + 记忆面板来源跳转高亮**（本会话模型无图像输入，只能像素统计不能「看」）。
