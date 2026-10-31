@@ -15,8 +15,8 @@
 | G1 选材与玫瑰 | 🟡 进行中 | 入口+素材栏+玫瑰放置已通；缩略图/五阶段预览未做 | 见 Round 2 | `.dsh-tools/cm-place-multi.png` |
 | G2 实时编辑 | 🟡 进行中 | 比例滑杆+宽长滑杆已实现；撤销/重做/触摸未做 | 见 Round 2 | — |
 | G3 球面地板 | 🟡 进行中 | SphereSurface 已实现并放置成功；视觉贴地未目测 | 见 Round 2 | — |
-| G4 数据库闭环 | ⬜ 未开始 | 当前仍 localStorage | — | — |
-| G5 异常/权限/并发 | ⬜ 未开始 | — | — | — |
+| G4 数据库闭环 | 🟡 进行中 | 表+API+保存/发布/加载已通；revision/刷新恢复实测；缺「两株不同大小+围栏+道路+跨浏览器上下文」完整证据 | 见 Round 3 | `.dsh-tools/test-g4.py` 输出 |
+| G5 异常/权限/并发 | 🟡 进行中 | 旧 revision→409 冲突实测；缺保存失败重试/跨账号越权/参观只读证据 | 见 Round 3 | `.dsh-tools/test-g5.py` 输出 |
 | G6 模板与兼容 | ⬜ 未开始 | — | — | — |
 | G7 完整球体 | 🟡 进行中 | 前序会话已实现全周环绕/复位/慢转 | 见 docs/progress-sphere.md | 待补本轮证据 |
 | G8 模型扩展 | 🟡 进行中 | B1 五类修复 + 3 建筑已做 | 见 docs/progress-sphere.md | 待补本轮证据 |
@@ -26,6 +26,21 @@
 | G12 构建与交付 | ⬜ 未开始 | — | — | — |
 
 ## 每轮记录
+
+### Round 3 · 数据库持久化闭环（G4/G5 起步，提交 `edaf65e`）
+
+**Schema**：`planet_layouts(id, planet_id, revision, status(draft/published), published_revision, updated_at)` + `planet_layout_items(id, layout_id, kind, x, z, rot, scale, width, length, color, stage, sort_order)`；迁移 `0003_complete_bishop` 已应用（47 表）。
+
+**API**：`GET/PUT /api/planet-layout`、`POST /api/planet-layout/publish`（`authed` + zod）；服务端校验 kind 白名单/数量≤300/数值有限性；`saveDraft` 事务内 `FOR UPDATE` + baseRevision 乐观并发（不匹配 → 409）。
+
+**前端**：创造模式属性栏底部加「保存到服务器 / 发布」+ revision/状态显示；页面加载时 `GET` 服务端布局并 `setAll` 覆盖本地草稿；localStorage 只作本地草稿。
+
+**实测（Playwright，dev server）**
+- 放置玫瑰+泥土 → 保存 → 服务器 `revision:1, status:draft, items[rose,soil]`；**清空 localStorage 后刷新 → 从服务器恢复**（`.dsh-tools/test-g4.py`）。
+- PUT baseRevision=当前 → `revision:2`；再 PUT 同一旧 baseRevision → **409 conflict**；POST publish → `status:published, publishedRevision:2`；最终 GET 读回 items（`.dsh-tools/test-g5.py`）。
+- `tsc --noEmit` exit 0。
+
+**未验证/风险**：保存失败重试、跨账号越权、参观只读 published、跨独立浏览器上下文 未做；「两株不同大小玫瑰+围栏+道路」完整 G4 证据未补；视觉仍无图像输入。
 
 ### Round 2 · 创造模式前端（2026-10-31）
 
