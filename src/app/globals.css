@@ -910,3 +910,17 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .cp-head { flex-wrap: nowrap; }
 .cp-head .btn, .cp-head .cp-close { flex: 0 0 auto; white-space: nowrap; }
 .hb-name, .hb-lib, .hb-mini { white-space: nowrap; }
+
+/* V4-R15：四向微移按钮（桌面 40px / 手机 44px）与球面坐标说明 */
+.sel-dpad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; justify-content: center; margin: 4px 0 4px; }
+.sel-dpad-btn { border-radius: 10px; border: 1px solid rgba(120, 95, 70, 0.3); background: rgba(255, 255, 255, 0.72);
+  font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; color: var(--ink); }
+.sel-dpad-btn:hover { background: var(--honey); }
+.sel-dpad-btn.up { grid-column: 2; grid-row: 1; }
+.sel-dpad-btn.left { grid-column: 1; grid-row: 2; }
+.sel-dpad-btn.right { grid-column: 3; grid-row: 2; }
+.sel-dpad-btn.down { grid-column: 2; grid-row: 2; }
+.sel-dpad-note { grid-column: 1 / -1; font-size: 11px; opacity: 0.65; text-align: center; }
+.sel-coord-note { font-size: 11px; opacity: 0.7; margin: 2px 0 4px; line-height: 1.4; }
+.sel-edit-row input[type="number"] { width: 76px; min-height: 30px; border-radius: 8px; border: 1px solid rgba(120, 95, 70, 0.28); padding: 0 6px; font-family: inherit; font-size: 12.5px; }
+@media (max-width: 860px) { .sel-dpad { grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); } }

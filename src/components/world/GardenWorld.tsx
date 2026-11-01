@@ -151,6 +151,27 @@ function PlantNode({ p, x, z, k = 1, selected, hovered, reduced, fx, onSelect, s
     </group>
   );
 }
+/** V4-R15：数字输入——保留用户正在输入的中途文本（"0." 等），只在合法时提交 */
+function NumField({ label, value, suffix, onCommit, min = -6, max = 6, step = 0.01 }:
+  { label: string; value: number; suffix: string; onCommit: (v: number) => void; min?: number; max?: number; step?: number }) {
+  const [text, setText] = React.useState(String(+value.toFixed(3)));
+  React.useEffect(() => { setText(String(+value.toFixed(3))); }, [value]);
+  return (
+    <label className="sel-edit-row">{label}
+      <input type="number" step={step} value={text} inputMode="decimal"
+        onChange={(e) => {
+          const raw = e.target.value;
+          setText(raw);
+          if (raw.trim() === "" || raw.endsWith(".") || raw.endsWith("-")) return;
+          const v = Number(raw);
+          if (Number.isFinite(v)) onCommit(Math.max(min, Math.min(max, v)));
+        }}
+        onBlur={() => { const v = Number(text); if (!Number.isFinite(v)) setText(String(+value.toFixed(3))); }} />
+      <span>{suffix}</span>
+    </label>
+  );
+}
+
 function hashId(id: string) { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return h; }
 
 /**
@@ -1081,8 +1102,20 @@ export function GardenWorld(props: WorldProps) {
           <span className="sel-edit-title">{selLabel} · {selEdit === "move" ? "移动" : selEdit === "rotate" ? "旋转" : "缩放"}</span>
           {selEdit === "move" && (
             <>
-              <label className="sel-edit-row">左右 <input type="range" min={-4} max={4} step={0.05} value={selItem.x} onChange={(e) => props.onDecorUpdate?.(selItem.id, { x: +e.target.value })} /><span>{selItem.x.toFixed(2)}</span></label>
-              <label className="sel-edit-row">前后 <input type="range" min={-4} max={4} step={0.05} value={selItem.z} onChange={(e) => props.onDecorUpdate?.(selItem.id, { z: +e.target.value })} /><span>{selItem.z.toFixed(2)}</span></label>
+              <div className="sel-dpad" role="group" aria-label="四向微移">
+                <button className="sel-dpad-btn up" type="button" aria-label="向上微移"
+                  onClick={(e) => { const m = e.shiftKey ? 0.001 : e.altKey ? 0.02 : 0.005; const c = nudgeRef.current?.(selItem, 0, 1, m * PLANET_R); if (c) props.onDecorUpdate?.(selItem.id, { x: c.x, z: c.z }); }}>↑</button>
+                <button className="sel-dpad-btn left" type="button" aria-label="向左微移"
+                  onClick={(e) => { const m = e.shiftKey ? 0.001 : e.altKey ? 0.02 : 0.005; const c = nudgeRef.current?.(selItem, -1, 0, m * PLANET_R); if (c) props.onDecorUpdate?.(selItem.id, { x: c.x, z: c.z }); }}>←</button>
+                <button className="sel-dpad-btn right" type="button" aria-label="向右微移"
+                  onClick={(e) => { const m = e.shiftKey ? 0.001 : e.altKey ? 0.02 : 0.005; const c = nudgeRef.current?.(selItem, 1, 0, m * PLANET_R); if (c) props.onDecorUpdate?.(selItem.id, { x: c.x, z: c.z }); }}>→</button>
+                <button className="sel-dpad-btn down" type="button" aria-label="向下微移"
+                  onClick={(e) => { const m = e.shiftKey ? 0.001 : e.altKey ? 0.02 : 0.005; const c = nudgeRef.current?.(selItem, 0, -1, m * PLANET_R); if (c) props.onDecorUpdate?.(selItem.id, { x: c.x, z: c.z }); }}>↓</button>
+                <span className="sel-dpad-note">步长 {(0.005 * PLANET_R).toFixed(3)}（Shift 精调 · Alt 粗调）</span>
+              </div>
+              <p className="sel-coord-note">下面是<strong>球面（球冠）坐标</strong>，不是世界 XYZ</p>
+              <NumField label="球面 X" value={selItem.x} suffix="球冠" onCommit={(v) => props.onDecorUpdate?.(selItem.id, { x: v })} />
+              <NumField label="球面 Z" value={selItem.z} suffix="球冠" onCommit={(v) => props.onDecorUpdate?.(selItem.id, { z: v })} />
             </>
           )}
           {selEdit === "rotate" && (
