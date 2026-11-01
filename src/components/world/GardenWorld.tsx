@@ -35,6 +35,10 @@ export type WorldProps = {
   hoverLabel?: (key: string) => string | null; intro?: "long" | "short" | "none"; onIntroDone?: () => void;
   decor?: DecorPlacement[];
   onDecorMove?: (id: string, x: number, z: number) => void;
+  /** V4-R09：点「移动」/按 M 进入两次点击移动（预览 → 点地面确认） */
+  onDecorMoveStart?: (id: string) => void;
+  /** V4-R10：落点无效（点空中/星球外）时提示 */
+  onPlaceMiss?: () => void;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
@@ -786,9 +790,19 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           return (
             <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
-                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); props.onDecorTransformStart?.(); props.decorDrag.current = d.id; }}
+                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); }}
                 onPointerUp={(e) => {
                   if (props.mode !== "garden" || props.readOnly || e.delta >= 6) return;
+                  // V4-R10：放置/移动状态下点到对象表面，也要取「背后地形」交点确认，不把建筑表面当地面
+                  if (props.placingKind) {
+                    const hitPoint = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
+                    if (hitPoint) {
+                      e.stopPropagation();
+                      const c = pointToCap(hitPoint);
+                      props.onPlace?.(c.x, c.z);
+                      return;
+                    }
+                  }
                   e.stopPropagation();
                   // H08：浏览模式下点建筑「模型」应打开原业务入口，而不是进创造模式；
                   // 编辑模式才选中。纯装饰建筑（无业务入口）浏览时点模型不做事，保持标签语义。
@@ -1036,7 +1050,7 @@ export function GardenWorld(props: WorldProps) {
         <Canvas shadows dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.75]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
           onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
-          onPointerMissed={() => setHover(null)}>
+          onPointerMissed={() => { setHover(null); props.onPlaceMiss?.(); }}>
           <Suspense fallback={null}>
             <PerfProbe />
             <Scene {...props} labelEl={labelEl} selEl={selEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} nudge={nudgeRef} />
@@ -1053,7 +1067,7 @@ export function GardenWorld(props: WorldProps) {
         <div ref={selEl} className="world-selbar" role="group" aria-label={`选中对象：${selLabel}`}>
           <span className="selbar-name">{selLabel}</span>
           <span className="selbar-scale">{selItem.scale.toFixed(2)}×</span>
-          <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "move" ? null : "move")} aria-pressed={selEdit === "move"} title="移动（也可直接拖动对象）">移动</button>
+          <button className="selbar-btn" type="button" onClick={() => { props.onDecorMoveStart?.(selItem.id); setSelEdit(selEdit === "move" ? null : "move"); }} aria-pressed={selEdit === "move"} title="移动（M）：点击地面确认，Esc 取消（也可直接拖动对象）">移动</button>
           <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "rotate" ? null : "rotate")} aria-pressed={selEdit === "rotate"} title="旋转">旋转</button>
           <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "scale" ? null : "scale")} aria-pressed={selEdit === "scale"} title="缩放">缩放</button>
           <button className="selbar-btn" type="button" onClick={() => props.onDecorDuplicate?.(selItem.id)} title="复制一份（Ctrl+D）">复制</button>

@@ -117,6 +117,8 @@ export function SpaceApp() {
   const [slotEdit, setSlotEdit] = useState<number | null>(null);
   // V4-R05：独立「布局」面板（服务器/模板/环境密度从素材库搬出）
   const [layoutOpen, setLayoutOpen] = useState(false);
+  // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
+  const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
   // H43/H44/H45：星落动画——最多一颗星 + 3 个光点，可取消；低动效直接开窗
   const [starFall, setStarFall] = useState(false);
@@ -273,7 +275,7 @@ export function SpaceApp() {
   }, [layoutRev, decorStore.decor]);
   // H25：退出创造的三条路径（右上退出按钮 / 快捷栏退出 / Esc 最后一级）统一走这里
   const doExit = () => {
-    setAskExit(false); setCreativeOpen(false); setPlacingKind(null);
+    setAskExit(false); setCreativeOpen(false); setPlacingKind(null); setMoveId(null);
     setSelectedDecorId(null); setLibOpen(false); setSlotMode(false);
   };
   const requestExit = () => {
@@ -386,11 +388,21 @@ export function SpaceApp() {
       if (e.key === "e" || e.key === "E") {
         e.preventDefault();
         setLibOpen(true);
+        return;
+      }
+      if (e.key === "m" || e.key === "M") {
+        // V4-R09：M = 移动选中对象（无选中时不拦截）
+        if (!selectedDecorId) return;
+        e.preventDefault();
+        const it = decorStore.decor.find((d) => d.id === selectedDecorId);
+        if (!it) return;
+        setCopyFrom(null); setMoveId(selectedDecorId); setPlacingKind(it.kind);
+        setLayoutMsg(`移动「${DECOR_CATALOG.find((c) => c.kind === it.kind)?.label ?? it.kind}」：点击星球表面确认；Esc 取消`);
       }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, hotbar, diyTarget]);
+  }, [creativeOpen, hotbar, diyTarget, selectedDecorId]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -399,6 +411,8 @@ export function SpaceApp() {
       if (diyTarget) return; // H36：DIY 工作台自己处理 Esc
       // H19：全量素材库打开时 Esc 先关库
       if (libOpen) { setLibOpen(false); return; }
+      // V4-R09：移动预览中按 Esc → 取消，对象保持原位（预览期间没写过 store）
+      if (moveId) { setMoveId(null); setPlacingKind(null); setLayoutMsg("已取消移动，位置不变"); return; }
       // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
       if (placingKind) { setPlacingKind(null); setCopyFrom(null); return; }
       if (selectedDecorId) { setSelectedDecorId(null); return; }
@@ -406,7 +420,7 @@ export function SpaceApp() {
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, placingKind, selectedDecorId, libOpen, diyTarget]);
+  }, [creativeOpen, placingKind, moveId, selectedDecorId, libOpen, diyTarget]);
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
   useEffect(() => { if (panel.panel === "chat" && panel.conversationId) lastConv.current = panel.conversationId; }, [panel]);
@@ -564,8 +578,23 @@ export function SpaceApp() {
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
               recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
+              onDecorMoveStart={(id) => {
+                const it = decorStore.decor.find((d) => d.id === id);
+                if (!it) return;
+                setCopyFrom(null); setMoveId(id); setPlacingKind(it.kind); setSelectedDecorId(id);
+                setLayoutMsg(`移动「${DECOR_CATALOG.find((c) => c.kind === it.kind)?.label ?? it.kind}」：点击星球表面确认；Esc 取消（原位不动）`);
+              }}
+              onPlaceMiss={() => { if (moveId || placingKind) setLayoutMsg("这里放不了：请点击星球表面"); }}
               placingKind={placingKind}
               onPlace={(x, z) => {
+                // V4-R09/R11：移动确认——只在这里写一次 update（预览期间不写 store，不产生多步 undo）
+                if (moveId) {
+                  decorStore.update(moveId, { x, z });
+                  lastPlaceAt.current = performance.now();
+                  setMoveId(null); setPlacingKind(null);
+                  setLayoutMsg("已移到新位置（可撤销）");
+                  return;
+                }
                 // H06：复制预览确认 → 用源实例参数落位；普通放置 → 用素材默认参数
                 if (copyFrom) {
                   const id = decorStore.place(copyFrom.kind, x, z, { rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage, width: copyFrom.width, length: copyFrom.length, parts: copyFrom.parts ? { ...copyFrom.parts } : undefined });
@@ -587,7 +616,7 @@ export function SpaceApp() {
               }}
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
               selectedDecorId={selectedDecorId}
-              paused={creativeOpen || panel.panel !== null || introPlaying}
+              paused={creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
@@ -595,11 +624,14 @@ export function SpaceApp() {
               onDecorTransformEnd={() => decorStore.endTransform()}
               onDecorUpdate={(id, patch) => decorStore.update(id, patch)}
               onDecorDiy={(id) => { setSelectedDecorId(id); setDiyTarget(id); }}
-              placingPreview={copyFrom
-                ? { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage }
-                : placingKind
-                  ? { kind: placingKind, rot: 0, scale: 1 }
-                  : null}
+              placingPreview={(() => {
+                if (moveId) {
+                  const it = decorStore.decor.find((d) => d.id === moveId);
+                  if (it) return { kind: it.kind, rot: it.rot, scale: it.scale, color: it.color, stage: it.stage };
+                }
+                if (copyFrom) return { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage };
+                return placingKind ? { kind: placingKind, rot: 0, scale: 1 } : null;
+              })()}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
           ) : (
             <StaticGarden plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant} onSelect={(id) => open({ panel: "dossier", plantId: id })}
