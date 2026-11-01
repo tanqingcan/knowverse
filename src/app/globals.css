@@ -935,3 +935,17 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 
 /* V4-H16：创造模式隐藏原顶栏（display:none 也使其内部按钮不再可聚焦） */
 .topnav.is-hidden { display: none !important; }
+
+/* V4-R26：地形工具栏 */
+.terrain-bar { position: absolute; right: 16px; top: 64px; z-index: 7; display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; background: rgba(255, 247, 232, 0.94); border: 1px solid var(--line); border-radius: 12px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 8px 26px rgba(30, 24, 50, 0.16); }
+.terrain-label { font-size: 12px; color: var(--ink-2); }
+.terrain-tool { min-height: 40px; min-width: 44px; padding: 0 10px; border: 1px solid var(--line); background: transparent;
+  border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink); }
+.terrain-tool.is-on { background: var(--honey); color: #3f3657; border-color: var(--honey); }
+.terrain-radius { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.terrain-radius input { width: 84px; }
+.terrain-reset { min-height: 40px; padding: 0 10px; border: 1px solid var(--line); background: transparent; border-radius: 8px;
+  cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink); }
+@media (max-width: 860px) { .terrain-bar { right: 8px; top: 56px; flex-wrap: wrap; max-width: calc(100vw - 16px); } }

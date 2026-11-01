@@ -124,6 +124,10 @@ export function SpaceApp() {
   // V4-R19：花圃作为独立布局对象——位移覆盖（键=花圃索引）+ 选中索引
   const [bedMoves, setBedMoves] = useState<Record<string, { x: number; z: number; rot?: number }>>({});
   const [bedSel, setBedSel] = useState<number | null>(null);
+  // V4-R26：地形高度场与工具
+  const [terrainHeights, setTerrainHeights] = useState<Float32Array | null>(null);
+  const [terrainTool, setTerrainTool] = useState<"up" | "down" | "restore" | null>(null);
+  const [terrainRadius, setTerrainRadius] = useState(0.45);
   // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
   const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
@@ -610,6 +614,10 @@ export function SpaceApp() {
               onPlaceMiss={() => { if (moveId || placingKind) setLayoutMsg("这里放不了：请点击星球表面"); }}
               nudgeScale={nudgeScale}
               bedMoves={bedMoves}
+              terrainHeights={terrainHeights}
+              terrainTool={terrainTool}
+              terrainRadius={terrainRadius}
+              onTerrainBrush={(h) => { setTerrainHeights(h); setLayoutMsg("地形已修改（尚未保存）"); }}
               selectedBedIndex={bedSel}
               bedSelPos={bedSel != null && bedLayoutNow[bedSel] ? { x: bedLayoutNow[bedSel].x, z: bedLayoutNow[bedSel].z } : null}
               onBedNudge={(i, cap) => { const gid = space?.gardens?.[i]?.id ?? String(i); setBedMoves((prev) => ({ ...prev, [gid]: { x: cap.x, z: cap.z, rot: prev[gid]?.rot ?? 0 } })); setLayoutMsg("花圃已微调（尚未保存）"); }}
@@ -708,7 +716,24 @@ export function SpaceApp() {
 
         {/* H16：进入创造后保留「小型退出入口」——HUD 主体（今日建议/业务工具栏）隐藏，只留一个退出创造按钮 */}
         {creativeOpen && !focus && (
+          <>
+          {/* V4-R26：地形工具栏 */}
+          <div className="terrain-bar" role="toolbar" aria-label="地形工具">
+            <span className="terrain-label">地形</span>
+            {([["up", "抬高"], ["down", "降低"], ["restore", "平滑恢复"]] as const).map(([k, t]) => (
+              <button key={k} type="button" aria-pressed={terrainTool === k}
+                className={`terrain-tool ${terrainTool === k ? "is-on" : ""}`}
+                onClick={() => setTerrainTool((c) => (c === k ? null : k))}>{t}</button>
+            ))}
+            <label className="terrain-radius">笔刷
+              <input type="range" min={0.15} max={1.2} step={0.05} value={terrainRadius}
+                onChange={(e) => setTerrainRadius(Number(e.target.value))} aria-label="笔刷半径" />
+              <b>{terrainRadius.toFixed(2)}</b>
+            </label>
+            <button type="button" className="terrain-reset" onClick={() => setTerrainHeights(null)}>全部恢复平地</button>
+          </div>
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
+          </>
         )}
         {/* H28：DIY 工作台——独立覆盖层，主场景（星球/镜头/选中）不卸载不失位 */}
         {diyTarget && (() => {
