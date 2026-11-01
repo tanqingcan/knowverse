@@ -973,6 +973,6 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 
 /* V4-H37：移动端 selbar 不越界 + 按钮 ≥44px */
 @media (max-width: 860px) {
-  .world-selbar { max-width: calc(100vw - 16px); flex-wrap: wrap; left: 8px !important; right: 8px !important; transform: none !important; }
+  .world-selbar { max-width: calc(100vw - 16px); flex-wrap: wrap; left: 8px !important; right: 8px !important; transform: none !important; top: auto !important; bottom: 132px !important; z-index: 9; }
   .world-selbar .selbar-btn { min-height: 44px; min-width: 44px; }
 }
