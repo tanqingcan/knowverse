@@ -483,7 +483,7 @@ function Sparks({ points, start }: { points: THREE.Vector3[]; start: number }) {
       s.scale.set(sc, sc, 1);
     });
   });
-  return <group>{Array.from({ length: 9 }, (_, i) => <sprite key={i} ref={(o) => { refs.current[i] = o; }} material={mat} visible={false} />)}</group>;
+  return <group>{Array.from({ length: 9 }, (_, i) => <sprite key={i} ref={(o) => { refs.current[i] = o; }} material={mat} visible={false} raycast={() => null} />)}</group>;
 }
 
 /* ───────── 镜头、拖动、入场 ───────── */
@@ -605,7 +605,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const world = useRef<THREE.Group>(null);
   // H02：把「屏幕坐标 → 球冠坐标」暴露给外层 DOM 拖动。R3F 的 pointermove 在拖动期间不触发
   // （实测 [h02] move 无日志），DOM 层 pointermove 才稳定；用相机射线与球面求交，避免拿建筑表面点。
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const dragRay = useMemo(() => new THREE.Raycaster(), []);
   const dragNdc = useMemo(() => new THREE.Vector2(), []);
   const dragSphere = useMemo(() => new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), []);
@@ -677,6 +677,26 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     return () => { delete (window as unknown as { __gardenProject?: unknown }).__gardenProject; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, gl]);
+
+  // V4-H02 诊断：曝光「屏幕上某点最先命中哪些对象」，用于定位"点 A 选中 B"的真因
+  useEffect(() => {
+    (window as unknown as {
+      __gardenPick?: (x: number, y: number) => { name: string; dist: number }[] | null;
+    }).__gardenPick = (x, y) => {
+      const r = gl.domElement.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      const ndc = new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+      const rc = new THREE.Raycaster();
+      rc.setFromCamera(ndc, camera);
+      const hits = rc.intersectObjects(scene.children, true).slice(0, 5);
+      return hits.map((h) => ({
+        name: h.object.name || h.object.parent?.name || h.object.type,
+        dist: +h.distance.toFixed(3),
+      }));
+    };
+    return () => { delete (window as unknown as { __gardenPick?: unknown }).__gardenPick; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, gl, scene]);
 
   // H06：放置预览 ghost（跟随指针的半透明模型）
   const ghost = useRef<THREE.Group>(null);
@@ -930,7 +950,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       </group>
 
       {/* 背后的暖色天光（克制的辉光） */}
-      <sprite position={[0, 0.6, -9]} scale={[22, 9, 1]}>
+      <sprite position={[0, 0.6, -9]} scale={[22, 9, 1]} raycast={() => null}>
         <spriteMaterial map={haloTexture()} transparent opacity={0.35} depthWrite={false} color="#FFD9C2" />
       </sprite>
     </>
