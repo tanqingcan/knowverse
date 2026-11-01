@@ -619,6 +619,14 @@ export function SpaceApp() {
                 if (moveId?.startsWith("bed:")) {
                   const gi = Number(moveId.slice(4));
                   const gid = space?.gardens?.[gi]?.id ?? String(gi);
+                  // V4-R23：重叠检查——用花圃实际半径（不是固定半径），命中则提示换点、不写入
+                  const myR = bedLayoutNow[gi]?.r ?? 0.3;
+                  const hitBed = bedLayoutNow.some((b, i) => i !== gi && Math.hypot(b.x - x, b.z - z) < b.r + myR);
+                  const hitBld = decorStore.decor.some((d) => isBuildingKind(d.kind) && Math.hypot(d.x - x, d.z - z) < myR + 0.45);
+                  if (hitBed || hitBld) {
+                    setLayoutMsg(`⚠ 这里${hitBed ? "与其他花圃" : "与建筑"}重叠：换一个位置再点，或按 Esc 取消（尚未移动）`);
+                    return;
+                  }
                   setBedMoves((prev) => ({ ...prev, [gid]: { x, z, rot: prev[gid]?.rot ?? 0 } }));
                   lastPlaceAt.current = performance.now();
                   setMoveId(null); setPlacingKind(null);
