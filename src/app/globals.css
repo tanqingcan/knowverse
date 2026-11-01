@@ -496,7 +496,7 @@ input[type=file]::file-selector-button { border: 0; background: #4a4067; color: 
 .focus { position: absolute; z-index: 5; top: 50%; left: 50%; bottom: auto; right: auto; margin: 0;
   transform: translate(-50%, -50%);
   width: min(600px, calc(100vw - 40px)); height: min(560px, calc(100vh - 170px));
-  border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; animation: kv-rise-c .32s var(--ease);
+  border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; animation: kv-rise-c .95s var(--ease);
   border: 1px solid var(--line);
   background: rgba(255, 247, 232, 0.9);
   -webkit-backdrop-filter: blur(18px) saturate(1.08); backdrop-filter: blur(18px) saturate(1.08);
