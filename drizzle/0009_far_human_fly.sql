@@ -1,0 +1,1 @@
+ALTER TABLE "planet_layouts" ADD COLUMN "bed_moves" jsonb;

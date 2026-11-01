@@ -33,13 +33,26 @@ export function newKey(prefix = "k") {
   return prefix + "-" + Array.from(a, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * 当前用户时区。初始取浏览器时区；载入空间后由 SpaceApp 用 user.timezone 覆盖。
+ * 这样设置面板里改时区会真正影响所有格式化输出与历史检索的日期范围。
+ */
+let currentTimeZone =
+  (typeof Intl !== "undefined" && Intl.DateTimeFormat().resolvedOptions().timeZone) || "Asia/Shanghai";
+export function setTimeZone(tz?: string | null) {
+  if (tz) currentTimeZone = tz;
+}
+export function getTimeZone() {
+  return currentTimeZone;
+}
+
 export function fmtTime(iso: string | Date, withDate = true) {
   const d = new Date(iso);
   const opts: Intl.DateTimeFormatOptions = withDate
-    ? { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Taipei" }
-    : { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Taipei" };
+    ? { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: currentTimeZone }
+    : { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: currentTimeZone };
   return new Intl.DateTimeFormat("zh-CN", opts).format(d);
 }
 export function fmtDate(iso: string | Date) {
-  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "numeric", day: "numeric", timeZone: "Asia/Taipei" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "numeric", day: "numeric", timeZone: currentTimeZone }).format(new Date(iso));
 }

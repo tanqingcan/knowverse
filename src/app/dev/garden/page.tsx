@@ -21,11 +21,25 @@ export default function Page() {
     const f = () => setCel({ plantId: PLANTS[0].id, fromStage: "bud", toStage: "bloom", key: Date.now() });
     window.addEventListener("kv-cel", f); return () => window.removeEventListener("kv-cel", f); }, []);
   if (!q) return null;
+  // ?n=100&g=3：隔离压力数据（不碰真实账号），检查大量植物的布局/重叠/NaN
+  const N = Number(q.get("n") ?? 0), G = Math.max(1, Number(q.get("g") ?? 2));
+  const stress = N > 0 ? Array.from({ length: N }, (_, i) => ({
+    id: `stress-${i}`, conceptName: `知识点 ${i + 1}`,
+    species: ["rose", "iris", "lily", "sunflower"][i % 4],
+    color: ["rose", "mist", "cream", "gold"][i % 4],
+    stage: ["seed", "sprout", "leaf", "bud", "bloom"][i % 5],
+    gardenIndex: i % G, isNatal: i === 0,
+  })) : null;
+  const plants = (stress ?? PLANTS) as any[];
+  const gardens = stress ? Array.from({ length: G }, (_, i) => ({ name: `花圃 ${i + 1}` })) : [{ name: "数据库系统概论" }, { name: "概率统计" }];
+  // G9 压力验证用：暴露本页渲染的植物数量/花园数/全部坐标是否有限（隔离数据，不碰真实账号）
+  if (typeof window !== "undefined") (window as any).__devPlants = { n: plants.length, g: gardens.length, allFinite: plants.every((p: any) => Number.isFinite(p.gardenIndex)) };
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(180deg,#756B99 0%,#9CAFC5 42%,#F2C9B6 78%,#FFF7E8 100%)" }}>
-      <GardenWorld plants={PLANTS} gardens={[{ name: "数据库系统概论" }, { name: "概率统计" }]} mode={(q.get("mode") as any) ?? "garden"}
+      <GardenWorld plants={plants} gardens={gardens} mode={(q.get("mode") as any) ?? "garden"}
         reduced={q.has("reduced")} pose={cel ? "celebrate" : (q.get("pose") as any) ?? "idle"} lampState="idle" signText="左外连接" signSub="本命花"
-        selectedId={q.get("sel") ? PLANTS[+q.get("sel")!].id : null} recenterKey={0} intro="none" celebrate={cel}
+        selectedId={q.get("sel") ? plants[+q.get("sel")!]?.id ?? null : null} recenterKey={0} intro="none" celebrate={cel}
+        perf={q.has("perf")}
         hoverLabel={(k) => k} onFail={() => console.error("webgl fail")} />
     </div>
   );

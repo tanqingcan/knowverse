@@ -36,8 +36,21 @@ export function ChatPanel() {
   const { concepts } = useConcepts();
   const [win, setWin] = useState<Win | null>(null);
   const [list, setList] = useState<any[] | null>(null);
-  const [showList, setShowList] = useState(!panel.conversationId);
-  const [text, setText] = useState("");
+  // H42：会话历史默认折叠（标题/按钮里再展开），不再一进来就占掉窗口 1/3
+  const [showList, setShowList] = useState(false);
+  // H48：未发送的草稿要跨「关窗/开窗」保留（面板卸载不丢）——按会话 id 存 localStorage
+  const draftKey = `kv-chat-draft:${panel.conversationId ?? "new"}`;
+  const [text, setText] = useState<string>(() => {
+    try { return (typeof localStorage !== "undefined" && localStorage.getItem(draftKey)) || ""; } catch { return ""; }
+  });
+  const setDraft = (v: string) => {
+    setText(v);
+    try {
+      if (typeof localStorage !== "undefined") {
+        if (v) localStorage.setItem(draftKey, v); else localStorage.removeItem(draftKey);
+      }
+    } catch { /* 隐私模式忽略 */ }
+  };
   const [sending, setSending] = useState(false);
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -51,7 +64,7 @@ export function ChatPanel() {
   useEffect(() => { loadList(); }, []);
 
   useEffect(() => {
-    if (!panel.conversationId) { setWin(null); setShowList(true); return; }
+    if (!panel.conversationId) { setWin(null); setShowList(false); return; }
     setErr(null);
     const qs = panel.messageId ? `?around=${panel.messageId}` : "";
     api<Win>(`/api/conversations/${panel.conversationId}${qs}`).then((w) => { setWin(w); setTitle(w.conversation.title); setShowList(false); })
@@ -73,7 +86,7 @@ export function ChatPanel() {
   const send = async () => {
     const t = text.trim();
     if (!t || sending) return;
-    setSending(true); setBusy(true); setErr(null); setPendingText(t); setText("");
+    setSending(true); setBusy(true); setErr(null); setPendingText(t); setDraft("");
     try {
       const r = await api<Win & { growth: any[] }>("/api/chat", { body: { conversationId: win?.conversation.id ?? null, text: t, focusConceptId: (!win && focusConcept) ? focusConcept : (focusConcept || null) } });
       setWin(r); setTitle(r.conversation.title);
@@ -84,7 +97,7 @@ export function ChatPanel() {
       const last = r.messages[r.messages.length - 1];
       if (last?.status === "failed") toast(`回答生成失败：${last.errorMessage}`, "error");
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "发送失败"); setText(t);
+      setErr(e instanceof ApiError ? e.message : "发送失败"); setDraft(t); // 失败把内容放回输入框，可直接重试
     } finally { setSending(false); setBusy(false); setPendingText(null); }
   };
 
@@ -177,7 +190,7 @@ export function ChatPanel() {
             <p className="small">回答会尽量依据你的资料，并标出版本和页码；资料不足时我会说明。</p>
             <div className="row" style={{ justifyContent: "center", marginTop: 10 }}>
               {["LEFT JOIN 之后把右表条件写在 WHERE 里，为什么结果像内连接？", "P(A|B) 和 P(B|A) 有什么区别？", "根据我的记录给我出几道题"].map((s) => (
-                <button key={s} className="chip" style={{ cursor: "pointer" }} onClick={() => setText(s)}>{s}</button>
+                <button key={s} className="chip" style={{ cursor: "pointer" }} onClick={() => setDraft(s)}>{s}</button>
               ))}
             </div>
           </div>
@@ -267,7 +280,7 @@ export function ChatPanel() {
         <div className="box">
           <label className="sr-only" htmlFor="chat-input">输入问题</label>
           <textarea id="chat-input" className="textarea" rows={2} value={text} maxLength={4000} placeholder={win ? "继续提问…（Enter 发送，Shift+Enter 换行）" : "问星灯一个问题…"}
-            onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
+            onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
           <button className="btn btn-primary" disabled={sending || !text.trim()} onClick={send}>{sending ? "…" : "发送"}</button>
         </div>
       </div>

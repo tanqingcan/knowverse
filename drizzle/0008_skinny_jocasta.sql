@@ -1,0 +1,1 @@
+ALTER TABLE "planet_layouts" ADD COLUMN "schema_version" integer DEFAULT 1 NOT NULL;

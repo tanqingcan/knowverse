@@ -1,0 +1,1 @@
+ALTER TABLE "planet_layout_items" ADD COLUMN "parts" jsonb;
