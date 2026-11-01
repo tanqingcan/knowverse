@@ -11,7 +11,7 @@ import { C, matte, glassMat, glowMat, rbox, cylGeo, coneGeo, sphereGeo, torusGeo
 
 export function Halo({ size = 0.3, opacity = 0.8, position }: { size?: number; opacity?: number; position?: [number, number, number] }) {
   const mat = useMemo(() => new THREE.SpriteMaterial({ map: haloTexture(), transparent: true, depthWrite: false, opacity, blending: THREE.AdditiveBlending }), [opacity]);
-  return <sprite material={mat} scale={[size, size, 1]} position={position} />;
+  return <sprite material={mat} scale={[size, size, 1]} position={position} raycast={() => null} />;
 }
 
 export function Contact({ r = 0.2 }: { r?: number }) {
