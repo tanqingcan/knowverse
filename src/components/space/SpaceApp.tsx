@@ -277,7 +277,7 @@ export function SpaceApp() {
   const saveCreative = useCallback(async () => {
     try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor, bedMoves); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
-  }, [layoutRev, decorStore.decor]);
+  }, [layoutRev, decorStore.decor, bedMoves]);
   // H25：退出创造的三条路径（右上退出按钮 / 快捷栏退出 / Esc 最后一级）统一走这里
   const doExit = () => {
     setAskExit(false); setCreativeOpen(false); setPlacingKind(null); setMoveId(null);
