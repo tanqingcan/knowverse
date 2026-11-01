@@ -248,8 +248,8 @@ function BedContacts({ items }: { items: { x: number; z: number; s: number }[] }
   return <instancedMesh ref={ref} args={[contactGeo(), contactMat(), Math.max(1, items.length)]} visible={items.length > 0} frustumCulled={false} />;
 }
 
-function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant>; onBedSelect?: (index: number) => void; bedSelected?: boolean } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
-  const f = useMemo(() => capFrame(bed.x, bed.z, bed.rot ?? 0), [bed.x, bed.z, bed.rot]);
+function Bed({ bed, plants, terrainLift = 0, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant>; onBedSelect?: (index: number) => void; bedSelected?: boolean; terrainLift?: number } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
+  const f = useMemo(() => capFrame(bed.x, bed.z, bed.rot ?? 0, terrainLift), [bed.x, bed.z, bed.rot, terrainLift]);
   const { selectedId, hover, fx, ...pass } = rest as any;
   const hitItems = useMemo(() => bed.plants.map((pp) => ({ id: pp.id, x: pp.x, z: pp.z })), [bed.plants]);
   const contactItems = useMemo(() => bed.plants.map((pp) => ({ x: pp.x, z: pp.z, s: plants.get(pp.id)?.stage === "bloom" ? 0.11 : 0.08 })), [bed.plants, plants]);
@@ -915,7 +915,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <Wildflowers items={blooms} />
 
         {beds.map((b) => (
-          <Bed onBedSelect={props.onSelectBed} bedSelected={props.selectedBedIndex === b.index} key={b.index} bed={b} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
+          <Bed onBedSelect={props.onSelectBed} bedSelected={props.selectedBedIndex === b.index} key={b.index} bed={b} terrainLift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, b.x, b.z) : 0} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
             reduced={reduced} onSelect={props.onSelect} setHover={setHover} register={register} />
         ))}
 
@@ -940,7 +940,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
               <group key={d.id}
                 onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
                 <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} />
-                {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
+                {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
               </group>
             );
           }
