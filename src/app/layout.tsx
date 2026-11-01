@@ -10,7 +10,7 @@ export const viewport: Viewport = { themeColor: "#101629", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>{children}<div className="paper-grain" aria-hidden="true" /></body>
     </html>
   );
 }

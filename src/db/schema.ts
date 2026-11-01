@@ -460,6 +460,32 @@ export const notes = pgTable("notes", {
 ]);
 
 /**
+ * 长期记忆（B4 记忆面板）：AI 从对话中提炼、用户可确认/修正的“事实 / 偏好 / 事件”。
+ * 修正不删除：原记录 status 置为 corrected，新内容作为新 active 记录写入并指向原记录（corrects_id），
+ * 修正历史因此完整保留；删除为软删除（status → deleted）。
+ * source_message_id / source_conversation_id 用于定位到产生这条记忆的原对话消息。
+ */
+export const memories = pgTable("memories", {
+  id: id(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),                           // fact | preference | event
+  content: text("content").notNull(),
+  conceptId: uuid("concept_id").references(() => concepts.id, { onDelete: "set null" }),
+  sourceMessageId: uuid("source_message_id").references(() => messages.id, { onDelete: "set null" }),
+  sourceConversationId: uuid("source_conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("active"),     // active | deleted | corrected
+  correctsId: uuid("corrects_id").references((): AnyPgColumn => memories.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: ts("updated_at").defaultNow().notNull(),
+}, (t) => [
+  index("memories_user_status_idx").on(t.userId, t.status),
+  index("memories_source_msg_idx").on(t.sourceMessageId),
+  index("memories_concept_idx").on(t.conceptId),
+  check("memories_kind_ck", sql`${t.kind} in ('fact','preference','event')`),
+  check("memories_status_ck", sql`${t.status} in ('active','deleted','corrected')`),
+]);
+
+/**
  * 学习证据：成长的唯一依据。kind 明确区分
  *   self_report（用户自述理解） / read / asked / note（学习记录）
  *   guided_practice（AI 或提示辅助完成） / independent_attempt / independent_variant_pass（独立作答证据）
@@ -648,3 +674,66 @@ export const outboxEvents = pgTable("outbox_events", {
   deliveredAt: ts("delivered_at"),
   attempts: integer("attempts").notNull().default(0),
 }, (t) => [index("outbox_undelivered_idx").on(t.id).where(sql`${t.deliveredAt} is null`)]);
+
+/* ───────────────────────── 创造模式：星球布局持久化 ───────────────────────── */
+
+/**
+ * 星球布局（创造模式）：每个星球一份「工作布局」，revision 每次保存 +1（乐观并发用 baseRevision 校验）。
+ * status: draft | published；publishedRevision 记录最近一次发布的 revision。
+ * 只存可重建参数（kind/位置/姿态/尺寸/颜色/阶段/排序），不存 Three.js 对象或逐帧网格。
+ */
+export const planetLayouts = pgTable("planet_layouts", {
+  /** H52：布局数据版本——1=迁移前（无建筑实例），2=v3 全场景布局（含初始建筑实例）。
+   *  加载时据此决定「是否需要用默认常量补建筑」，避免用户删光建筑后被模板补回。 */
+  schemaVersion: integer("schema_version").notNull().default(1),
+  id: id(),
+  planetId: uuid("planet_id").notNull().references(() => planets.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull().default(1),
+  status: text("status").notNull().default("draft"),
+  publishedRevision: integer("published_revision"),
+  /** 最近一次发布的布局快照（可「恢复上一已发布版本」，且参观只读用） */
+  publishedItems: jsonb("published_items"),
+  /** V4-R22：花圃（知识花圃）布局位移——键为 gardenId，值为 {x,z,rot}；与装饰 items 分开存 */
+  bedMoves: jsonb("bed_moves"),
+  /** V4-R30：地形稀疏高度场 [{i,j,h}]（49×49 网格，只存非零格点）；null=平地 */
+  terrain: jsonb("terrain"),
+  /** V4-R29：水面高度（相对基础球面的径向增量；null=无水面） */
+  water: real("water"),
+  createdAt: createdAt(),
+  updatedAt: ts("updated_at").defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("planet_layouts_planet_uq").on(t.planetId),
+  check("planet_layouts_status_ck", sql`${t.status} in ('draft','published')`),
+  check("planet_layouts_revision_ck", sql`${t.revision} >= 1`),
+]);
+
+export const planetLayoutItems = pgTable("planet_layout_items", {
+  id: id(),
+  layoutId: uuid("layout_id").notNull().references(() => planetLayouts.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  /** V4-H51：客户端实例 ID（跨会话稳定；旧数据为 null → 加载时重建） */
+  instanceId: text("instance_id"),
+  x: real("x").notNull(),
+  z: real("z").notNull(),
+  rot: real("rot").notNull().default(0),
+  scale: real("scale").notNull().default(1),
+  width: real("width"),
+  length: real("length"),
+  color: text("color"),
+  stage: text("stage"),
+  /** H34：DIY 分区颜色（按部位名存 #rrggbb）；旧数据为 null → 使用模型默认色 */
+  parts: jsonb("parts"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+}, (t) => [
+  index("planet_layout_items_layout_idx").on(t.layoutId, t.sortOrder),
+  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road','cottage','greenhouse','observatory','seedshed','arch','pond','sign','lotus','grassGroup','wildflowerGroup')`),
+]);
+
+/** 四区知识归属：种子待确认、收藏玫瑰和水生展示，不改变学习证据。 */
+export const gardenKnowledgePlaces = pgTable("garden_knowledge_places", {
+ userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+ conceptId: uuid("concept_id").notNull().references(() => concepts.id, { onDelete: "cascade" }),
+ place: text("place").notNull(),
+ createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.userId,t.conceptId,t.place]}), check("garden_knowledge_places_place_check",sql`${t.place} in ('seed','rose','aquatic')`)]);

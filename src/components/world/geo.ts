@@ -10,7 +10,7 @@ export const C = {
   grass: "#A8BC91", grassDeep: "#7E9A6E", grassLight: "#C4D3A8", rose: "#E4A1AA", honey: "#DDB56D",
   soil: "#8A6A55", soilDeep: "#6E5242", wood: "#B5835C", woodDeep: "#8C5F40", woodLight: "#D4A87C",
   plaster: "#F6E8D6", roof: "#C98478", roofDeep: "#A8665E", stone: "#B9B2C9", stoneDeep: "#9590AA",
-  glass: "#E6F0F5", leaf: "#94B77C", leafDeep: "#668A58", leafLight: "#C6DCA4", stem: "#76985F",
+  glass: "#D9EAF0", leaf: "#94B77C", leafDeep: "#668A58", leafLight: "#C6DCA4", stem: "#76985F",
   window: "#FFD38A", ink: "#3F3657",
 };
 
@@ -32,7 +32,7 @@ export function matte(color: string, opts: { rough?: number; emissive?: string; 
 export function vcol(key: string, side: THREE.Side = THREE.DoubleSide) {
   return memo(`vc:${key}:${side}`, () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side }));
 }
-export const glassMat = () => memo("glass", () => new THREE.MeshStandardMaterial({ color: C.glass, roughness: 0.15, metalness: 0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+export const glassMat = () => memo("glass", () => new THREE.MeshStandardMaterial({ color: C.glass, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
 export const glowMat = (color: string, intensity = 1.6) => memo(`glow:${color}:${intensity}`, () => new THREE.MeshStandardMaterial({ color, emissive: new THREE.Color(color), emissiveIntensity: intensity, roughness: 0.6 }));
 
 /* ───────── 手绘纹理（Canvas 生成，尺寸受限） ───────── */
@@ -125,7 +125,7 @@ type Surf = {
   color: (s: number, t: number) => THREE.Color;
 };
 function surface(p: Surf) {
-  const segU = p.segU ?? 6, segV = p.segV ?? 9;
+  const segU = p.segU ?? 13, segV = p.segV ?? 11;
   const pos: number[] = [], col: number[] = [], idx: number[] = [];
   for (let v = 0; v <= segV; v++) {
     const t = v / segV, w = p.width * p.profile(t);
@@ -215,6 +215,43 @@ export function bellGeo() {
 export const sphereGeo = (r = 1, w = 16, h = 12) => memo(`sph:${r}:${w}:${h}`, () => new THREE.SphereGeometry(r, w, h));
 export const cylGeo = (rt: number, rb: number, h: number, seg = 16) => memo(`cyl:${rt}:${rb}:${h}:${seg}`, () => new THREE.CylinderGeometry(rt, rb, h, seg));
 export const coneGeo = (r: number, h: number, seg = 18) => memo(`cone:${r}:${h}:${seg}`, () => new THREE.ConeGeometry(r, h, seg));
+/** 圆润草叶：细锥 + 顶部外弯，可配径向细分与弯度，替代低分段圆锥 */
+export function bladeGeo(h: number, r = 0.006, seg = 6, bendK = 0.42) {
+  return memo(`blade:${h}:${r}:${seg}:${bendK}`, () => {
+    const g = new THREE.CylinderGeometry(r * 0.3, r, h, seg, 1, false);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const t = (pos.getY(i) + h / 2) / h; // 0 底部 → 1 顶部
+      const bend = t * t * h * bendK;
+      pos.setX(i, pos.getX(i) + bend);
+      pos.setZ(i, pos.getZ(i) + bend * 0.3);
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    g.translate(0, h / 2, 0);
+    return g;
+  });
+}
+/** 一丛圆润的草：N 片宽而短的叶片绕中心错开、顶端外弯，合并成单一几何（实例化用） */
+export function grassTuftGeo(blades = 8, seg = 8, bendK = 0.55) {
+  return memo(`tuft:${blades}:${seg}:${bendK}`, () => {
+    const parts: number[] = [];
+    for (let i = 0; i < blades; i++) {
+      const h = 0.026 + (i % 4) * 0.005;
+      const a = (i / blades) * Math.PI * 2 + (i % 2 ? 0.14 : -0.1);
+      const b = bladeGeo(h, 0.0075, seg, bendK).clone()
+        .rotateZ(i % 2 ? 0.1 : -0.08) // 轻微左右交错，避免完全同心
+        .rotateY(a)
+        .translate(Math.cos(a) * 0.006, 0, -Math.sin(a) * 0.006)
+        .toNonIndexed();
+      parts.push(...(b.attributes.position.array as Float32Array));
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(parts, 3));
+    g.computeVertexNormals();
+    return g;
+  });
+}
 export const torusGeo = (r: number, t: number, rs = 10, ts = 28) => memo(`tor:${r}:${t}:${rs}:${ts}`, () => new THREE.TorusGeometry(r, t, rs, ts));
 export function rbox(w: number, h: number, d: number, r = 0.02) {
   return memo(`rbox:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, 3, r) as THREE.BufferGeometry);
