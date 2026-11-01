@@ -17,6 +17,7 @@ import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
 import { capFrame, worldToCap, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
+import { makeHeights, applyBrush } from "@/lib/home/terrain";
 import type { StageKey } from "@/lib/flora";
 import { DECOR_CATALOG, isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
 import { doorOf, homePoses } from "@/lib/home/home-layout";
@@ -60,6 +61,14 @@ export type WorldProps = {
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
   placingPreview?: { kind: string; rot: number; scale: number; color?: string; stage?: string } | null;
+  /** V4-R26：地形高度场（49×49，null=平地） */
+  terrainHeights?: Float32Array | null;
+  /** V4-R26：当前地形笔刷（null=未启用） */
+  terrainTool?: "up" | "down" | "restore" | null;
+  /** V4-R26：一次点击 = 一笔，回调把新高度场交回上层（写历史/存 DB） */
+  onTerrainBrush?: (heights: Float32Array) => void;
+  /** V4-R26：笔刷半径（球冠坐标单位） */
+  terrainRadius?: number;
   onPlace?: (x: number, z: number) => void; // 点击球面放置回调
   onDecorSelect?: (id: string) => void;    // 创造模式：选中已放置对象
   onDecorDuplicate?: (id: string) => void; // H05：紧凑操作条的「复制」
@@ -742,7 +751,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const terrain = useMemo(() => paintTerrain(beds, poses), [beds, poses]);
   // H09：poses 变化会重绘地表纹理；旧 CanvasTexture 必须 dispose，否则拖动建筑时纹理数单调增长（实测 12→20）
   useEffect(() => () => { (terrain as unknown as { dispose?: () => void })?.dispose?.(); }, [terrain]);
-  const planetGeo = useMemo(() => planetGeometry(), []);
+  const planetGeo = useMemo(() => planetGeometry(props.terrainHeights), [props.terrainHeights]);
   const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);
   const [lights, setLights] = useState(props.intro === "none" || reduced ? 1 : 0.05);
   const lightAcc = useRef(0);
@@ -856,7 +865,20 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         const c = pointToCap(hit);
         props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
       }}>
-        <mesh geometry={planetGeo} material={planetMat} receiveShadow />
+        <mesh geometry={planetGeo} material={planetMat} receiveShadow
+          onClick={(e) => {
+            // V4-R26：地形笔刷——一次点击 = 一笔；只改高度场，不写 DB（由上层决定）
+            if (!props.terrainTool) return;
+            e.stopPropagation();
+            const hit = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
+            if (!hit) return;
+            const c = pointToCap(hit);
+            const base = props.terrainHeights ?? makeHeights();
+            const next = new Float32Array(base);
+            if (applyBrush(next, c.x, c.z, props.terrainRadius ?? 0.45, 0.85, props.terrainTool)) {
+              props.onTerrainBrush?.(next);
+            }
+          }} />
         {/* H06/H21：放置预览 ghost——跟随指针、半透明；只在放置/复制预览时挂载 */}
         {props.placingKind && props.placingPreview && (
           <group ref={ghost} visible={false}>
