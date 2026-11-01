@@ -421,14 +421,14 @@ function MemoryPath({ setHover, onHotspot, poses }: { setHover: (k: string | nul
   const paths = useMemo(() => {
     const cDef = { x: SPOTS.cottage.x, z: SPOTS.cottage.z, yaw: SPOTS.cottage.yaw };
     const gDef = { x: SPOTS.greenhouse.x, z: SPOTS.greenhouse.z, yaw: SPOTS.greenhouse.yaw };
-    const cDoor = doorOf(poses.cottage, cDef, SPOTS.cottageDoor);
-    const gDoor = doorOf(poses.greenhouse, gDef, SPOTS.greenhouseDoor);
+    const cDoor = doorOf(poses.cottage ?? SPOTS.cottage, cDef, SPOTS.cottageDoor);
+    const gDoor = doorOf(poses.greenhouse ?? SPOTS.greenhouse, gDef, SPOTS.greenhouseDoor);
     const toPair = (p: { x: number; z: number }): [number, number] => [p.x, p.z];
     return {
       memory: [...MEMORY_PATH.slice(0, -1), toPair(cDoor)],
       green: [...GREEN_PATH.slice(0, -1), toPair(gDoor)],
-      star: [toPair(gDoor), ...STAR_PATH.slice(1, -1), [poses.observatory.x, poses.observatory.z] as [number, number]],
-      seed: [toPair(gDoor), ...SEED_PATH.slice(1, -1), [poses.seedshed.x, poses.seedshed.z] as [number, number]],
+      star: [toPair(gDoor), ...STAR_PATH.slice(1, -1), [(poses.observatory ?? SPOTS.observatory).x, (poses.observatory ?? SPOTS.observatory).z] as [number, number]],
+      seed: [toPair(gDoor), ...SEED_PATH.slice(1, -1), [(poses.seedshed ?? SPOTS.seedShed).x, (poses.seedshed ?? SPOTS.seedShed).z] as [number, number]],
     };
   }, [poses]);
   const stones = useMemo(() => pathCurve(paths.memory).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), [paths]);
@@ -798,12 +798,12 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       return { ...capToAzPolar(x, z), yaw, lift: 0 };
     }
     // 坐姿略向前，避免背部穿过长椅靠背（靠背在 z≈-0.04，身体后半约 -0.056）
-    return { ...capToAzPolar(poses.bench.x, poses.bench.z + 0.022), yaw: poses.bench.yaw, lift: 0 };
+    return { ...capToAzPolar((poses.bench ?? SPOTS.bench).x, (poses.bench ?? SPOTS.bench).z + 0.022), yaw: (poses.bench ?? SPOTS.bench).yaw, lift: 0 };
   }, [props.pose, sel, celebPos, poses]);
   const lampAt = useMemo(() => {
     const t = celebPos ?? sel;
     if (t) return { ...capToAzPolar(t.x + 0.12, t.z + 0.05), lift: 0.5 };
-    return { ...capToAzPolar(poses.lampSpot.x, poses.lampSpot.z), lift: 0.36 };
+    return { ...capToAzPolar((poses.lampSpot ?? SPOTS.lampSpot).x, (poses.lampSpot ?? SPOTS.lampSpot).z), lift: 0.36 };
   }, [sel, celebPos, poses]);
   const travelerPose: Pose = (props.pose === "tend" && !sel) ? "idle" : props.pose;
 
