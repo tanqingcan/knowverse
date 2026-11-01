@@ -18,6 +18,8 @@ export type LayoutResponse = {
   schemaVersion?: number;
   /** V4-R22：花圃位移（键=gardenId） */
   bedMoves?: Record<string, { x: number; z: number; rot?: number }> | null;
+  /** V4-R30：地形稀疏高度场 */
+  terrain?: { i: number; j: number; h: number }[] | null;
   publishedRevision: number | null; hasPublished?: boolean; items: LayoutItem[];
 };
 
@@ -40,10 +42,10 @@ export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
 });
 
 export function loadLayout() { return api<LayoutResponse>("/api/planet-layout"); }
-export function saveLayout(baseRevision: number, list: DecorPlacement[], bedMoves?: Record<string, { x: number; z: number; rot?: number }>) {
+export function saveLayout(baseRevision: number, list: DecorPlacement[], bedMoves?: Record<string, { x: number; z: number; rot?: number }>, terrain?: { i: number; j: number; h: number }[] | null) {
   return api<{ revision: number; status: string }>("/api/planet-layout", {
     method: "PUT",
-    body: { baseRevision, items: list.map(toLayoutItem), bedMoves: bedMoves ?? {} },
+    body: { baseRevision, items: list.map(toLayoutItem), bedMoves: bedMoves ?? {}, terrain: terrain ?? null },
   });
 }
 export function publishLayout(baseRevision: number) {

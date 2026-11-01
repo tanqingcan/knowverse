@@ -695,6 +695,8 @@ export const planetLayouts = pgTable("planet_layouts", {
   publishedItems: jsonb("published_items"),
   /** V4-R22：花圃（知识花圃）布局位移——键为 gardenId，值为 {x,z,rot}；与装饰 items 分开存 */
   bedMoves: jsonb("bed_moves"),
+  /** V4-R30：地形稀疏高度场 [{i,j,h}]（49×49 网格，只存非零格点）；null=平地 */
+  terrain: jsonb("terrain"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").defaultNow().notNull(),
 }, (t) => [
