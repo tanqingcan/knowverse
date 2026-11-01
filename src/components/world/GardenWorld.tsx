@@ -798,13 +798,13 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       return { ...capToAzPolar(x, z), yaw, lift: 0 };
     }
     // 坐姿略向前，避免背部穿过长椅靠背（靠背在 z≈-0.04，身体后半约 -0.056）
-    return { ...capToAzPolar(SPOTS.bench.x, SPOTS.bench.z + 0.022), yaw: SPOTS.bench.yaw, lift: 0 };
-  }, [props.pose, sel, celebPos]);
+    return { ...capToAzPolar(poses.bench.x, poses.bench.z + 0.022), yaw: poses.bench.yaw, lift: 0 };
+  }, [props.pose, sel, celebPos, poses]);
   const lampAt = useMemo(() => {
     const t = celebPos ?? sel;
     if (t) return { ...capToAzPolar(t.x + 0.12, t.z + 0.05), lift: 0.5 };
-    return { ...capToAzPolar(SPOTS.lampSpot.x, SPOTS.lampSpot.z), lift: 0.36 };
-  }, [sel, celebPos]);
+    return { ...capToAzPolar(poses.lampSpot.x, poses.lampSpot.z), lift: 0.36 };
+  }, [sel, celebPos, poses]);
   const travelerPose: Pose = (props.pose === "tend" && !sel) ? "idle" : props.pose;
 
   const L = lights;
