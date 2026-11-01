@@ -129,6 +129,9 @@ export function SpaceApp() {
   const [terrainHeights, setTerrainHeights] = useState<Float32Array | null>(null);
   const [terrainTool, setTerrainTool] = useState<"up" | "down" | "restore" | null>(null);
   const [terrainRadius, setTerrainRadius] = useState(0.45);
+  // V4-R30：地形撤销/重做（一次笔触一条历史，最多 40 步）
+  const [terrainPast, setTerrainPast] = useState<Float32Array[]>([]);
+  const [terrainFuture, setTerrainFuture] = useState<Float32Array[]>([]);
   // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
   const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
@@ -621,7 +624,12 @@ export function SpaceApp() {
               terrainHeights={terrainHeights}
               terrainTool={terrainTool}
               terrainRadius={terrainRadius}
-              onTerrainBrush={(h) => { setTerrainHeights(h); setLayoutMsg("地形已修改（尚未保存）"); }}
+              onTerrainBrush={(h) => {
+                setTerrainPast((prev) => [...prev.slice(-39), terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
+                setTerrainFuture([]);
+                setTerrainHeights(h);
+                setLayoutMsg("地形已修改（可撤销，尚未保存）");
+              }}
               selectedBedIndex={bedSel}
               bedSelPos={bedSel != null && bedLayoutNow[bedSel] ? { x: bedLayoutNow[bedSel].x, z: bedLayoutNow[bedSel].z } : null}
               onBedNudge={(i, cap) => { const gid = space?.gardens?.[i]?.id ?? String(i); setBedMoves((prev) => ({ ...prev, [gid]: { x: cap.x, z: cap.z, rot: prev[gid]?.rot ?? 0 } })); setLayoutMsg("花圃已微调（尚未保存）"); }}
@@ -734,7 +742,29 @@ export function SpaceApp() {
                 onChange={(e) => setTerrainRadius(Number(e.target.value))} aria-label="笔刷半径" />
               <b>{terrainRadius.toFixed(2)}</b>
             </label>
-            <button type="button" className="terrain-reset" onClick={() => setTerrainHeights(null)}>全部恢复平地</button>
+            <button type="button" className="terrain-undo" disabled={terrainPast.length === 0}
+              onClick={() => {
+                setTerrainPast((prev) => {
+                  if (prev.length === 0) return prev;
+                  const last = prev[prev.length - 1];
+                  setTerrainFuture((f) => [...f, terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
+                  setTerrainHeights(last);
+                  return prev.slice(0, -1);
+                });
+                setLayoutMsg("地形已撤销一步");
+              }}>撤销</button>
+            <button type="button" className="terrain-redo" disabled={terrainFuture.length === 0}
+              onClick={() => {
+                setTerrainFuture((prev) => {
+                  if (prev.length === 0) return prev;
+                  const last = prev[prev.length - 1];
+                  setTerrainPast((p2) => [...p2, terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
+                  setTerrainHeights(last);
+                  return prev.slice(0, -1);
+                });
+                setLayoutMsg("地形已重做一步");
+              }}>重做</button>
+            <button type="button" className="terrain-reset" onClick={() => { setTerrainHeights(null); setTerrainPast([]); setTerrainFuture([]); }}>全部恢复平地</button>
           </div>
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
           </>
