@@ -533,7 +533,12 @@ export function SpaceApp() {
   const use3d = !render3dFailed && webgl === true && (renderMode === "3d" || (renderMode === "auto"));
 
   const scenePlants = useMemo(() => (space?.plants ?? []).map((p) => ({ ...p, stage: override?.[p.id] ?? p.stage, gardenIndex: space!.gardens.findIndex((g) => g.id === p.gardenId) })), [space, override]);
-  const sceneGardens = useMemo(() => (space?.gardens ?? []).map((g) => ({ name: g.name })), [space]);
+  const sceneGardens = useMemo(() => (space?.gardens ?? []).map((g) => ({ id: g.id, name: g.name })), [space]);
+  // V4-R19/R21：当前花圃布局（含手动位移覆盖），供选中坐标/整圃精调使用；与 GardenHUD 内部那份互不影响
+  const bedLayoutNow = useMemo(
+    () => layoutBeds(sceneGardens, (space?.plants ?? []).map((p) => ({ ...p, gardenIndex: (space?.gardens ?? []).findIndex((g) => g.id === p.gardenId) })) as WorldPlant[], bedMoves),
+    [sceneGardens, space, bedMoves],
+  );
 
   // 浮窗语义：Esc 关闭、焦点进出、Tab 不出窗（只对需要专注的浮窗与设置弹窗生效）
   const closePanel = useCallback(() => { setFocusLarge(false); open({ panel: null }); }, [open]);
@@ -600,6 +605,8 @@ export function SpaceApp() {
               nudgeScale={nudgeScale}
               bedMoves={bedMoves}
               selectedBedIndex={bedSel}
+              bedSelPos={bedSel != null && bedLayoutNow[bedSel] ? { x: bedLayoutNow[bedSel].x, z: bedLayoutNow[bedSel].z } : null}
+              onBedNudge={(i, cap) => { const gid = space?.gardens?.[i]?.id ?? String(i); setBedMoves((prev) => ({ ...prev, [gid]: { x: cap.x, z: cap.z, rot: prev[gid]?.rot ?? 0 } })); setLayoutMsg("花圃已微调（尚未保存）"); }}
               bedMoving={moveId?.startsWith("bed:") ?? false}
               onSelectBed={(i) => { setBedSel(i); setSelectedDecorId(null); const nm = space?.gardens?.[i]?.name ?? `花圃 ${i + 1}`; setLayoutMsg(`已选中花圃「${nm}」——按 M 或点操作条上的「移动」平移整圃（植物随行）`); }}
               placingKind={placingKind}
@@ -607,7 +614,8 @@ export function SpaceApp() {
                 // V4-R09/R11：移动确认——只在这里写一次 update（预览期间不写 store，不产生多步 undo）
                 if (moveId?.startsWith("bed:")) {
                   const gi = Number(moveId.slice(4));
-                  setBedMoves((prev) => ({ ...prev, [String(gi)]: { x, z, rot: prev[String(gi)]?.rot ?? 0 } }));
+                  const gid = space?.gardens?.[gi]?.id ?? String(gi);
+                  setBedMoves((prev) => ({ ...prev, [gid]: { x, z, rot: prev[gid]?.rot ?? 0 } }));
                   lastPlaceAt.current = performance.now();
                   setMoveId(null); setPlacingKind(null);
                   setLayoutMsg("花圃已平移，植物/土壤一起移动（尚未保存）");

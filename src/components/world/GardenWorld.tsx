@@ -1015,6 +1015,11 @@ export function GardenWorld(props: WorldProps) {
   // R13/R14：方向键优先移动「选中的对象」；无选中时才转相机
   const selIdRef = useRef(props.selectedDecorId ?? null);
   selIdRef.current = props.selectedDecorId ?? null;
+  // V4-R21：花圃选中/坐标同样用 ref，避免键盘 effect 闭包过期
+  const bedSelIdxRef = useRef<number | null>(props.selectedBedIndex ?? null);
+  bedSelIdxRef.current = props.selectedBedIndex ?? null;
+  const bedPosRef = useRef<{ x: number; z: number } | null>(props.bedSelPos ?? null);
+  bedPosRef.current = props.bedSelPos ?? null;
   const decorRef = useRef(props.decor);
   decorRef.current = props.decor;
   const nudgeAt = useRef(0);
@@ -1035,9 +1040,9 @@ export function GardenWorld(props: WorldProps) {
       const DIRS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
       if (DIRS[e.key]) {
         // V4-R21：选中花圃时，方向键整圃平移
-        const bi = props.selectedBedIndex;
-        if (bi != null && bi >= 0 && props.bedSelPos) {
-          const bd = props.bedSelPos;
+        const bi = bedSelIdxRef.current;
+        if (bi != null && bi >= 0 && bedPosRef.current) {
+          const bd = bedPosRef.current;
           {
             e.preventDefault();
             const R = PLANET_R;
