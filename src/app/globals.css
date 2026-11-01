@@ -847,12 +847,13 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .hb-slot { position: relative; padding: 0; }
 .hb-slot .hb-main { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; border: 0; background: transparent; cursor: pointer; font-family: inherit; color: inherit; border-radius: inherit; padding: 0; }
-.hb-slot .hb-place { position: absolute; right: -2px; top: -2px; z-index: 2; width: 20px; height: 20px; min-height: 20px;
+.hb-slot .hb-place { position: absolute; right: -2px; top: -2px; z-index: 2; width: 44px; height: 44px; min-height: 44px;
   border-radius: 999px; border: 1px solid rgba(120, 95, 70, 0.35); background: rgba(255, 247, 232, 0.98);
   color: var(--ink-2); font-size: 11px; line-height: 1; cursor: pointer; font-family: inherit; padding: 0; }
 .hb-slot .hb-place:hover { background: var(--honey); color: #3f3657; }
 .hb-slot.is-active .hb-place, .hb-slot.is-current .hb-place { border-color: rgba(200, 150, 60, 0.7); }
-@media (max-width: 860px) { .hb-slot .hb-place { width: 24px; height: 24px; min-height: 24px; font-size: 12px; } }
+/* V4-H24：移动端「放」按钮也必须是 ≥44px 触摸目标（原来只有 24px，手指点不中） */
+@media (max-width: 860px) { .hb-slot .hb-place { width: 44px; height: 44px; min-height: 44px; font-size: 13px; } }
 
 
 /* ═══════════ V4-R05：素材库 = 居中可收起分类网格（覆盖旧的左侧长表） ═══════════ */
