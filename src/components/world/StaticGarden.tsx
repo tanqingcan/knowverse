@@ -177,6 +177,30 @@ export function StaticGarden(props: {
       <text x={0} y={-60} textAnchor="middle" fontSize={20} fontFamily="var(--font-title)" fill="#4A3426">{props.signText}</text><text x={0} y={-42} textAnchor="middle" fontSize={12} fill="#6B4C36">本命花</text></g>
   ) }); }
 
+  // V4-H15：用户新增的装饰也画进绘本——按实际坐标画色点/几何近似图，
+  // 明确"不支持的原样给近似"（不谎称还原了模型）。建筑/长椅/灯/牌已由 hs()/固定块画过，这里跳过。
+  const DECOR_2D: Record<string, { r: number; fill: string }> = {
+    rose: { r: 7, fill: "#D96A7A" }, flower: { r: 6, fill: "#E8A0B4" }, flower2: { r: 6, fill: "#C9A2E8" }, flower3: { r: 6, fill: "#F2C46B" },
+    fence: { r: 6, fill: "#9A7B5A" }, soil: { r: 9, fill: "#8A6A4E" }, road: { r: 9, fill: "#B9A88F" },
+    stone: { r: 6, fill: "#9AA0A6" }, rock: { r: 7, fill: "#8B9196" }, bush: { r: 7, fill: "#5F7F60" },
+    tree: { r: 8, fill: "#4F7A52" }, pot: { r: 6, fill: "#B07A5A" },
+  };
+  for (const d of props.decor ?? []) {
+    const g = DECOR_2D[d.kind];
+    if (!g) continue;
+    const c = P(d.x, d.z);
+    items.push({
+      key: `udecor-${d.kind}-${d.x.toFixed(3)}-${d.z.toFixed(3)}`,
+      z: d.z,
+      el: (
+        <g transform={`translate(${c.x.toFixed(1)} ${c.y.toFixed(1)}) scale(${c.s.toFixed(3)})`} className="sg-udecor" data-kind={d.kind} aria-label={`用户装饰：${d.kind}（近似图）`}>
+          <circle cx={0} cy={-g.r} r={g.r} fill={g.fill} opacity={0.9} />
+          <ellipse cx={0} cy={0} rx={g.r * 1.2} ry={g.r * 0.4} fill="#000" opacity={0.12} />
+        </g>
+      ),
+    });
+  }
+
   for (const b of beds) {
     const c = P(b.x, b.z);
     const rx = b.r * 330 * c.s, ry = b.r * 150 * c.s;
