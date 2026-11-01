@@ -45,7 +45,7 @@ export async function getLayout(user: CurrentUser) {
   const items = await q(
     `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
-  return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, items: items as LayoutItemInput[] };
+  return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, bedMoves: (layout.bedMoves as BedMoves) ?? {}, items: items as LayoutItemInput[] };
 }
 
 export type BedMoves = Record<string, { x: number; z: number; rot?: number }>;
