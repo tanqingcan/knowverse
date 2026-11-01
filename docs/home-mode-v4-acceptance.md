@@ -191,6 +191,14 @@ V3 把 H60 判为「全过」，**本表不承认该结论**。理由（V3 自�
 - ✅ 使用 demo 账号做常规测试；H53 用 `fresh` 账号验证权限隔离
 - ✅ 未破坏用户学习记录（13 株植物、concepts 均保留）
 
+**⚠️ 第二处数据污染（用户账号），已清理**：
+
+反复的 `fresh` 账号测试（H53 / R22 的权限隔离验证）与 R24 的注册探测，在 `users` 表里留下了
+**5 个测试账号**（`guest-jz8qv1` / `guest-n6wnip` / `guest-sjrmex` / `guest-oympgv` / `r24probe`）。
+本轮已 `DELETE`，**保留 3 个真实账号**（`demo` / `xingye` / `ahe`）。
+
+**清理后 DB 状态**：`2 subjects · 17 concepts · 13 plants · 13 layout_items · 3 users`（与 V4 开始前一致）。
+
 **⚠️ 一处需要纠正的数据污染，已修复**：
 
 反复的实测脚本向 demo 账号的布局**写入过测试用对象**（`localStorage` 的 `d-mvx*` 装饰实例 → 通过保存按钮落库），
