@@ -668,6 +668,7 @@ export function SpaceApp() {
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
+              onDecorHide={(id) => { decorStore.update(id, { hidden: true }); setSelectedDecorId(null); setLayoutMsg("已隐藏（可撤销）"); }}
               onDecorTransformStart={() => decorStore.beginTransform()}
               onDecorTransformEnd={() => decorStore.endTransform()}
               onDecorUpdate={(id, patch) => decorStore.update(id, patch)}

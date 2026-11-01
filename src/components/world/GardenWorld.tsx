@@ -37,6 +37,8 @@ export type WorldProps = {
   onDecorMove?: (id: string, x: number, z: number) => void;
   /** V4-R09：点「移动」/按 M 进入两次点击移动（预览 → 点地面确认） */
   onDecorMoveStart?: (id: string) => void;
+  /** V4-H13：隐藏选中对象（可恢复） */
+  onDecorHide?: (id: string) => void;
   /** V4-R10：落点无效（点空中/星球外）时提示 */
   onPlaceMiss?: () => void;
   /** V4-R14：方向键步长倍率（0.5 / 1 / 2，可在布局面板设置） */
@@ -894,6 +896,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         ))}
         {/* 玩家摆放的装饰：surface 类（土壤/道路）走 SphereSurface 贴球面；其余走 OnCap + DecorItem */}
         {(props.decor ?? []).map((d, i) => {
+          if (d.hidden) return null; // V4-H13：隐藏对象不渲染（数据保留，可恢复）
           const isSurface = d.kind === "soil" || d.kind === "road";
           const isSel = props.selectedDecorId === d.id;
           const isBld = isBuildingKind(d.kind);
@@ -1238,6 +1241,7 @@ export function GardenWorld(props: WorldProps) {
           <button className="selbar-btn" type="button" onClick={() => setSelEdit(selEdit === "scale" ? null : "scale")} aria-pressed={selEdit === "scale"} title="缩放">缩放</button>
           <button className="selbar-btn" type="button" onClick={() => props.onDecorDuplicate?.(selItem.id)} title="复制一份（Ctrl+D）">复制</button>
           <button className="selbar-btn" type="button" onClick={() => props.onDecorDiy?.(selItem.id)} title="DIY 工作台">DIY</button>
+          <button className="selbar-btn" type="button" onClick={() => props.onDecorHide?.(selItem.id)} title="隐藏（可撤销）">隐藏</button>
           <button className="selbar-btn selbar-del" type="button" onClick={() => props.onDecorRemove?.(selItem.id)} title="删除">删除</button>
         </div>
       )}
