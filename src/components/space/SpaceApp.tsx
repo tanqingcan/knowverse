@@ -743,7 +743,15 @@ export function SpaceApp() {
               onDecorSelect={(id) => { if(!creativeOpen)return; if(id.startsWith("knowledge-")){const cid=id.split("-").slice(2).join("-");const p=space.plants.find(p=>p.conceptId===cid);if(p) open({panel:"dossier",plantId:p.id});return;} if(batchMode){const next=batchIds.includes(id)?batchIds.filter(k=>k!==id):[...batchIds,id];setBatchIds(next);setSelectedDecorId(next.at(-1)??null);} else setSelectedDecorId(id); setBedSel(null); }}
               selectedDecorIds={batchMode ? batchIds : undefined}
               selectedDecorId={selectedDecorId}
-              paused={!!bedMoves.__fourzones || creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
+              // 空闲自转的暂停条件（R12）：创造模式 / 任意浮窗 / 开场动画 / DIY 工作台 ——
+        // 另外，切到**具体分区视角**（pond / roses / mountains / seeds）时也要暂停：
+        // `GardenWorld` 的 zoneView effect 会把 `drag.current.yaw` 钉到固定值（池塘/玫瑰各一个朝向），
+        // 自转会把分区取景漂走。
+        //
+        // ⚠️ 这里**绝不能**再判断 `!!bedMoves.__fourzones`：
+        // 那是「四分区功能已启用」的**持久标记**（存在于 DB 的 bed_moves 里，加载后恒为真），
+        // 一旦用它当暂停条件，`paused` 就永久为 true、自转彻底失效。
+        paused={zoneView !== "garden" || creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
               env={env}
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
