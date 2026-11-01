@@ -885,7 +885,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
                 onPointerUp={(e) => {
                   if (props.mode !== "garden" || props.readOnly || e.delta >= 6) return;
                   // V4-R10：放置/移动状态下点到对象表面，也要取「背后地形」交点确认，不把建筑表面当地面
-                  if (props.placingKind) {
+                  if (props.placingKind || props.bedMoving) {
                     const hitPoint = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
                     if (hitPoint) {
                       e.stopPropagation();
