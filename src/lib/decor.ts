@@ -4,12 +4,13 @@
  * A 的 `/api/decor` 就绪后，把 loadDecor/saveDecor 换成接口即可，其余不变。
  */
 import { useEffect, useRef, useState } from "react";
+import { MY_PLANET_LAYOUT } from "@/lib/home/my-default-layout";
 
 /** 建筑类（H02）：原固定建筑改为可编辑实例，kind 与室内/装饰共用一套布局数据 */
 export type DecorKind =
   | "lamp" | "bush" | "tree" | "pot" | "stone" | "fence" | "chair" | "flower" | "flower2" | "flower3" | "rock" | "rose" | "soil" | "road"
   | "cottage" | "greenhouse" | "observatory" | "seedshed" | "arch" | "pond" | "sign"
-  | "grassGroup" | "wildflowerGroup"; // H04：程序化群组（整组密度可调，不逐株编辑）
+  | "lotus" | "grassGroup" | "wildflowerGroup"; // H04：程序化群组（整组密度可调，不逐株编辑）
 /** 建筑类 kind（与场景热点名一致，点击打开业务入口或热点） */
 export const BUILDING_KINDS = ["cottage", "greenhouse", "observatory", "seedshed", "arch", "pond", "sign"] as const;
 export type BuildingKind = (typeof BUILDING_KINDS)[number];
@@ -38,6 +39,7 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
   { kind: "flower2", label: "郁金香", load: 0.3 },
   { kind: "flower3", label: "雏菊", load: 0.3 },
   { kind: "rock", label: "石头", load: 0.1 },
+  { kind: "lotus", label: "荷花", load: 0.4 },
   { kind: "rose", label: "玫瑰", load: 0.4 },
   { kind: "soil", label: "泥土/花圃地", load: 0.5, surface: true },
   { kind: "road", label: "石径", load: 0.5, surface: true },
@@ -54,15 +56,15 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
   { kind: "wildflowerGroup", label: "野花（群组）", load: 0 },
 ];
 
-/** 团队可维护的默认布局模板（创造模式「从模板开始 / 恢复默认模板」用；只含用户装饰，不动系统固定物件） */
-export const DEFAULT_TEMPLATE: DecorPlacement[] = [
-  { id: "tpl-rose-1", kind: "rose", x: -0.35, z: 0.55, rot: 0, scale: 1.2, stage: "bloom" },
-  { id: "tpl-rose-2", kind: "rose", x: 0.4, z: 0.52, rot: 20, scale: 0.9, stage: "bud" },
-  { id: "tpl-soil", kind: "soil", x: 0, z: 0.78, rot: 0, scale: 1, width: 1.4, length: 0.8 },
-  { id: "tpl-road", kind: "road", x: 0.85, z: 0.25, rot: 40, scale: 1, width: 0.5, length: 1.6 },
-  { id: "tpl-fence", kind: "fence", x: -0.72, z: 0.5, rot: 90, scale: 1 },
-  { id: "tpl-lamp", kind: "lamp", x: 0.72, z: 0.72, rot: 0, scale: 0.9 },
-];
+/**
+ * 默认布局模板（创造模式「从模板开始 / 恢复默认模板」用）。
+ *
+ * V4 起改为**我的星球实际搭好的布局**（141 件，由 `planet_layout_items` revision 94 导出），
+ * 不再是早期那 6 件示例。这样「恢复默认模板」= 恢复我自己的星球，
+ * 而不会把辛苦搭的 141 件换回示例小样。
+ * 源文件：`src/lib/home/my-default-layout.ts`；原始数据备份：`docs/home-mode-v4/my-planet-layout-v94.json`
+ */
+export const DEFAULT_TEMPLATE: DecorPlacement[] = MY_PLANET_LAYOUT;
 
 /** 单星球装饰负荷上限（load 总和） */
 export const DECOR_LOAD_CAP = 50;
@@ -118,7 +120,16 @@ export function addDecorAt(list: DecorPlacement[], kind: DecorKind, x: number, z
   return [...list, d];
 }
 export function updateDecor(list: DecorPlacement[], id: string, patch: Partial<DecorPlacement>): DecorPlacement[] {
-  return list.map((d) => (d.id === id ? { ...d, ...patch } : d));
+  const pond=id === "landscape-pond" ? list.find(d=>d.id===id) : undefined;
+  const nextPond=pond ? {...pond,...patch} : undefined;
+  return list.map(d=>{
+    if(d.id===id)return {...d,...patch};
+    if(pond && nextPond && d.kind==="lotus"){
+      const ratio=nextPond.scale/(pond.scale||1);
+      return {...d,x:nextPond.x+(d.x-pond.x)*ratio,z:nextPond.z+(d.z-pond.z)*ratio};
+    }
+    return d;
+  });
 }
 export function removeDecor(list: DecorPlacement[], id: string): DecorPlacement[] {
   return list.filter((d) => d.id !== id);
@@ -156,6 +167,15 @@ export function addPreset(list: DecorPlacement[], p: DecorPreset): DecorPlacemen
 }
 
 /** 订阅装饰列表：localStorage + 自定义事件（跨组件同步）。内置撤销/重做历史（与 list 同源，避免快照错位）。 */
+/** Translate a selection as one layout operation without changing other instances. */
+export function translateDecorSelection(list: DecorPlacement[], ids: string[], dx: number, dz: number) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dz)) throw new Error("无效移动距离");
+  const chosen=new Set(ids);
+  if(chosen.has("landscape-pond"))list.filter(d=>d.kind==="lotus").forEach(d=>chosen.add(d.id));
+  if(list.some(d=>chosen.has(d.id) && (Math.abs(d.x+dx)>6 || Math.abs(d.z+dz)>6))) throw new Error("整组超出可编辑范围");
+  return list.map(d=>chosen.has(d.id)?{...d,x:d.x+dx,z:d.z+dz}:d);
+}
+
 export function useDecor() {
   const [list, setList] = useState<DecorPlacement[]>([]);
   const history = useRef<DecorPlacement[][]>([]);
@@ -250,6 +270,10 @@ export function useDecor() {
       setVer((v) => v + 1);
       saveDecor(next); setList(next);
     },
+    translateMany: (ids: string[], dx: number, dz: number) => {
+      commit(translateDecorSelection(list,ids,dx,dz));
+    },
+    removeMany: (ids: string[]) => { const chosen=new Set(ids); commit(list.filter(d=>!chosen.has(d.id))); },
     beginTransform,
     endTransform,
     remove: (id: string) => commit(removeDecor(list, id)),

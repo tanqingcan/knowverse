@@ -94,32 +94,32 @@ export function Greenhouse({ lights = 1 }: { lights?: number }) {
   return (
     <group>
       <Contact r={0.42} />
-      <mesh geometry={rbox(W + 0.06, 0.05, D + 0.06, 0.02)} material={matte(C.stone)} position={[0, 0.025, 0]} castShadow receiveShadow />
-      {posts.map(([x, z], i) => <mesh key={i} geometry={rbox(0.022, H, 0.022, 0.006)} material={beam} position={[x, 0.05 + H / 2, z]} castShadow />)}
-      <mesh geometry={rbox(W + 0.03, 0.02, 0.022, 0.006)} material={beam} position={[0, 0.05 + H + R, 0]} castShadow />
-      {[-1, 1].map((sd) => <mesh key={sd} geometry={rbox(W + 0.03, 0.018, 0.02, 0.005)} material={beam} position={[0, 0.05 + H, (sd * D) / 2]} />)}
+      <mesh geometry={rbox(W + 0.06, 0.05, D + 0.06, 0.02)} userData={{part:"base"}} material={matte(C.stone)} position={[0, 0.025, 0]} castShadow receiveShadow />
+      {posts.map(([x, z], i) => <mesh key={i} geometry={rbox(0.022, H, 0.022, 0.006)} userData={{part:"frame"}} material={beam} position={[x, 0.05 + H / 2, z]} castShadow />)}
+      <mesh geometry={rbox(W + 0.03, 0.02, 0.022, 0.006)} userData={{part:"frame"}} material={beam} position={[0, 0.05 + H + R, 0]} castShadow />
+      {[-1, 1].map((sd) => <mesh key={sd} geometry={rbox(W + 0.03, 0.018, 0.02, 0.005)} userData={{part:"frame"}} material={beam} position={[0, 0.05 + H, (sd * D) / 2]} />)}
       {[-1, 0, 1].map((k) => (
         <group key={k} position={[(k * W) / 2.05, 0.05 + H, 0]}>
-          {[-1, 1].map((sd) => <mesh key={sd} geometry={rbox(0.018, 0.018, roofLen, 0.004)} material={beam} position={[0, R / 2, (sd * D) / 4]} rotation={[sd * roofAng, 0, 0]} />)}
+          {[-1, 1].map((sd) => <mesh key={sd} geometry={rbox(0.018, 0.018, roofLen, 0.004)} userData={{part:"frame"}} material={beam} position={[0, R / 2, (sd * D) / 4]} rotation={[sd * roofAng, 0, 0]} />)}
         </group>
       ))}
       {/* 玻璃 */}
-      {[-1, 1].map((sd) => <mesh key={`w${sd}`} material={glassMat()} position={[0, 0.05 + H / 2, (sd * D) / 2]}><planeGeometry args={[W, H]} /></mesh>)}
-      {[-1, 1].map((sd) => <mesh key={`s${sd}`} material={glassMat()} position={[(sd * W) / 2, 0.05 + H / 2, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[D, H]} /></mesh>)}
-      {[-1, 1].map((sd) => <mesh key={`r${sd}`} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng, 0, 0]}><planeGeometry args={[W, roofLen]} /></mesh>)}
+      {[-1, 1].map((sd) => <mesh key={`w${sd}`} userData={{part:"roofGlass"}} material={glassMat()} position={[0, 0.05 + H / 2, (sd * D) / 2]}><planeGeometry args={[W, H]} /></mesh>)}
+      {[-1, 1].map((sd) => <mesh key={`s${sd}`} userData={{part:"roofGlass"}} material={glassMat()} position={[(sd * W) / 2, 0.05 + H / 2, 0]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[D, H]} /></mesh>)}
+      {[-1, 1].map((sd) => <mesh key={`r${sd}`} userData={{part:"roofGlass"}} material={glassMat()} position={[0, 0.05 + H + R / 2, (sd * D) / 4]} rotation={[-Math.PI / 2 + sd * roofAng, 0, 0]}><planeGeometry args={[W, roofLen]} /></mesh>)}
       {/* 山墙（三角）玻璃 */}
-      {[-1, 1].map((sd) => <mesh key={`g${sd}`} geometry={gable} material={glassMat()} position={[(sd * W) / 2, 0.05 + H, 0]} rotation={[0, (sd * Math.PI) / 2, 0]} />)}
+      {[-1, 1].map((sd) => <mesh key={`g${sd}`} geometry={gable} userData={{part:"roofGlass"}} material={glassMat()} position={[(sd * W) / 2, 0.05 + H, 0]} rotation={[0, (sd * Math.PI) / 2, 0]} />)}
       {/* 窗棂：玻璃本身很淡，靠木框把「三格玻璃」的节奏读出来（亮背景下也能看出是温室） */}
       {[-1, 1].map((zsd) => (
         <group key={`mm${zsd}`} position={[0, 0, (zsd * D) / 2]}>
           {[-1, 1].map((xsd) => (
-            <mesh key={xsd} geometry={rbox(0.009, H, 0.008, 0.003)} material={beam} position={[(xsd * W) / 6, 0.05 + H / 2, 0]} castShadow />
+            <mesh key={xsd} geometry={rbox(0.009, H, 0.008, 0.003)} userData={{part:"frame"}} material={beam} position={[(xsd * W) / 6, 0.05 + H / 2, 0]} castShadow />
           ))}
-          <mesh geometry={rbox(W, 0.008, 0.008, 0.003)} material={beam} position={[0, 0.05 + H * 0.52, 0]} castShadow />
+          <mesh geometry={rbox(W, 0.008, 0.008, 0.003)} userData={{part:"frame"}} material={beam} position={[0, 0.05 + H * 0.52, 0]} castShadow />
         </group>
       ))}
       {[-1, 1].map((xsd) => (
-        <mesh key={`me${xsd}`} geometry={rbox(0.008, H, 0.009, 0.003)} material={beam} position={[(xsd * W) / 2, 0.05 + H / 2, 0]} castShadow />
+        <mesh key={`me${xsd}`} geometry={rbox(0.008, H, 0.009, 0.003)} userData={{part:"frame"}} material={beam} position={[(xsd * W) / 2, 0.05 + H / 2, 0]} castShadow />
       ))}
       {/* 室内：书桌、书本、绿植、暖灯 */}
       <mesh geometry={rbox(0.26, 0.02, 0.14, 0.006)} material={matte(C.wood)} position={[0.03, 0.15, 0]} castShadow />
@@ -282,12 +282,23 @@ export function GrassField({ items }: { items: { pos: THREE.Vector3; quat: THREE
 /** 云海：环绕星球腰部的绘本云团，遮住下半球（InstancedMesh，一次绘制 + 实例色） */
 export function CloudRing({ R }: { R: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const puffs = useMemo(() => Array.from({ length: 46 }, (_, i) => {
-    const a = (i / 46) * Math.PI * 2 + rand(i, 1) * 0.2;
-    const y = -R * (0.2 + rand(i, 2) * 0.22);
-    const rr = Math.sqrt(R * R - y * y) * (1.0 + rand(i, 3) * 0.08);
-    return { p: [Math.sin(a) * rr, y, Math.cos(a) * rr] as [number, number, number], s: 0.32 + rand(i, 4) * 0.34, c: i % 4 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EDE3F2" : "#FFF7EE" };
-  }), [R]);
+  const puffs = useMemo(() => {
+    const upper = Array.from({ length: 46 }, (_, i) => {
+      const a = (i / 46) * Math.PI * 2 + rand(i, 1) * 0.2;
+      const y = -R * (0.2 + rand(i, 2) * 0.22);
+      const rr = Math.sqrt(R * R - y * y) * (1.0 + rand(i, 3) * 0.08);
+      return { p: [Math.sin(a) * rr, y, Math.cos(a) * rr] as [number, number, number], s: 0.32 + rand(i, 4) * 0.34, c: i % 4 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EDE3F2" : "#FFF7EE" };
+    });
+    // Overlapping cloud rows wrap the exposed lower cap, including its pole.
+    const lower = [{depth:.46,count:34},{depth:.65,count:30},{depth:.82,count:24},{depth:.95,count:16},{depth:1.02,count:7}].flatMap((layer,row)=>Array.from({length:layer.count},(_,i)=>{
+      const seed=100+row*40+i;
+      const a=i/layer.count*Math.PI*2+row*.31;
+      const y=-R*layer.depth+(rand(seed,2)-.5)*.10;
+      const rr=layer.depth>=1 ? .22 : Math.sqrt(R*R-Math.min(R*R,y*y))*1.025;
+      return {p:[Math.sin(a)*rr,y,Math.cos(a)*rr] as [number,number,number],s:.50+rand(seed,4)*.14,c:(i+row)%5===0 ? "#EDE3F2" : (i+row)%3===0 ? "#F7DCCF" : "#FFF7EE"};
+    }));
+    return [...upper,...lower];
+  }, [R]);
   useEffect(() => {
     const m = ref.current; if (!m) return;
     const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion();
@@ -307,12 +318,12 @@ export function Observatory({ lights = 1 }: { lights?: number }) {
   return (
     <group>
       <Contact r={0.3} />
-      <mesh geometry={cylGeo(0.28, 0.3, 0.05, 22)} material={stone} position={[0, 0.025, 0]} receiveShadow castShadow />
-      <mesh geometry={cylGeo(0.2, 0.22, 0.07, 18)} material={matte("#D8CFC0")} position={[0, 0.085, 0]} castShadow />
-      <mesh geometry={dome} material={matte("#C9C2D6", { rough: 0.85 })} position={[0, 0.12, 0]} castShadow />
+      <mesh geometry={cylGeo(0.28, 0.3, 0.05, 22)} userData={{part:"wall"}} material={stone} position={[0, 0.025, 0]} receiveShadow castShadow />
+      <mesh geometry={cylGeo(0.2, 0.22, 0.07, 18)} userData={{part:"wall"}} material={matte("#D8CFC0")} position={[0, 0.085, 0]} castShadow />
+      <mesh userData={{part:"dome"}} geometry={dome} material={matte("#C9C2D6", { rough: 0.85 })} position={[0, 0.12, 0]} castShadow />
       <group position={[0, 0.19, 0]} rotation={[-0.55, 0.5, 0]}>
-        <mesh geometry={cylGeo(0.018, 0.026, 0.24, 10)} material={matte("#C9A25E", { rough: 0.6 })} position={[0, 0.1, 0]} castShadow />
-        <mesh geometry={cylGeo(0.03, 0.03, 0.02, 10)} material={matte("#8C6A3F")} position={[0, 0.21, 0]} />
+        <mesh geometry={cylGeo(0.018, 0.026, 0.24, 10)} userData={{part:"lens"}} material={matte("#C9A25E", { rough: 0.6 })} position={[0, 0.1, 0]} castShadow />
+        <mesh geometry={cylGeo(0.03, 0.03, 0.02, 10)} userData={{part:"lens"}} material={matte("#8C6A3F")} position={[0, 0.21, 0]} />
       </group>
       <mesh geometry={sphereGeo(0.016, 8, 6)} material={glowMat("#FFDFA8", 0.6 + 1.2 * lights)} position={[0.19, 0.07, 0.1]} />
       <Halo size={0.3} opacity={0.45 * lights} position={[0.19, 0.1, 0.1]} />
@@ -335,20 +346,20 @@ export function SeedShed({ lights = 1 }: { lights?: number }) {
       {/* 石板地台 */}
       <mesh geometry={rbox(0.56, 0.05, 0.42, 0.02)} material={matte(C.stone)} position={[0, 0.025, 0]} castShadow receiveShadow />
       {/* 后墙 + 侧墙（木板） */}
-      <mesh geometry={rbox(0.46, 0.26, 0.022, 0.012)} material={wood} position={[0, 0.18, -0.17]} castShadow />
-      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} material={plank} position={[-0.23, 0.18, 0]} castShadow />
-      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} material={plank} position={[0.23, 0.18, 0]} castShadow />
+      <mesh geometry={rbox(0.46, 0.26, 0.022, 0.012)} userData={{part:"wall"}} material={wood} position={[0, 0.18, -0.17]} castShadow />
+      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} userData={{part:"wall"}} material={plank} position={[-0.23, 0.18, 0]} castShadow />
+      <mesh geometry={rbox(0.022, 0.26, 0.34, 0.012)} userData={{part:"wall"}} material={plank} position={[0.23, 0.18, 0]} castShadow />
       {/* 斜顶（前低后高） */}
       <group position={[0, 0.31, 0.02]} rotation={[0.22, 0, 0]}>
-        <mesh geometry={rbox(0.56, 0.02, 0.4, 0.008)} material={matte(C.roofDeep)} castShadow />
+        <mesh geometry={rbox(0.56, 0.02, 0.4, 0.008)} userData={{part:"roof"}} material={matte(C.roofDeep)} castShadow />
       </group>
       {/* 前柱 */}
       {[-1, 1].map((sd) => (
         <mesh key={sd} geometry={rbox(0.02, 0.3, 0.02, 0.008)} material={matte(C.woodDeep)} position={[sd * 0.23, 0.19, 0.17]} castShadow />
       ))}
       {/* 架板：两层，摆种子罐 */}
-      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} material={plank} position={[0, 0.13, -0.06]} castShadow />
-      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} material={plank} position={[0, 0.21, -0.06]} castShadow />
+      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} userData={{part:"wall"}} material={plank} position={[0, 0.13, -0.06]} castShadow />
+      <mesh geometry={rbox(0.42, 0.02, 0.16, 0.008)} userData={{part:"wall"}} material={plank} position={[0, 0.21, -0.06]} castShadow />
       {pots.map(([x, y, z, potC, sproutC], i) => (
         <group key={i} position={[x, y, z]}>
           <mesh geometry={cylGeo(0.016, 0.014, 0.028, 8)} material={matte(potC)} position={[0, 0.014, 0]} />

@@ -55,5 +55,5 @@ export function publishLayout(baseRevision: number) {
 }
 /** 恢复上一已发布版本（用 published_items 快照替换草稿，revision+1） */
 export function revertLayout() {
-  return api<{ revision: number; status: string; items: LayoutItem[] }>("/api/planet-layout/revert", { method: "POST" });
+  return api<{ revision: number; status: string; items: LayoutItem[]; bedMoves?: LayoutResponse["bedMoves"]; terrain?: LayoutResponse["terrain"]; water?: number | null }>("/api/planet-layout/revert", { method: "POST" });
 }

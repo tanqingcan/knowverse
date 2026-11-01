@@ -40,9 +40,9 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
   /** H21：连续放置开关——放完一个仍保持该素材 */
   continuous?: boolean;
   onToggleContinuous?: () => void;
-  /** R01：点击槽位 = 进入替换（打开素材库），不再直接进入场景放置 */
+  /** 右键或长按槽位进入替换 */
   onEditSlot?: (i: number) => void;
-  /** R01：独立「直接放置」次要动作 */
+  /** 点击素材格直接进入放置 */
   onPlaceSlot?: (i: number) => void;
   onPick?: (k: DecorKind) => void;
   onOpenLibrary: () => void;
@@ -61,6 +61,9 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
   const barRef = useRef<HTMLDivElement>(null);
   // R02：长按 500ms 进入替换（触摸设备的主要入口）
   const lp = useRef<number | null>(null);
+  const longPressed = useRef(false);
+  const clearLongPress = () => { if (lp.current != null) { clearTimeout(lp.current); lp.current = null; } };
+  useEffect(() => () => clearLongPress(), []);
   const cbRef = useRef(onWheelSlot);
   cbRef.current = onWheelSlot;
   useEffect(() => {
@@ -88,20 +91,18 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
           return (
             <div key={`${kind ?? "empty"}-${i}`} className={`hb-slot ${active ? "is-active" : ""} ${cur ? "is-current" : ""} ${kind ? "" : "is-empty"}`}
               onContextMenu={(e) => { e.preventDefault(); onEditSlot?.(i); }}
-              onPointerDown={() => { lp.current = window.setTimeout(() => onEditSlot?.(i), 500); }}
-              onPointerUp={() => { if (lp.current) { clearTimeout(lp.current); lp.current = null; } }}
-              onPointerLeave={() => { if (lp.current) { clearTimeout(lp.current); lp.current = null; } }}>
-              <button type="button" className="hb-main" onClick={() => onEditSlot?.(i)}
-                aria-label={`第 ${i + 1} 槽 ${kind ? labelOf(kind) : "空槽"}（点击替换）`}
-                title={`替换第 ${i + 1} 槽${kind ? ` · 当前「${labelOf(kind)}」` : " · 当前空槽"}`}>
+              onPointerDown={(e) => { if (e.button !== 0) return; clearLongPress(); longPressed.current = false; lp.current = window.setTimeout(() => { longPressed.current = true; onEditSlot?.(i); }, 500); }}
+              onPointerUp={clearLongPress}
+              onPointerCancel={clearLongPress}
+              onPointerLeave={clearLongPress}>
+              <button type="button" className="hb-main" onClick={() => { if (longPressed.current) { longPressed.current = false; return; } if (kind) onPlaceSlot?.(i); else onEditSlot?.(i); }}
+                aria-label={`第 ${i + 1} 槽 ${kind ? labelOf(kind) : "空槽"}（点击放置，右键或长按替换）`}
+                title={kind ? `放置「${labelOf(kind)}」 · 右键或长按更换素材` : "空槽 · 点击选择素材"}>
                 <span className="hb-num" aria-hidden="true">{i + 1}</span>
                 {kind ? <KindThumb kind={kind} /> : <span className="hb-empty" aria-hidden="true">+</span>}
                 <span className="hb-name">{kind ? labelOf(kind) : "空"}</span>
               </button>
-              {kind && (
-                <button type="button" className="hb-place" onClick={(e) => { e.stopPropagation(); onPlaceSlot?.(i); }}
-                  aria-label={`直接放置第 ${i + 1} 槽：${labelOf(kind)}`} title={`直接放置「${labelOf(kind)}」`}>放</button>
-              )}
+
             </div>
           );
         })}

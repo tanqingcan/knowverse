@@ -12,7 +12,7 @@ describe("SphereSurface 顶点贴球面（G3）", () => {
 
   it("所有顶点半径 = PLANET_R + lift，且坐标有限", () => {
     const segW = 14, segL = 14;
-    let checked = 0;
+    let checked = 0, invalid = 0, maxError = 0;
     for (const cx of [-1.5, -0.3, 0, 1.2]) {
       for (const cz of [-1.0, 0, 1.4]) {
         for (const width of [0.7, 1.4, 2.4]) {
@@ -28,8 +28,8 @@ describe("SphereSurface 顶点贴球面（G3）", () => {
                   const dz = u * sin + v * cos;
                   const f = capFrame(cx + dx, cz + dz, 0, lift);
                   const r = Math.hypot(f.pos.x, f.pos.y, f.pos.z);
-                  expect(Number.isFinite(r)).toBe(true);
-                  expect(Math.abs(r - expectedR)).toBeLessThan(2e-3);
+                  if (!Number.isFinite(r)) invalid++;
+                  else maxError = Math.max(maxError, Math.abs(r - expectedR));
                   checked++;
                 }
               }
@@ -38,7 +38,9 @@ describe("SphereSurface 顶点贴球面（G3）", () => {
         }
       }
     }
-    expect(checked).toBeGreaterThan(20000);
+    expect(invalid).toBe(0);
+    expect(maxError).toBeLessThan(2e-3);
+    expect(checked).toBe(121500);
   });
 
   it("扩大面积时边缘顶点仍贴球面（不悬空/不入球）", () => {

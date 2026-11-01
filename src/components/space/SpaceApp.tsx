@@ -13,6 +13,7 @@ import { api, fmtDate, setTimeZone } from "@/lib/api";
 import { loadLayout, saveLayout, publishLayout, revertLayout, fromLayoutItem } from "@/lib/layout-api";
 import { DEFAULT_TEMPLATE, loadDecor, isBuildingKind, DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor";
 import { CreativeHotbar, DEFAULT_HOTBAR, HOTBAR_KEY } from "@/components/space/CreativeHotbar";
+import { ZonePanel } from "./ZonePanel";
 import { DiyWorkbench } from "@/components/space/DiyWorkbench";
 import { saveVariant, variantOf } from "@/lib/home/variants";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home/home-layout";
@@ -123,23 +124,16 @@ export function SpaceApp() {
   // V4-R14：方向键步长倍率（布局面板可改，默认 1× = 0.005R）
   const [nudgeScale, setNudgeScale] = useState(1);
   // V4-R19：花圃作为独立布局对象——位移覆盖（键=花圃索引）+ 选中索引
+  const [travelerTarget,setTravelerTarget]=useState<{x:number;z:number;sit?:boolean}|null>(null);
+  const [zonePanelKey,setZonePanelKey]=useState(0);
+  const [zoneView, setZoneView] = useState("garden");
+  const [zoneEntries, setZoneEntries] = useState<{conceptId:string;place:string;name:string}[]>([]);
   const [bedMoves, setBedMoves] = useState<Record<string, { x: number; z: number; rot?: number }>>({});
   const [bedSel, setBedSel] = useState<number | null>(null);
   // V4-R26：地形高度场与工具
   const [terrainHeights, setTerrainHeights] = useState<Float32Array | null>(null);
-  const [terrainTool, setTerrainTool] = useState<"up" | "down" | "restore" | null>(null);
-  const [terrainRadius, setTerrainRadius] = useState(0.45);
   // V4-R29：水面高度（null=无水面）。水位取负值即「盆地积水」
   const [terrainWater, setTerrainWater] = useState<number | null>(null);
-  // V4-H27：小屏默认折叠地形栏（否则手机 UI 面积远超 25%）
-  const [terrainOpen, setTerrainOpen] = useState(true);
-  // V4-H27：小屏初始折叠地形栏
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth <= 860) setTerrainOpen(false);
-  }, []);
-  // V4-R30：地形撤销/重做（一次笔触一条历史，最多 40 步）
-  const [terrainPast, setTerrainPast] = useState<Float32Array[]>([]);
-  const [terrainFuture, setTerrainFuture] = useState<Float32Array[]>([]);
   // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
   const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
@@ -149,6 +143,10 @@ export function SpaceApp() {
   const panelRef = useRef<PanelState>({ panel: null });
   // H25：退出前判断「未保存改动」——savedSnap 记录最近一次成功加载/保存时的布局快照
   const savedSnap = useRef<string>('');
+  const savedSurface = useRef<string>('');
+  const surfaceSnap = (beds: typeof bedMoves, heights: Float32Array | null, water: number | null) => JSON.stringify({beds,terrain:heights ? toSparse(heights) : null,water});
+  const surfaceRef = useRef('');
+  surfaceRef.current = surfaceSnap(bedMoves,terrainHeights,terrainWater);
   const [askExit, setAskExit] = useState(false);
   const applyLayout = (arr: DecorPlacement[]) => { decorStore.setAll(arr); savedSnap.current = JSON.stringify(arr); };
   // ── V4-R07：快捷栏配置「按账号」存储（键 kv-hotbar:<userId>），与布局存储（kv-decor / 服务器）彻底分开 ──
@@ -189,6 +187,9 @@ export function SpaceApp() {
     try { localStorage.setItem(hotbarKeyRef.current, JSON.stringify(hotbar)); } catch { /* 隐私模式等写失败忽略 */ }
   }, [hotbar]);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
+  const [batchMode,setBatchMode]=useState(false);
+  const [batchIds,setBatchIds]=useState<string[]>([]);
+  const [batchMoving,setBatchMoving]=useState(false);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
   const [layoutRev, setLayoutRev] = useState(0);
   const [layoutStatus, setLayoutStatus] = useState("draft");
@@ -210,7 +211,7 @@ export function SpaceApp() {
   // H25：isDirty 用 ref 取最新布局，避免 Esc 闭包拿到旧 decor
   const decorRef = useRef<DecorPlacement[]>(decorStore.decor);
   decorRef.current = decorStore.decor;
-  const isDirty = () => savedSnap.current !== '' && JSON.stringify(decorRef.current) !== savedSnap.current;
+  const isDirty = () => savedSnap.current !== '' && (JSON.stringify(decorRef.current) !== savedSnap.current || (savedSurface.current !== '' && surfaceRef.current !== savedSurface.current));
   const tid = useRef(0);
 
   const reload = useCallback(async () => {
@@ -246,6 +247,7 @@ export function SpaceApp() {
   // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
   useEffect(() => {
     loadLayout().then((l) => {
+      savedSurface.current = surfaceSnap(l.bedMoves ?? {}, l.terrain?.length ? fromSparse(l.terrain) : null, l.water ?? null);
         // V4-R22：加载时恢复花圃位移（键=gardenId）
         if (l.bedMoves && typeof l.bedMoves === "object") setBedMoves(l.bedMoves as Record<string, { x: number; z: number; rot?: number }>);
       // V4-R30：地形高度场还原（旧布局无此字段 → 默认平地）
@@ -300,12 +302,12 @@ export function SpaceApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const saveCreative = useCallback(async () => {
-    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null, terrainWater); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
+    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null, terrainWater); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); savedSurface.current = surfaceRef.current; setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
   }, [layoutRev, decorStore.decor, bedMoves, terrainHeights, terrainWater]);
   // H25：退出创造的三条路径（右上退出按钮 / 快捷栏退出 / Esc 最后一级）统一走这里
   const doExit = () => {
-    setAskExit(false); setCreativeOpen(false); setPlacingKind(null); setMoveId(null);
+    setAskExit(false);setBedSel(null); setBatchMode(false);setBatchIds([]);setBatchMoving(false); setCreativeOpen(false); setPlacingKind(null); setMoveId(null);
     setSelectedDecorId(null); setLibOpen(false); setSlotMode(false);
   };
   const requestExit = () => {
@@ -318,7 +320,7 @@ export function SpaceApp() {
       setLayoutMsg("保存中…");
       const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null, terrainWater);
       setLayoutRev(r.revision); setLayoutStatus(r.status);
-      savedSnap.current = JSON.stringify(decorStore.decor);
+      savedSnap.current = JSON.stringify(decorStore.decor); savedSurface.current = surfaceRef.current;
       setLayoutMsg(`已保存到服务器（revision ${r.revision}）`);
       doExit();
     } catch (e: any) {
@@ -335,6 +337,10 @@ export function SpaceApp() {
     try {
       setLayoutMsg("恢复中…");
       const r = await revertLayout();
+      if (r.bedMoves) setBedMoves(r.bedMoves);
+      if (r.terrain !== undefined) setTerrainHeights(r.terrain ? fromSparse(r.terrain) : null);
+      if (r.water !== undefined) setTerrainWater(r.water);
+      if (r.bedMoves) savedSurface.current = surfaceSnap(r.bedMoves,r.terrain?.length ? fromSparse(r.terrain) : null,r.water ?? null);
       applyLayout(r.items.map(fromLayoutItem));
       setLayoutRev(r.revision); setLayoutStatus(r.status); setSelectedDecorId(null);
       setLayoutMsg(`已恢复上一已发布版本（revision ${r.revision}）`);
@@ -347,8 +353,12 @@ export function SpaceApp() {
   // G6 初始模板 / 放弃修改
   const applyTemplate = () => {
     // H13：模板恢复「先预览」——告知将被替换成什么（件数与种类），并明确可撤销回滚
-    const summary = DEFAULT_TEMPLATE.map((d) => d.kind).join("、");
-    if (!window.confirm(`从模板开始：共 ${DEFAULT_TEMPLATE.length} 件（${summary}）。\n当前草稿会被整体替换，可用「撤销」回滚。`)) return;
+    // V4：默认模板 = 我自己的星球布局（141 件），确认文案改为「数量 + 主要种类」摘要
+    const counts = new Map<string, number>();
+    for (const d of DEFAULT_TEMPLATE) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+      .map(([k, n]) => `${k}×${n}`).join("、");
+    if (!window.confirm(`恢复我的星球布局：共 ${DEFAULT_TEMPLATE.length} 件（${top} 等）。\n当前草稿会被整体替换，可用「撤销」回滚。`)) return;
     decorStore.applyTemplate(DEFAULT_TEMPLATE);
     setSelectedDecorId(null);
     setLayoutMsg("已载入默认模板（记得保存或发布）");
@@ -356,8 +366,11 @@ export function SpaceApp() {
   const discard = () => {
     if (!window.confirm("放弃未保存的改动，恢复服务器上的布局？")) return;
     loadLayout().then((l) => {
+      savedSurface.current = surfaceSnap(l.bedMoves ?? {}, l.terrain?.length ? fromSparse(l.terrain) : null, l.water ?? null);
         // V4-R22：加载时恢复花圃位移（键=gardenId）
         if (l.bedMoves && typeof l.bedMoves === "object") setBedMoves(l.bedMoves as Record<string, { x: number; z: number; rot?: number }>);
+      setTerrainHeights(l.terrain?.length ? fromSparse(l.terrain) : null);
+      setTerrainWater(l.water ?? null);
       // H03：服务端还没有建筑实例时，恢复服务器布局也要补回初始建筑，否则会被清空成「没有房子」
       const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
       applyLayout(serverHasBuildings ? l.items.map(fromLayoutItem) : [...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
@@ -441,13 +454,14 @@ export function SpaceApp() {
         e.preventDefault();
         const it = decorStore.decor.find((d) => d.id === selectedDecorId);
         if (!it) return;
+        setBatchMoving(batchMode && batchIds.length>1 && batchIds.includes(selectedDecorId));
         setCopyFrom(null); setMoveId(selectedDecorId); setPlacingKind(it.kind);
         setLayoutMsg(`移动「${DECOR_CATALOG.find((c) => c.kind === it.kind)?.label ?? it.kind}」：点击星球表面确认；Esc 取消`);
       }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, hotbar, diyTarget, selectedDecorId, bedSel]);
+  }, [creativeOpen, hotbar, diyTarget, selectedDecorId, bedSel,batchMode,batchIds]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -461,11 +475,12 @@ export function SpaceApp() {
       // H06：复制预览中按 Esc → 取消预览，不留下幽灵对象
       if (placingKind) { setPlacingKind(null); setCopyFrom(null); return; }
       if (selectedDecorId) { setSelectedDecorId(null); return; }
+      if (bedSel != null) {setBedSel(null);return;}
       requestExit();
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, placingKind, moveId, selectedDecorId, libOpen, diyTarget]);
+  }, [creativeOpen, placingKind, moveId, selectedDecorId, libOpen, diyTarget,bedSel]);
   useEffect(() => { if (!introPlaying) return; const t = setTimeout(() => setIntroPlaying(false), 4500); return () => clearTimeout(t); }, [introPlaying]);
   const lastConv = useRef<string | null>(null);
   useEffect(() => { if (panel.panel === "chat" && panel.conversationId) lastConv.current = panel.conversationId; }, [panel]);
@@ -609,6 +624,7 @@ export function SpaceApp() {
 
   const showIntro = introPlaying && use3d;
   const ctx = { space, reload, open, panel, setPanelPatch, onGrowth, toast, reduced, wide, setWide, replay, replaying: !!override, setBusy };
+  const waterPlacement = decorStore.decor.find(d=>d.id==="landscape-pond");
   const natal = space.plants.find((p) => p.isNatal);
   const section = sectionOf(panel.panel === "settings" ? null : panel.panel);
   const sec = SECTIONS.find((s) => s.key === section)!;
@@ -618,6 +634,7 @@ export function SpaceApp() {
   const lampState = celebrating ? "celebrate" : busy ? "think" : selectedPlant ? "guide" : "idle";
 
   const onHotspot = (h: Hotspot) => {
+    if ((h as string) === "seedshed") { setZoneView("seeds");setZonePanelKey(k=>k+1); return; }
     if (h === "cottage") openPanelKey("chat");
     else if (h === "greenhouse") open({ panel: "materials" });
     else if (h === "path") open({ panel: "history" });
@@ -634,7 +651,8 @@ export function SpaceApp() {
   return (
     <Ctx.Provider value={ctx}>
       <div className={`app ${focus ? "is-focus" : "is-garden"} ${reduced ? "reduced-motion" : ""} ${showIntro ? "is-intro" : ""} ${creativeOpen ? "is-creating" : ""}`}>
-        <Sky />
+        <Sky tint={env.sky} />
+        {!!bedMoves.__fourzones && !creativeOpen && !focus && <ZonePanel onClose={()=>setZonePanelKey(0)} openKey={zonePanelKey} zone={zoneView} onZone={setZoneView} plants={space.plants} onSelect={id=>open({panel:"dossier",plantId:id})} onEntries={setZoneEntries} />}
 
         {/* 花园场景：同一个画布在两种模式间改变大小，不重新加载 */}
         <section className="world-wrap" aria-label={`${space.planet?.name ?? "我的星球"}：${space.plants.length} 株植物`}>
@@ -642,13 +660,18 @@ export function SpaceApp() {
             <GardenWorld plants={scenePlants} gardens={sceneGardens} selectedId={selectedPlant}
               onSelect={(id) => { if (performance.now() - lastPlaceAt.current < 400) return; open({ panel: "dossier", plantId: id }); }}
               onHotspot={(h) => { if (performance.now() - lastPlaceAt.current < 400) return; onHotspot(h); }}
+              travelerTarget={travelerTarget}
+              onTravelTarget={p=>{if(!creativeOpen&&!focus)setTravelerTarget(p);}}
+              onTravelArrive={()=>{if(travelerTarget?.sit)setTravelerTarget(null);}}
+              onTravelBlocked={()=>{setTravelerTarget(null);toast("这里暂时走不到，请选一块空地","info");}}
               mode={focus ? "focus" : "garden"} reduced={reduced} celebrate={celebrate} pose={pose} lampState={lampState}
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} signSub={natal ? "本命花" : ""}
-              recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} decor={decorStore.decor}
+              recenterKey={recenterKey} focusBed={bedFocus} onDragged={setDragged} hoverLabel={hoverLabel} intro={intro} zoneView={zoneView} decor={decorStore.decor}
               onDecorMove={(id, x, z) => decorStore.update(id, { x, z })}
               onDecorMoveStart={(id) => {
                 const it = decorStore.decor.find((d) => d.id === id);
                 if (!it) return;
+                setBatchMoving(batchMode && batchIds.length>1 && batchIds.includes(id));
                 setCopyFrom(null); setMoveId(id); setPlacingKind(it.kind); setSelectedDecorId(id);
                 setLayoutMsg(`移动「${DECOR_CATALOG.find((c) => c.kind === it.kind)?.label ?? it.kind}」：点击星球表面确认；Esc 取消（原位不动）`);
               }}
@@ -656,20 +679,14 @@ export function SpaceApp() {
               nudgeScale={nudgeScale}
               bedMoves={bedMoves}
               terrainHeights={terrainHeights}
-              terrainTool={terrainTool}
-              terrainRadius={terrainRadius}
               terrainWater={terrainWater}
-              onTerrainBrush={(h) => {
-                setTerrainPast((prev) => [...prev.slice(-39), terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
-                setTerrainFuture([]);
-                setTerrainHeights(h);
-                setLayoutMsg("地形已修改（可撤销，尚未保存）");
-              }}
-              selectedBedIndex={bedSel}
+              onBedMoveStart={i=>{setCopyFrom(null);setPlacingKind(null);setBatchMoving(false);setMoveId(`bed:${i}`);setLayoutMsg("点击星球表面放置整块花圃；Esc取消，花朵随行");}}
+              onBedDeselect={()=>{setBedSel(null);if(moveId?.startsWith("bed:")){setMoveId(null);setPlacingKind(null);}}}
+              selectedBedIndex={creativeOpen ? bedSel : null}
               bedSelPos={bedSel != null && bedLayoutNow[bedSel] ? { x: bedLayoutNow[bedSel].x, z: bedLayoutNow[bedSel].z } : null}
               onBedNudge={(i, cap) => { const gid = space?.gardens?.[i]?.id ?? String(i); setBedMoves((prev) => ({ ...prev, [gid]: { x: cap.x, z: cap.z, rot: prev[gid]?.rot ?? 0 } })); setLayoutMsg("花圃已微调（尚未保存）"); }}
               bedMoving={moveId?.startsWith("bed:") ?? false}
-              onSelectBed={(i) => { setBedSel(i); setSelectedDecorId(null); const nm = space?.gardens?.[i]?.name ?? `花圃 ${i + 1}`; setLayoutMsg(`已选中花圃「${nm}」——按 M 或点操作条上的「移动」平移整圃（植物随行）`); }}
+              onSelectBed={(i) => { setBatchIds([]);setBatchMode(false); setBedSel(i); setSelectedDecorId(null); const nm = space?.gardens?.[i]?.name ?? `花圃 ${i + 1}`; setLayoutMsg(`已选中花圃「${nm}」——按 M 或点操作条上的「移动」平移整圃（植物随行）`); }}
               placingKind={placingKind}
               onPlace={(x, z) => {
                 // V4-R09/R11：移动确认——只在这里写一次 update（预览期间不写 store，不产生多步 undo）
@@ -689,6 +706,13 @@ export function SpaceApp() {
                   setMoveId(null); setPlacingKind(null);
                   setLayoutMsg("花圃已平移，植物/土壤一起移动（尚未保存）");
                   return;
+                }
+                if (moveId && batchMoving) {
+                  const anchor=decorStore.decor.find(d=>d.id===moveId);
+                  if(!anchor)return;
+                  const dx=x-anchor.x,dz=z-anchor.z;
+                  if(decorStore.decor.some(d=>batchIds.includes(d.id)&&(Math.abs(d.x+dx)>6||Math.abs(d.z+dz)>6))){setLayoutMsg("整组将超出可编辑范围，请换一个落点");return;}
+                  decorStore.translateMany(batchIds,dx,dz);setBatchMoving(false);setMoveId(null);setPlacingKind(null);lastPlaceAt.current=performance.now();setLayoutMsg(`已移动 ${batchIds.length} 个对象（可一次撤销）`);return;
                 }
                 if (moveId) {
                   decorStore.move(moveId, x, z); // V4-R18：强制记一步历史（可撤销）
@@ -716,9 +740,10 @@ export function SpaceApp() {
                   if (!continuous) { setPlacingKind(null); setSelectedDecorId(id); }
                 }
               }}
-              onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); setBedSel(null); }}
+              onDecorSelect={(id) => { if(!creativeOpen)return; if(id.startsWith("knowledge-")){const cid=id.split("-").slice(2).join("-");const p=space.plants.find(p=>p.conceptId===cid);if(p) open({panel:"dossier",plantId:p.id});return;} if(batchMode){const next=batchIds.includes(id)?batchIds.filter(k=>k!==id):[...batchIds,id];setBatchIds(next);setSelectedDecorId(next.at(-1)??null);} else setSelectedDecorId(id); setBedSel(null); }}
+              selectedDecorIds={batchMode ? batchIds : undefined}
               selectedDecorId={selectedDecorId}
-              paused={creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
+              paused={!!bedMoves.__fourzones || creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
               env={env}
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
@@ -731,9 +756,9 @@ export function SpaceApp() {
               placingPreview={(() => {
                 if (moveId) {
                   const it = decorStore.decor.find((d) => d.id === moveId);
-                  if (it) return { kind: it.kind, rot: it.rot, scale: it.scale, color: it.color, stage: it.stage };
+                  if (it) return { ...it };
                 }
-                if (copyFrom) return { kind: copyFrom.kind, rot: copyFrom.rot, scale: copyFrom.scale, color: copyFrom.color, stage: copyFrom.stage };
+                if (copyFrom) return { ...copyFrom };
                 return placingKind ? { kind: placingKind, rot: 0, scale: 1 } : null;
               })()}
               onIntroDone={() => setIntroPlaying(false)} onFail={() => setRender3dFailed(true)} />
@@ -764,53 +789,6 @@ export function SpaceApp() {
         {/* H16：进入创造后保留「小型退出入口」——HUD 主体（今日建议/业务工具栏）隐藏，只留一个退出创造按钮 */}
         {creativeOpen && !focus && (
           <>
-          {/* V4-R26：地形工具栏 */}
-          <button type="button" className="terrain-toggle" aria-expanded={terrainOpen}
-            onClick={() => setTerrainOpen((v) => !v)}>地形 {terrainOpen ? "▾" : "▸"}</button>
-          <div className={`terrain-bar ${terrainOpen ? "" : "is-collapsed"}`} role="toolbar" aria-label="地形工具">
-            <span className="terrain-label">地形</span>
-            {([["up", "抬高"], ["down", "降低"], ["restore", "平滑恢复"]] as const).map(([k, t]) => (
-              <button key={k} type="button" aria-pressed={terrainTool === k}
-                className={`terrain-tool ${terrainTool === k ? "is-on" : ""}`}
-                onClick={() => setTerrainTool((c) => (c === k ? null : k))}>{t}</button>
-            ))}
-            <label className="terrain-radius">笔刷
-              <input type="range" min={0.15} max={1.2} step={0.05} value={terrainRadius}
-                onChange={(e) => setTerrainRadius(Number(e.target.value))} aria-label="笔刷半径" />
-              <b>{terrainRadius.toFixed(2)}</b>
-            </label>
-            <button type="button" className="terrain-undo" disabled={terrainPast.length === 0}
-              onClick={() => {
-                setTerrainPast((prev) => {
-                  if (prev.length === 0) return prev;
-                  const last = prev[prev.length - 1];
-                  setTerrainFuture((f) => [...f, terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
-                  setTerrainHeights(last);
-                  return prev.slice(0, -1);
-                });
-                setLayoutMsg("地形已撤销一步");
-              }}>撤销</button>
-            <button type="button" className="terrain-redo" disabled={terrainFuture.length === 0}
-              onClick={() => {
-                setTerrainFuture((prev) => {
-                  if (prev.length === 0) return prev;
-                  const last = prev[prev.length - 1];
-                  setTerrainPast((p2) => [...p2, terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
-                  setTerrainHeights(last);
-                  return prev.slice(0, -1);
-                });
-                setLayoutMsg("地形已重做一步");
-              }}>重做</button>
-            <label className="terrain-water">水面
-              <input type="checkbox" checked={terrainWater != null}
-                onChange={(e) => setTerrainWater(e.target.checked ? -0.12 : null)} aria-label="添加水面" />
-              {terrainWater != null && (
-                <input type="range" min={-0.3} max={0.1} step={0.01} value={terrainWater}
-                  onChange={(ev) => setTerrainWater(Number(ev.target.value))} aria-label="水位高度" />
-              )}
-            </label>
-            <button type="button" className="terrain-reset" onClick={() => { setTerrainHeights(null); setTerrainPast([]); setTerrainFuture([]); }}>全部恢复平地</button>
-          </div>
           {/* V4-R18：装饰撤销/重做按钮——此前创造模式下只有地形栏的撤销，装饰只能靠键盘 */}
           <div className="decor-history" role="group" aria-label="装饰撤销重做">
             <button type="button" className="dh-btn" disabled={!decorStore.canUndo} onClick={undo} title="撤销装饰改动（Ctrl+Z）" aria-label="撤销装饰改动">撤销</button>
@@ -819,6 +797,10 @@ export function SpaceApp() {
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
           </>
         )}
+        {creativeOpen && !focus && <div className="batch-controls" role="group" aria-label="批量布置">
+          <button aria-pressed={batchMode} onClick={()=>{setBatchMode(v=>!v);setBatchIds([]);setSelectedDecorId(null);setBatchMoving(false);setMoveId(null);setPlacingKind(null);}}>批量选择{batchMode ? " · 开" : ""}</button>
+          {batchMode && <><span>已选 {batchIds.length} 个</span><button disabled={batchIds.length<2} onClick={()=>{const id=batchIds.at(-1);const d=decorStore.decor.find(d=>d.id===id);if(d){setSelectedDecorId(d.id);setBatchMoving(true);setMoveId(d.id);setPlacingKind(d.kind);setLayoutMsg("点击地面移动整组，最后选中对象为落点；Esc取消");}}}>移动所选</button><button disabled={!batchIds.length} onClick={()=>{decorStore.removeMany(batchIds);setBatchIds([]);setSelectedDecorId(null);setMoveId(null);setPlacingKind(null);setBatchMoving(false);setLayoutMsg("已删除所选对象（可撤销）");}}>删除所选</button><button onClick={()=>{setBatchIds([]);setSelectedDecorId(null);setMoveId(null);setPlacingKind(null);setBatchMoving(false);}}>清空选择</button></>}
+        </div>}
         {/* H28：DIY 工作台——独立覆盖层，主场景（星球/镜头/选中）不卸载不失位 */}
         {diyTarget && (() => {
           const it = decorStore.decor.find((d) => d.id === diyTarget);
@@ -855,7 +837,7 @@ export function SpaceApp() {
           </div>
         )}
         {!focus && !creativeOpen && (
-          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} creativeOpen={creativeOpen} onToggleCreative={() => { setCreativeOpen(!creativeOpen); setPlacingKind(null); }} />
+          <GardenHUD narrow={narrow} dragged={dragged} onRecenter={() => setRecenterKey((k) => k + 1)} onLocateBed={(x, z) => setBedFocus({ x, z, key: Date.now() })} selectedPlant={selectedPlant} replayLabel={replayLabel} hidden={showIntro} creativeOpen={creativeOpen} onToggleCreative={() => { setTravelerTarget(null);setCreativeOpen(!creativeOpen); setPlacingKind(null); }} />
         )}
         {/* H16：顶栏/主内容区在创造模式下隐藏（视觉只留星球 + 底部快捷栏） */}
         {creativeOpen && !focus && (
@@ -908,6 +890,7 @@ export function SpaceApp() {
         {/* V4-R05：布局面板——服务器/模板/环境密度独立于素材库 */}
         <LayoutMenu open={creativeOpen && layoutOpen && !focus} onClose={() => setLayoutOpen(false)}
           nudgeScale={nudgeScale} onNudgeScale={setNudgeScale}
+          onGroupDiy={kind=>{const d=decorStore.decor.find(d=>d.kind===kind);if(d){setLayoutOpen(false);setDiyTarget(d.id);}}}
           groupDensities={{
             grass: decorStore.decor.find((d) => d.kind === "grassGroup")?.scale ?? 1,
             blooms: decorStore.decor.find((d) => d.kind === "wildflowerGroup")?.scale ?? 1,

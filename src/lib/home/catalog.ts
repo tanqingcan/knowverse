@@ -72,7 +72,7 @@ export const DECOR_CATEGORY: Record<DecorKind, AssetCategory> = {
   flower2: "flora",
   flower3: "flora",
   rock: "stone",
-  rose: "flora",
+  rose: "flora", lotus: "flora",
   soil: "ground",
   road: "path",
   // 建筑类（H02）：原固定建筑改为可编辑实例后也进装饰目录

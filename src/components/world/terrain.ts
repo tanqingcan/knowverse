@@ -14,7 +14,7 @@ function toPx(x: number, z: number) {
 }
 const U = S / (2 * PLANET_R); // 每单位多少像素（极点附近近似）
 
-export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: number; z: number; yaw: number }>) {
+export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: number; z: number; yaw: number }>, manualPaths = false) {
   // H09：建筑地表印迹按实例位置绘制（poses 由布局推导），不再固定用 SPOTS，避免搬走后留下旧印
   // V4-H13：已有布局(poses 存在)但该建筑已被删除 → 返回 null 不画印迹（避免印迹回落 SPOTS 原位）
   const at = (k: string, dx: number, dz: number): { x: number; z: number } | null => {
@@ -71,7 +71,7 @@ export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: numb
     const o = at("observatory", SPOTS.observatory.x, SPOTS.observatory.z);
     if (c) ring(c.x, c.z, 0.55, "#D8CBA8", 0.55);
     if (gh) ring(gh.x, gh.z, 0.52, "#D8CBA8", 0.5);
-    if (b) ring(b.x, b.z, 0.22, "#D8CBA8", 0.5);
+    if (b) ring(b.x, b.z, 0.14, "#D8CBA8", 0.25);
     if (o) ring(o.x, o.z, 0.44, "#D8CBA8", 0.5);
   }
 
@@ -88,9 +88,11 @@ export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: numb
       g.beginPath(); g.arc(p.px + (r() - 0.5) * width * U, p.py + (r() - 0.5) * width * U, 1 + r() * 1.5, 0, Math.PI * 2); g.fill();
     }
   };
+  if (!manualPaths) {
   drawPath(MEMORY_PATH, 0.15);
   drawPath(GREEN_PATH, 0.11);
   drawPath(STAR_PATH, 0.1);
+  }
   g.globalAlpha = 1;
 
   const t = new THREE.CanvasTexture(cv);
@@ -99,17 +101,35 @@ export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: numb
 }
 
 /** 球体，UV 改为俯视投影（与纹理一致） */
-export function planetGeometry(heights?: Float32Array | null) {
+export function planetGeometry(heights?: Float32Array | null, zoned = false, pond?: {x:number;z:number;radius?:number;depth?:number}) {
   const geo = new THREE.SphereGeometry(PLANET_R, 160, 120);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   const uv = geo.attributes.uv as THREE.BufferAttribute;
+  const colors: number[] = [];
   let displaced = false;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     uv.setXY(i, x / (2 * PLANET_R) + 0.5, 0.5 - z / (2 * PLANET_R));
+    const tint = new THREE.Color(zoned && y < -0.4 ? (y < -2.1 ? "#b2b5c9" : "#9895ab") : "#ffffff");
+    colors.push(tint.r, tint.g, tint.b);
     // V4-R26/R27：有高度场则按局部采样把顶点沿径向推出/压入（真实地形起伏，不是贴图）
-    if (heights) {
-      const h = terrainHeightAt(heights, x, z);
+    if (heights || zoned || pond) {
+      const rad = Math.hypot(x, y, z) || 1;
+      const polar = Math.acos(Math.max(-1, Math.min(1, y / rad)));
+      const az = Math.atan2(x, z);
+      const cx = polar * PLANET_R * Math.sin(az), cz = polar * PLANET_R * Math.cos(az);
+      let h = heights && Math.abs(cx) <= 3 && Math.abs(cz) <= 3 ? terrainHeightAt(heights, cx, cz) : 0;
+      if (pond) {
+        const d=Math.hypot(cx-pond.x,cz-pond.z);
+        const basinRadius=(pond.radius ?? 1.18)*1.36;
+        if(d<basinRadius)h-=(pond.depth ?? .32)*Math.pow(Math.cos(d/basinRadius*Math.PI/2),2);
+      }
+      if (zoned && y / rad < -0.12) {
+        // 下半球未知山脊：连续径向地形，而非放置在云上的独立锥体。
+        const south = Math.min(1, (-y / rad - 0.12) / 0.55);
+        const ridge = Math.pow(Math.abs(Math.sin(az * 5 + polar * 3.5)), 3);
+        h += south * (0.12 + 0.65 * ridge + 0.22 * Math.pow(Math.sin(polar * 7 + az * 2), 2));
+      }
       if (h !== 0) {
         const r = Math.hypot(x, y, z) || 1;
         const k = (r + h) / r;
@@ -118,6 +138,17 @@ export function planetGeometry(heights?: Float32Array | null) {
       }
     }
   }
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  if (zoned && geo.index) {
+    const upper: number[] = [], lower: number[] = [];
+    for(let t=0;t<geo.index.count;t+=3){
+      const a=geo.index.getX(t), b=geo.index.getX(t+1), c=geo.index.getX(t+2);
+      (pos.getY(a)+pos.getY(b)+pos.getY(c)<-1.2 ? lower : upper).push(a,b,c);
+    }
+    geo.setIndex([...upper,...lower]); geo.clearGroups();
+    geo.addGroup(0,upper.length,0);geo.addGroup(upper.length,lower.length,1);
+  }
+  if (!zoned && geo.index) { geo.clearGroups(); geo.addGroup(0,geo.index.count,0); }
   uv.needsUpdate = true;
   if (displaced) {
     pos.needsUpdate = true;

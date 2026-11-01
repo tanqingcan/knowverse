@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { C, matte, glowMat, sphereGeo, cylGeo, torusGeo, rbox, surfaceFrame } from "./geo";
 import { Halo } from "./Props3D";
 
-export type Pose = "idle" | "read" | "tend" | "think" | "celebrate";
+export type Pose = "idle" | "read" | "tend" | "think" | "celebrate" | "walk" | "stand";
 
 const COAT = "#8FA3C2", COAT_D = "#7186A8", SKIN = "#F4D7C3", HAIR = "#4E3F5E", HAT = "#DDB56D", SCARF = "#E4A1AA", BOOT = "#5B4A63";
 
@@ -23,6 +23,7 @@ export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
   const tail = useRef<THREE.Group>(null);
   const can = useRef<THREE.Group>(null);
   const dots = useRef<THREE.Group>(null);
+  const legRefs=useRef<(THREE.Group|null)[]>([]);
   const sitting = pose === "idle" || pose === "read";
   const cur = useRef({ lift: 0, lean: 0, hd: 0, al: 0, ar: 0, hop: 0 });
 
@@ -31,6 +32,8 @@ export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
     const k = reduced ? 1 : Math.min(1, dt * 5);
     // 目标姿态
     const target = {
+      walk: {lean:.07,hd:.04,al:.15,ar:.15},
+      stand: {lean:0,hd:.04,al:.2,ar:.2},
       idle: { lean: 0, hd: 0.05, al: 0.25, ar: 0.25 },
       read: { lean: 0.08, hd: 0.38, al: 1.15, ar: 1.15 },
       tend: { lean: 0.32, hd: 0.3, al: 0.35, ar: 1.05 },
@@ -41,7 +44,7 @@ export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
     c.lean += (target.lean - c.lean) * k; c.hd += (target.hd - c.hd) * k; c.al += (target.al - c.al) * k; c.ar += (target.ar - c.ar) * k;
     const breathe = reduced ? 0 : Math.sin(t * 1.6) * 0.004;
     const hop = pose === "celebrate" && !reduced ? Math.max(0, Math.sin(t * 6)) * 0.03 : 0;
-    if (root.current) { root.current.position.y = (sitting ? 0.03 : 0) + breathe + hop; root.current.rotation.x = c.lean; }
+    if (root.current) { root.current.position.y = (sitting ? 0.03 : breathe) + hop; root.current.rotation.x = c.lean; }
     if (head.current) {
       head.current.rotation.x = c.hd + (pose === "think" && !reduced ? Math.sin(t * 0.9) * 0.05 : 0);
       head.current.rotation.z = pose === "think" ? 0.18 : pose === "idle" && !reduced ? Math.sin(t * 0.5) * 0.06 : 0;
@@ -49,14 +52,25 @@ export function Traveler({ pose, reduced }: { pose: Pose; reduced?: boolean }) {
     if (armL.current) armL.current.rotation.x = -c.al + (pose === "celebrate" && !reduced ? Math.sin(t * 6) * 0.15 : 0);
     if (armR.current) { armR.current.rotation.x = -c.ar; armR.current.rotation.z = pose === "think" ? 0.5 : 0; }
     if (tail.current && !reduced) { tail.current.rotation.z = Math.sin(t * 2.2) * 0.25 + 0.15; tail.current.rotation.x = 0.2 + Math.sin(t * 1.7) * 0.12; }
+    const stride=pose==="walk"&&!reduced?Math.sin(t*8)*.45:0;
+    legRefs.current.forEach((leg,i)=>{if(leg)leg.rotation.x=(i===0?1:-1)*stride;});
+    if(pose==="walk"){if(armL.current)armL.current.rotation.x=-stride*.6;if(armR.current)armR.current.rotation.x=stride*.6;}
     if (can.current) can.current.rotation.x = pose === "tend" && !reduced ? 0.5 + Math.sin(t * 1.4) * 0.12 : 0.5;
     if (dots.current) dots.current.children.forEach((d, i) => { d.scale.setScalar(reduced ? 1 : 0.6 + 0.4 * Math.max(0, Math.sin(t * 3 - i * 0.7))); });
   });
 
-  const legs = useMemo(() => [-1, 1].map((sd) => (
-    <group key={sd} position={[sd * 0.022, sitting ? 0.068 : 0.05, sitting ? 0.008 : 0]} rotation={[sitting ? -1.5 : 0, 0, 0]}>
-      <mesh geometry={cylGeo(0.012, 0.013, 0.05, 8)} material={matte(COAT_D)} position={[0, -0.025, 0]} castShadow />
-      <mesh geometry={sphereGeo(0.017, 10, 8)} material={matte(BOOT)} position={[0, -0.05, 0.008]} scale={[1, 0.75, 1.35]} castShadow />
+  const legs = useMemo(() => [-1, 1].map((sd) => sitting ? (
+    <group key={sd} position={[sd * .022,0,0]}>
+      {/* Horizontal thigh, bent knee, hanging shin; feet remain in front of the seat. */}
+      <mesh geometry={cylGeo(.012,.013,.047,8)} material={matte(COAT_D)} position={[0,.068,.0315]} rotation={[Math.PI/2,0,0]} castShadow/>
+      <mesh geometry={sphereGeo(.013,10,8)} material={matte(COAT_D)} position={[0,.068,.055]} castShadow/>
+      <mesh geometry={cylGeo(.011,.012,.047,8)} material={matte(COAT_D)} position={[0,.043,.058]} castShadow/>
+      <mesh geometry={sphereGeo(.017,10,8)} material={matte(BOOT)} position={[0,.012,.073]} scale={[1,.75,1.35]} castShadow/>
+    </group>
+  ) : (
+    <group key={sd} ref={o=>{legRefs.current[sd<0?0:1]=o;}} position={[sd*.022,.05,0]}>
+      <mesh geometry={cylGeo(.012,.013,.05,8)} material={matte(COAT_D)} position={[0,-.025,0]} castShadow/>
+      <mesh geometry={sphereGeo(.017,10,8)} material={matte(BOOT)} position={[0,-.05,.008]} scale={[1,.75,1.35]} castShadow/>
     </group>
   )), [sitting]);
 

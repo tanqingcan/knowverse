@@ -727,5 +727,13 @@ export const planetLayoutItems = pgTable("planet_layout_items", {
   createdAt: createdAt(),
 }, (t) => [
   index("planet_layout_items_layout_idx").on(t.layoutId, t.sortOrder),
-  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road','cottage','greenhouse','observatory','seedshed','arch','pond','sign','grassGroup','wildflowerGroup')`),
+  check("planet_layout_items_kind_ck", sql`${t.kind} in ('lamp','bush','tree','pot','stone','fence','chair','flower','flower2','flower3','rock','rose','soil','road','cottage','greenhouse','observatory','seedshed','arch','pond','sign','lotus','grassGroup','wildflowerGroup')`),
 ]);
+
+/** 四区知识归属：种子待确认、收藏玫瑰和水生展示，不改变学习证据。 */
+export const gardenKnowledgePlaces = pgTable("garden_knowledge_places", {
+ userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+ conceptId: uuid("concept_id").notNull().references(() => concepts.id, { onDelete: "cascade" }),
+ place: text("place").notNull(),
+ createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.userId,t.conceptId,t.place]}), check("garden_knowledge_places_place_check",sql`${t.place} in ('seed','rose','aquatic')`)]);

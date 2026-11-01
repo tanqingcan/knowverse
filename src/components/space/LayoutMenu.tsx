@@ -5,12 +5,13 @@
  */
 import React from "react";
 
-export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, env, onEnv, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
+export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensities, onGroupDensity, onGroupDiy, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, env, onEnv, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
   open: boolean;
   onClose: () => void;
   /** V4-R14：方向键步长倍率（0.5×/1×/2×），并显示单位 */
   nudgeScale?: number;
   onNudgeScale?: (v: number) => void;
+  onGroupDiy?: (kind: "grassGroup" | "wildflowerGroup") => void;
   groupDensities?: { grass: number; blooms: number };
   onGroupDensity?: (kind: "grassGroup" | "wildflowerGroup", v: number) => void;
   revision?: number; status?: string; message?: string | null;
@@ -72,6 +73,8 @@ export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensi
                   </label>
                 </>
               )}
+              <button onClick={()=>onGroupDiy?.("grassGroup")}>草地 DIY 配色</button>
+              <button onClick={()=>onGroupDiy?.("wildflowerGroup")}>野花 DIY 配色</button>
               <label className="cp-prop">草地密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.grass} onChange={(e) => onGroupDensity?.("grassGroup", +e.target.value)} /><span>{groupDensities.grass.toFixed(1)}</span></label>
               <label className="cp-prop">野花密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.blooms} onChange={(e) => onGroupDensity?.("wildflowerGroup", +e.target.value)} /><span>{groupDensities.blooms.toFixed(1)}</span></label>
             </section>

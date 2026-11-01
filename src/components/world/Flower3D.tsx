@@ -223,7 +223,7 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
   const bend = (rand(seed, 1) - 0.5) * 0.05;
   const yaw = (rand(seed, 2) - 0.5) * 1.1; // 花朵朝向镜头附近，保证最佳观赏面
   const vary = 0.92 + rand(seed, 4) * 0.16;
-  const H = HEIGHT[species] ?? 0.3;
+  const H = (HEIGHT[species] ?? 0.3) * (species === "rose" ? .62 : 1);
   const sel = useRef(0);
 
   useFrame((st, dt) => {
@@ -273,7 +273,7 @@ export function Flower3D({ species, color, stage, open = 1, seed = 1, selected, 
       const n = stage === "leaf" ? 3 : 5;
       for (let i = 0; i < n; i++) {
         const t = 0.25 + (i / n) * 0.55;
-        leaves.push({ kind: species === "sunflower" ? "heart" : "almond", len: species === "sunflower" ? 0.085 : 0.058, w: species === "sunflower" ? 0.068 : 0.036,
+        leaves.push({ kind: species === "sunflower" ? "heart" : "almond", len: species === "sunflower" ? 0.085 : 0.043, w: species === "sunflower" ? 0.068 : 0.029,
           at: stemCurvePoint(h, bend, t).toArray(), yaw: i * 2.4, tilt: 1.05, bend: 0.3 });
       }
     }

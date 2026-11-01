@@ -78,6 +78,7 @@ export function homePoses(decor: { kind: string; x: number; z: number; rot: numb
   }
   // 星灯停靠点跟着书房走：保持原来的相对偏移（门口前），并随书房朝向旋转
   const c = out.cottage;
+  if (!c) return out; // 用户移除书屋时不再访问空锚点，也不补回默认书屋。
   const baseDX = SPOTS.lampSpot.x - SPOTS.cottage.x;
   const baseDZ = SPOTS.lampSpot.z - SPOTS.cottage.z;
   const dyaw = ((c.yaw - SPOTS.cottage.yaw) * Math.PI) / 180;

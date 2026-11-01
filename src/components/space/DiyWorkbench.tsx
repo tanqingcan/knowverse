@@ -12,6 +12,7 @@ import { DECOR_CATALOG, type DecorKind, type DecorPlacement } from "@/lib/decor"
 /** H29：各类对象的可改色分区（花：花瓣/花心/叶片/茎；房屋：屋顶/墙面/门窗/饰边） */
 export const DIY_PARTS: Record<string, { key: string; label: string; def: string }[]> = {
   // H29：只列「模型里真实存在的独立部位」——玫瑰/鸢尾/百合没有独立花心网格，就不假装有
+  lotus: [{key:"petal",label:"花瓣",def:"#efb5ca"},{key:"leaf",label:"荷叶",def:"#588e76"},{key:"core",label:"莲蓬与花蕊",def:"#e5cc79"},{key:"stem",label:"花茎",def:"#6b9a74"}],
   rose: [
     { key: "petal", label: "花瓣", def: "#C56E6E" },
     { key: "leaf", label: "叶片", def: "#8DAF78" },
@@ -74,11 +75,13 @@ function Preview({ kind, stage, parts, spin }: { kind: string; stage?: string; p
       <directionalLight position={[2.5, 4, 2]} intensity={2.2} />
       <directionalLight position={[-2, 1.5, -1.5]} intensity={0.7} color="#C9B8E8" />
       <group ref={ref} rotation={[0, spin, 0]} position={[0, -0.35, 0]}>
-        <DecorItem kind={kind as DecorKind} seed={7} lights={1} stage={stage} parts={parts} tint={parts[PRIMARY_PART[kind] ?? ""] ?? undefined} />
+        {kind === "pond" ? <mesh rotation={[-Math.PI/2,0,0]}><circleGeometry args={[.48,48]}/><meshPhysicalMaterial color={parts.primary ?? "#5fb6d9"} side={THREE.DoubleSide} roughness={.15}/></mesh> : <DecorItem kind={kind as DecorKind} seed={7} lights={1} stage={stage} parts={parts} tint={parts[PRIMARY_PART[kind] ?? ""] ?? undefined} />}
       </group>
     </Canvas>
   );
 }
+
+const GENERIC_COLORS: Record<string,string> = {tree:"#ebb2bb",bush:"#8daf78",lamp:"#51475d",chair:"#b5835c",fence:"#b5835c",stone:"#c9c2b6",rock:"#c9c2b6",soil:"#a07c63",road:"#c9c2b6",pond:"#5fb6d9",lotus:"#de8fac",arch:"#b5835c",sign:"#b5835c",grassGroup:"#9db983",wildflowerGroup:"#f4d9df",pot:"#c88a6e"};
 
 export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   item: DecorPlacement;
@@ -87,7 +90,7 @@ export function DiyWorkbench({ item, onApply, onCancel, onSaveVariant }: {
   /** H32：把当前配色存成「我的素材变体」，之后新放置该素材时复用（不改同类已有对象） */
   onSaveVariant?: (parts: Record<string, string>) => void;
 }) {
-  const partDefs = useMemo(() => DIY_PARTS[item.kind] ?? [{ key: "primary", label: "整体", def: item.color ?? "#C56E6E" }], [item.kind, item.color]);
+  const partDefs = useMemo(() => DIY_PARTS[item.kind] ?? [{ key: "primary", label: item.id === "landscape-pond" ? "水色" : "整体", def: item.color ?? GENERIC_COLORS[item.kind] ?? "#C56E6E" }], [item.kind, item.color]);
   const [parts, setParts] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     // H51：与服务端一致，颜色统一小写，避免刷新前后仅大小写不同被误判为不一致

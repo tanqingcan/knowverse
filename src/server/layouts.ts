@@ -11,7 +11,7 @@ import type { CurrentUser } from "./auth";
 import { AppError, notFound } from "./errors";
 
 export type LayoutItemInput = {
-  kind: string; x: number; z: number; rot?: number; scale?: number;
+  instanceId?: string | null; kind: string; x: number; z: number; rot?: number; scale?: number;
   width?: number | null; length?: number | null; color?: string | null; stage?: string | null;
 };
 
@@ -20,7 +20,7 @@ export type LayoutItemInput = {
 const VALID_KINDS = new Set([
   "lamp", "bush", "tree", "pot", "stone", "fence", "chair", "flower", "flower2", "flower3", "rock", "rose", "soil", "road",
   "cottage", "greenhouse", "observatory", "seedshed", "arch", "pond", "sign",
-  "grassGroup", "wildflowerGroup",
+  "lotus", "grassGroup", "wildflowerGroup",
 ]);
 const MAX_ITEMS = 300;
 
@@ -115,16 +115,16 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
 export async function publishLayout(user: CurrentUser, baseRevision: number) {
   const planetId = await findPlanet(user);
   return withTx(async (c) => {
-    const r = await c.query(`SELECT id, revision FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
+    const r = await c.query(`SELECT id, revision, bed_moves, terrain, water FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
     if (!r.rowCount) throw notFound("布局");
     if (baseRevision !== r.rows[0].revision) throw new AppError("conflict", "布局已被其他窗口修改，请重载", 409);
     const items = await c.query(
-      `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
+      `SELECT instance_id AS "instanceId", kind, x, z, rot, scale, width, length, color, stage, parts
        FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [r.rows[0].id]);
     // 发布时把当前布局固化成快照：参观只读与「恢复上一已发布版本」都用它
     await c.query(
       `UPDATE planet_layouts SET status = 'published', published_revision = revision, published_items = $2::jsonb, updated_at = now() WHERE id = $1`,
-      [r.rows[0].id, JSON.stringify(items.rows)]);
+      [r.rows[0].id, JSON.stringify({ version: 2, items: items.rows, bedMoves: r.rows[0].bed_moves ?? {}, terrain: r.rows[0].terrain ?? null, water: r.rows[0].water ?? null })]);
     return { planetId, revision: r.rows[0].revision as number, status: "published" as const };
   });
 }
@@ -135,18 +135,24 @@ export async function revertToPublished(user: CurrentUser) {
   return withTx(async (c) => {
     const r = await c.query(`SELECT id, revision, published_items AS "publishedItems" FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
     if (!r.rowCount) throw notFound("布局");
-    const snap = r.rows[0].publishedItems as LayoutItemInput[] | null;
-    if (!snap) throw notFound("已发布版本");
+    const raw = r.rows[0].publishedItems as LayoutItemInput[] | { items: LayoutItemInput[]; bedMoves: BedMoves; terrain: TerrainPoints | null; water: number | null } | null;
+    if (!raw) throw notFound("已发布版本");
+    const snap = Array.isArray(raw) ? raw : raw.items;
+    // Legacy array snapshots did not contain terrain/bed transforms: preserve those fields.
+    if (!Array.isArray(raw)) {
+      await c.query(`UPDATE planet_layouts SET bed_moves = $2, terrain = $3, water = $4 WHERE id = $1`,
+        [r.rows[0].id, JSON.stringify(raw.bedMoves), raw.terrain == null ? null : JSON.stringify(raw.terrain), raw.water]);
+    }
     const nextRev = (r.rows[0].revision as number) + 1;
     await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', updated_at = now() WHERE id = $1`, [r.rows[0].id, nextRev]);
     await c.query(`DELETE FROM planet_layout_items WHERE layout_id = $1`, [r.rows[0].id]);
     let i = 0;
     for (const it of snap) {
       await c.query(
-        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [r.rows[0].id, it.kind, it.x, it.z, it.rot ?? 0, it.scale ?? 1, it.width ?? null, it.length ?? null, it.color ?? null, it.stage ?? null, (it as { parts?: Record<string, string> | null }).parts ?? null, i++]);
+        `INSERT INTO planet_layout_items (layout_id, instance_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [r.rows[0].id, it.instanceId ?? null, it.kind, it.x, it.z, it.rot ?? 0, it.scale ?? 1, it.width ?? null, it.length ?? null, it.color ?? null, it.stage ?? null, (it as { parts?: Record<string, string> | null }).parts ?? null, i++]);
     }
-    return { planetId, revision: nextRev, status: "draft" as const, items: snap };
+    return { planetId, revision: nextRev, status: "draft" as const, items: snap, ...(Array.isArray(raw) ? {} : { bedMoves: raw.bedMoves, terrain: raw.terrain, water: raw.water }) };
   });
 }

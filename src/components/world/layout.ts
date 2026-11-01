@@ -108,18 +108,20 @@ export const WILD_ROCKS = Array.from({ length: 10 }, (_, i) => {
 });
 
 /** 草丛与小石头：避开花圃、建筑与小路；可指定环带（minR/maxR）铺满整个可见球面 */
-export function scatter(beds: BedLayout[], count = 520, seed = 11, maxR = 2.35, minR = 0) {
+export function scatter(beds: BedLayout[], count = 520, seed = 11, maxR = 2.35, minR = 0, obstacles?: { blocked: {x:number;z:number;r:number}[]; paths: {x:number;z:number}[] }) {
   let s = seed;
   const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
   const blocked: { x: number; z: number; r: number }[] = [
     ...beds.map((b) => ({ x: b.x, z: b.z, r: b.r + 0.07 })),
+    ...(obstacles?.blocked ?? [
     { ...SPOTS.cottage, r: 0.45 }, { ...SPOTS.greenhouse, r: 0.42 }, { ...SPOTS.bench, r: 0.16 }, { ...SPOTS.sign, r: 0.06 },
     { ...SPOTS.seedShed, r: 0.34 }, { ...SPOTS.arch, r: 0.16 }, { ...SPOTS.pond, r: 0.52 },
     ...TREES.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.18 : 0.12 })),
     ...WILD.map((t) => ({ x: t.x, z: t.z, r: t.kind === "tree" ? 0.22 : 0.16 })),
     ...WILD_ROCKS.map((t) => ({ x: t.x, z: t.z, r: 0.12 })),
+    ]),
   ];
-  const pathPts = [...pathCurve(MEMORY_PATH).getSpacedPoints(30), ...pathCurve(GREEN_PATH).getSpacedPoints(20), ...pathCurve(STAR_PATH).getSpacedPoints(20), ...pathCurve(SEED_PATH).getSpacedPoints(12)];
+  const pathPts = obstacles?.paths ?? [...pathCurve(MEMORY_PATH).getSpacedPoints(30), ...pathCurve(GREEN_PATH).getSpacedPoints(20), ...pathCurve(STAR_PATH).getSpacedPoints(20), ...pathCurve(SEED_PATH).getSpacedPoints(12)];
   const out: { x: number; z: number; s: number; tone: number; yaw: number }[] = [];
   let guard = 0;
   const ring = maxR * maxR - minR * minR;

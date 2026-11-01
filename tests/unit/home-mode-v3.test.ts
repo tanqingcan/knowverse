@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_HOME_LAYOUT, homePoses } from "@/lib/home/home-layout";
-import { DEFAULT_TEMPLATE, addDecorAt, removeDecor, updateDecor, isBuildingKind, type DecorPlacement } from "@/lib/decor";
+import { DEFAULT_TEMPLATE, DECOR_CATALOG, translateDecorSelection, addDecorAt, removeDecor, updateDecor, isBuildingKind, type DecorPlacement } from "@/lib/decor";
+import { MY_PLANET_LAYOUT } from "@/lib/home/my-default-layout";
 import { DIY_PART_KEYS, validateParts } from "@/lib/home/diy-parts";
 import { toLayoutItem, fromLayoutItem, type LayoutItem } from "@/lib/layout-api";
 import { saveVariant, variantOf, loadVariants } from "@/lib/home/variants";
@@ -25,8 +26,26 @@ describe("H03/H14/H52 初始对象迁移与版本", () => {
     expect(poses2.cottage!.x).not.toBeCloseTo(poses.cottage!.x, 3);
   });
 
-  it("DEFAULT_TEMPLATE 只用于装饰（不含建筑），建筑来自 DEFAULT_HOME_LAYOUT", () => {
-    expect(DEFAULT_TEMPLATE.some((d) => isBuildingKind(d.kind))).toBe(false);
+  it("DEFAULT_TEMPLATE = 我的星球完整布局（含建筑），不再只含装饰", () => {
+    // ⚠️ 契约变更（V4，2026-11-01）：
+    // V3 的契约是「DEFAULT_TEMPLATE 只含装饰，建筑来自 DEFAULT_HOME_LAYOUT」，
+    // 但 `applyTemplate()` 是**整体替换**（commit(next)）——沿用 6 件装饰模板意味着
+    // 用户一点「恢复默认模板」，搭好的 3 栋 cottage / 2 栋 greenhouse 等建筑会被一起清掉。
+    // 因此 V4 把模板改为**我的星球实际布局**（141 件，由 planet_layout_items revision 94 导出），
+    // 「恢复默认模板」= 恢复我自己的星球。旧断言（不含建筑）随契约一起废弃。
+    expect(DEFAULT_TEMPLATE).toBe(MY_PLANET_LAYOUT);
+    expect(DEFAULT_TEMPLATE.length).toBe(141);
+    // 必须包含建筑，否则整体替换会丢建筑
+    expect(DEFAULT_TEMPLATE.filter((d) => isBuildingKind(d.kind)).length).toBeGreaterThanOrEqual(4);
+    // 也必须包含两个区域群组
+    expect(DEFAULT_TEMPLATE.some((d) => d.kind === "grassGroup")).toBe(true);
+    expect(DEFAULT_TEMPLATE.some((d) => d.kind === "wildflowerGroup")).toBe(true);
+  });
+
+  it("DEFAULT_HOME_LAYOUT 仍是「首次进入」的初始布局（新账号用，不受模板变更影响）", () => {
+    // 与 DEFAULT_TEMPLATE 分离：新账号仍从 11 件初始布局起步，而不是直接铺 141 件
+    expect(DEFAULT_HOME_LAYOUT.length).toBe(11);
+    expect(DEFAULT_TEMPLATE).not.toBe(DEFAULT_HOME_LAYOUT);
   });
 });
 
@@ -96,11 +115,12 @@ describe("H34 服务端分区校验", () => {
     expect(validateParts("cottage", { roof: "red" }).ok).toBe(false);
   });
   it("没有分区定义的 kind → 拒绝", () => {
-    expect(validateParts("stone", { primary: "#ffffff" }).ok).toBe(false);
+    expect(validateParts("unknown-kind", { primary: "#ffffff" }).ok).toBe(false);
   });
-  it("每个有分区的 kind 至少两个部位（否则 DIY 名不副实）", () => {
+  it("每类素材具有整体配色或有效分区", () => {
     for (const [kind, keys] of Object.entries(DIY_PART_KEYS)) {
-      expect(keys.length, kind).toBeGreaterThanOrEqual(2);
+      expect(keys.length, kind).toBeGreaterThanOrEqual(1);
+      for(const key of keys) expect(validateParts(kind,{[key]:"#ABCDEF"}).ok,`${kind}/${key}`).toBe(true);
     }
     expect(DIY_PART_KEYS.rose).toContain("petal");
     expect(DIY_PART_KEYS.cottage).toEqual(expect.arrayContaining(["roof", "wall"]));
@@ -141,4 +161,31 @@ describe("H54/H56 数据健康", () => {
     expect(t.parts!.petal).toBe("#abcdef");
     expect(next.filter((d) => d.id !== id).every((d) => d.x === list.find((o) => o.id === d.id)!.x)).toBe(true);
   });
+});
+
+describe("全素材DIY与批量移动",()=>{
+ it("目录内每类素材整体色均可校验和保存还原",()=>{
+  for(const {kind} of DECOR_CATALOG){
+   expect(validateParts(kind,{primary:"#ABCDEF"}).ok,kind).toBe(true);
+   const d={id:`check-${kind}`,kind,x:0,z:0,rot:0,scale:1,parts:{primary:"#abcdef"}};
+   expect(fromLayoutItem(toLayoutItem(d)).parts,kind).toEqual(d.parts);
+  }
+ });
+ it("批量移动保留相对间距、尺寸与颜色，未选项不改变",()=>{
+  const list=DEFAULT_HOME_LAYOUT.slice(0,3),ids=list.slice(0,2).map(d=>d.id);
+  const next=translateDecorSelection(list,ids,.3,-.2);
+  expect(next[0].x-list[0].x).toBeCloseTo(.3);
+  expect(next[1].z-list[1].z).toBeCloseTo(-.2);
+  expect(next[1].x-next[0].x).toBeCloseTo(list[1].x-list[0].x);
+  expect(next[2]).toBe(list[2]);expect(next[0].scale).toBe(list[0].scale);
+  expect(()=>translateDecorSelection(list,ids,100,0)).toThrow();
+ });
+});
+
+it("池塘移动及缩放携带荷花而不移动岸边长椅",()=>{
+ const p:DecorPlacement={id:"landscape-pond",kind:"pond",x:3,z:0,rot:0,scale:1};
+ const l:DecorPlacement={id:"lotus",kind:"lotus",x:3.5,z:.2,rot:0,scale:1};
+ const c:DecorPlacement={id:"bench",kind:"chair",x:4,z:1,rot:0,scale:1};
+ const n=updateDecor([p,l,c],p.id,{x:2,z:1,scale:2});
+ expect(n[1].x).toBe(3);expect(n[1].z).toBe(1.4);expect(n[2]).toBe(c);
 });

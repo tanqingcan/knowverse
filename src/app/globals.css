@@ -976,3 +976,34 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
   .world-selbar { max-width: calc(100vw - 16px); flex-wrap: wrap; left: 8px !important; right: 8px !important; transform: none !important; top: auto !important; bottom: 132px !important; z-index: 9; }
   .world-selbar .selbar-btn { min-height: 44px; min-width: 44px; }
 }
+
+.zone-nav { position:absolute; z-index:15; left:16px; bottom:90px; max-width:calc(100vw - 32px); color:#41384e; }
+.zone-tabs { display:flex; flex-wrap:wrap; gap:5px; padding:7px; border-radius:18px; background:rgba(255,247,232,.88); backdrop-filter:blur(12px); }
+.zone-tabs button,.zone-row button { border:0; border-radius:10px; padding:8px 10px; background:transparent; color:inherit; cursor:pointer; }
+.zone-tabs .active,.zone-row button[aria-pressed=true] {background:#706485;color:#fff;}
+.zone-content { position:absolute; bottom:55px; left:0; width:min(390px,calc(100vw - 32px)); max-height:55vh; overflow:auto; background:rgba(255,247,232,.96); padding:18px; border-radius:18px; box-shadow:0 12px 35px #30264133; }
+.zone-content h3 {font-size:17px;margin:0 20px 12px 0;} .zone-content p {font-size:13px;line-height:1.6;}
+.zone-row {display:flex;gap:4px;align-items:center;justify-content:space-between;border-top:1px solid #ddd2c3;padding:7px 0;font-size:13px;}
+.zone-row button {background:#e8e0d5;font-size:12px;} .zone-close {position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:20px;}
+@media(max-width:600px){.zone-nav{bottom:104px;left:8px;}.zone-tabs{max-width:94vw}.zone-tabs button{padding:8px 6px;font-size:12px}.zone-content{max-height:48vh}}
+
+.batch-controls{position:absolute;z-index:40;top:16px;left:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 140px);padding:8px 12px;background:#fff5e5e8;border-radius:12px;font-size:12px}.batch-controls button{padding:6px 9px;border:1px solid #d8ccb9;border-radius:8px;background:#fff8eb;color:#514360}.batch-controls button[aria-pressed=true]{background:#655077;color:white}.batch-controls button:disabled{opacity:.45}
+
+.bed-controls{position:absolute;z-index:42;left:50%;bottom:110px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;border-radius:14px;background:#fff7e8ed;color:#514360;box-shadow:0 4px 20px #30243c20;max-width:94%;flex-wrap:wrap;font-size:12px}.bed-controls button{border:1px solid #e2d5c2;border-radius:8px;padding:7px 10px;background:#fff9ee;color:inherit}.bed-controls button[aria-pressed=true]{background:#655077;color:white}.bed-controls small{opacity:.7}
+
+/* Translucent suspended function windows; the planet stays visible through the glass. */
+.app .focus.paper,.app .side-card.paper,.app .modal.paper,.app .diy-card,.app .creative-palette,.app .layout-menu,.app .zone-content {
+ background:rgba(255,247,232,.73);border:1px solid rgba(255,249,235,.65);
+ backdrop-filter:blur(20px) saturate(1.08);-webkit-backdrop-filter:blur(20px) saturate(1.08);
+ box-shadow:0 18px 55px rgba(35,27,49,.24),inset 0 1px 0 rgba(255,255,255,.65);color:var(--ink);
+}
+.app .focus-head,.app .panel-head,.app .diy-head{background:rgba(255,250,240,.22)}
+.app .focus-body{background:transparent}
+.app .side-card.paper{top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 28px));height:min(560px,calc(100dvh - 140px));animation:kv-rise-c .35s var(--ease)}
+.app .zone-nav{top:50%;left:50%;bottom:auto;transform:translate(-50%,-50%);z-index:20;width:min(440px,calc(100vw - 28px));max-width:none}
+.app .zone-content{position:relative;left:auto;bottom:auto;width:100%;max-height:min(560px,calc(100dvh - 140px));overflow:auto}
+.app .modal-scrim,.app .diy-mask{background:rgba(38,30,56,.16);backdrop-filter:none;-webkit-backdrop-filter:none}
+.app .diy-preview{background:rgba(246,234,219,.25)}
+.app .focus::before,.app .zone-content::before{content:"";position:absolute;left:28px;right:28px;top:0;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,rgba(221,181,109,.7) 0 22px,transparent 22px calc(100% - 22px),rgba(221,181,109,.7) calc(100% - 22px));pointer-events:none}
+@supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){.app .focus.paper,.app .side-card.paper,.app .modal.paper,.app .diy-card,.app .zone-content{background:rgba(255,247,232,.95)}}
+.app.reduced-motion .focus.paper,.app.reduced-motion .side-card.paper,.app.reduced-motion .modal.paper,.app.reduced-motion .diy-card,.app.reduced-motion .zone-content{background:rgba(255,247,232,.94);backdrop-filter:none;-webkit-backdrop-filter:none}

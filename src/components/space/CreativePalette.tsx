@@ -31,7 +31,7 @@ function KindThumb({ kind, big = false }: { kind: DecorKind; big?: boolean }) {
 }
 
 const CATEGORY: Record<DecorKind, string> = {
-  rose: "花卉", flower: "花卉", flower2: "花卉", flower3: "花卉", pot: "花卉",
+  rose: "花卉", lotus: "花卉", flower: "花卉", flower2: "花卉", flower3: "花卉", pot: "花卉",
   tree: "树木", bush: "树木",
   fence: "围栏",
   soil: "地板", road: "道路",
@@ -115,7 +115,7 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
               </button>
               {showProps && (
                 <div className="cp-prop-wrap">
-                  {selSurface ? (
+                  {selected.kind === "soil" ? <label className="cp-prop">直径 <input aria-label="泥地直径" type="range" min={0.3} max={2.4} step={0.05} value={Math.max(selected.width ?? .7,selected.length ?? .7)} onChange={e=>onUpdate?.({width:+e.target.value,length:+e.target.value})}/><span>{Math.max(selected.width ?? .7,selected.length ?? .7).toFixed(2)}</span></label> : selSurface ? (
                     <>
                       <label className="cp-prop">宽 <input type="range" min={0.3} max={2.4} step={0.05} value={selected.width ?? 0.7} onChange={(e) => onUpdate?.({ width: +e.target.value })} /><span>{(selected.width ?? 0.7).toFixed(2)}</span></label>
                       <label className="cp-prop">长 <input type="range" min={0.3} max={2.4} step={0.05} value={selected.length ?? 0.7} onChange={(e) => onUpdate?.({ length: +e.target.value })} /><span>{(selected.length ?? 0.7).toFixed(2)}</span></label>

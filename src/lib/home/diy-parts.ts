@@ -3,6 +3,7 @@
  * 避免「前端能选、后端不认」或反过来。
  */
 export const DIY_PART_KEYS: Record<string, string[]> = {
+  tree:["primary"], bush:["primary"], lamp:["primary"], chair:["primary"], fence:["primary"], stone:["primary"], rock:["primary"], soil:["primary"], road:["primary"], pond:["primary"], lotus:["petal","leaf","core","stem"], arch:["primary"], sign:["primary"], grassGroup:["primary"], wildflowerGroup:["primary"],
   rose: ["petal", "leaf", "stem"],
   flower: ["petal", "core", "leaf", "stem"],
   flower2: ["petal", "leaf", "stem"],
@@ -25,7 +26,7 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 export function validateParts(kind: string, parts: unknown): { ok: true; value: Record<string, string> | null } | { ok: false; error: string } {
   if (parts == null) return { ok: true, value: null };
   if (typeof parts !== "object" || Array.isArray(parts)) return { ok: false, error: "parts 必须是对象" };
-  const allowed = DIY_PART_KEYS[kind];
+  const allowed = DIY_PART_KEYS[kind] ? [...DIY_PART_KEYS[kind], "primary"] : undefined;
   if (!allowed) return { ok: false, error: `素材 ${kind} 不支持分区配色` };
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(parts as Record<string, unknown>)) {

@@ -10,7 +10,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat, torusGeo } from "./geo";
+import { C, matte, grainTexture, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand, contactGeo, contactMat, torusGeo } from "./geo";
 import { Flower3D } from "./Flower3D";
 import { Bench, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
@@ -22,12 +22,16 @@ import type { StageKey } from "@/lib/flora";
 import { DECOR_CATALOG, isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
 import { doorOf, homePoses } from "@/lib/home/home-layout";
 import { DecorItem } from "./DecorItem";
+import { surfaceCapFromWorld } from "./surfacePicking";
+import { SEATED_TRAVELER_SCALE, TRAVELER_SEAT_X, TRAVELER_SEAT_Y } from "./benchSeat";
+import { TravelerNavigator, type TravelTarget } from "./TravelerNavigator";
 import { SphereSurface } from "./Surface3D";
 
 export type Hotspot = "cottage" | "greenhouse" | "path" | "galaxy" | "observatory";
 export type Celebration = { plantId: string; fromStage: StageKey; toStage: StageKey; key: number } | null;
 
 export type WorldProps = {
+  zoneView?: string;
   plants: WorldPlant[]; gardens: { name: string }[];
   selectedId?: string | null; onSelect?: (id: string) => void; onHotspot?: (h: Hotspot) => void;
   mode: "garden" | "focus"; reduced: boolean; celebrate?: Celebration; onGrowthShown?: (c: NonNullable<Celebration>) => void;
@@ -47,6 +51,12 @@ export type WorldProps = {
   /** V4-R19：花圃布局位移（键=花圃索引） */
   bedMoves?: Record<string, { x: number; z: number; rot?: number }>;
   /** V4-R19：点击花圃土壤面选中整圃 */
+  onBedMoveStart?: (index:number)=>void;
+  onBedDeselect?: ()=>void;
+  travelerTarget?: TravelTarget | null;
+  onTravelTarget?: (p:TravelTarget)=>void;
+  onTravelArrive?: ()=>void;
+  onTravelBlocked?: ()=>void;
   onSelectBed?: (index: number) => void;
   selectedBedIndex?: number | null;
   /** V4-H04：环境设置（天空底色/恒星密度/星球色调） */
@@ -60,7 +70,7 @@ export type WorldProps = {
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
-  placingPreview?: { kind: string; rot: number; scale: number; color?: string; stage?: string } | null;
+  placingPreview?: { kind: string; rot: number; scale: number; color?: string; stage?: string; width?: number; length?: number; parts?: Record<string,string>; id?:string } | null;
   /** V4-R26：地形高度场（49×49，null=平地） */
   terrainHeights?: Float32Array | null;
   /** V4-R26：当前地形笔刷（null=未启用） */
@@ -79,6 +89,7 @@ export type WorldProps = {
   onDecorTransformEnd?: () => void;        // H12：拖动结束提交
   onDecorUpdate?: (id: string, patch: Partial<DecorPlacement>) => void; // H22：紧凑属性浮层（移动/旋转/缩放）
   onDecorDiy?: (id: string) => void;       // H22：DIY 入口（H28 起接工作台）
+  selectedDecorIds?: string[];
   selectedDecorId?: string | null;         // 当前选中的装饰对象
   readOnly?: boolean;
   paused?: boolean; // 编辑/浮窗期间暂停空闲慢转（G7）
@@ -109,27 +120,18 @@ const BUILDING_HIT: Record<string, { name: string; r: number; h: number; labelY:
   cottage: { name: "cottage", r: 0.34, h: 0.9, labelY: 0.95, clickable: true },
   greenhouse: { name: "greenhouse", r: 0.32, h: 0.45, labelY: 0.48, clickable: true },
   observatory: { name: "observatory", r: 0.3, h: 0.36, labelY: 0.3, clickable: true },
-  seedshed: { name: "seedshed", r: 0.3, h: 0.4, labelY: 0.32, clickable: false },
+  seedshed: { name: "seedshed", r: 0.3, h: 0.4, labelY: 0.32, clickable: true },
   arch: { name: "arch", r: 0.18, h: 0.5, labelY: 0.42, clickable: false },
   pond: { name: "pond", r: 0.5, h: 0.2, labelY: 0.16, clickable: false },
   sign: { name: "sign", r: 0.2, h: 0.3, labelY: 0.2, clickable: false },
 };
 
 /** V4-R17：拾取坐标——优先用射线与「理想球」求交（精确），避免低模拾取球的多面体方向误差 */
-function rayToCap(ray: THREE.Ray, fallbackPoint?: THREE.Vector3) {
+function rayToCap(ray: THREE.Ray, fallbackPoint?: THREE.Vector3, frame?: THREE.Object3D | null) {
   const hit = ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
-  if (hit) return pointToCap(hit);
-  if (fallbackPoint) return pointToCap(fallbackPoint);
+  if (hit) return surfaceCapFromWorld(hit, frame ?? null, PLANET_R);
+  if (fallbackPoint) return surfaceCapFromWorld(fallbackPoint, frame ?? null, PLANET_R);
   return null;
-}
-
-/** 世界坐标点 → 球冠平面坐标 (x,z)，与 capToAzPolar 互逆 */
-function pointToCap(p: THREE.Vector3) {
-  const r = p.length() || 1;
-  const polar = Math.acos(Math.max(-1, Math.min(1, p.y / r)));
-  const d = polar * PLANET_R;
-  const az = Math.atan2(p.x, p.z);
-  return { x: Math.sin(az) * d, z: Math.cos(az) * d };
 }
 
 /* ───────── 花圃里的一株植物（含成长动画） ───────── */
@@ -256,9 +258,9 @@ function Bed({ bed, plants, terrainLift = 0, ...rest }: { bed: BedLayout; plants
   const hitItems = useMemo(() => bed.plants.map((pp) => ({ id: pp.id, x: pp.x, z: pp.z })), [bed.plants]);
   const contactItems = useMemo(() => bed.plants.map((pp) => ({ x: pp.x, z: pp.z, s: plants.get(pp.id)?.stage === "bloom" ? 0.11 : 0.08 })), [bed.plants, plants]);
   return (
-    <group position={f.pos} quaternion={f.quat}>
+    <group position={f.pos} quaternion={f.quat} onPointerUp={e=>{if(pass.onBedSelect && e.delta<6){e.stopPropagation();pass.onBedSelect(bed.index);}}}>
       <mesh geometry={cylGeo(bed.r * 1.05, bed.r * 1.08, 0.12, 40)} material={matte(C.soilDeep)} position={[0, -0.05, 0]}
-        onPointerUp={(e) => { if (e.delta > 6) return; e.stopPropagation(); pass.onBedSelect?.(bed.index); }} />
+        onPointerUp={(e) => { if (e.delta > 6 || !pass.onBedSelect) return; e.stopPropagation(); pass.onBedSelect(bed.index); }} />
       <GardenBed r={bed.r} />
       {/* R19：整圃选中框——外圈高亮环 */}
       {pass.bedSelected && (
@@ -304,7 +306,7 @@ function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, name, children }: { x: nu
   return <group name={name} position={f.pos} quaternion={q}>{children}</group>;
 }
 
-function Grass({ items }: { items: ReturnType<typeof scatter> }) {
+function Grass({ items, tint }: { items: ReturnType<typeof scatter>; tint?: string }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => grassTuftGeo(), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 1, color: "#ffffff" }), []);
@@ -316,11 +318,11 @@ function Grass({ items }: { items: ReturnType<typeof scatter> }) {
       const f = capFrame(it.x, it.z, (it.yaw * 180) / Math.PI);
       q.copy(f.quat);
       mx.compose(f.pos, q, new THREE.Vector3(it.s, it.s * (0.8 + (i % 3) * 0.2), it.s));
-      m.setMatrixAt(i, mx); m.setColorAt(i, col.set(tones[it.tone]));
+      m.setMatrixAt(i, mx); m.setColorAt(i, col.set(tint ?? tones[it.tone]));
     });
     void up;
     m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [items]);
+  }, [items,tint]);
   return <instancedMesh ref={ref} args={[geo, mat, items.length]} frustumCulled={false} receiveShadow />;
 }
 
@@ -409,7 +411,7 @@ function FloraField({ items }: { items: FloraItem[] }) {
 }
 
 /** 草地上的小野花（两组实例化网格：花冠 + 花心），只是装饰，不代表任何学习记录 */
-function Wildflowers({ items }: { items: ReturnType<typeof scatter> }) {
+function Wildflowers({ items, tint }: { items: ReturnType<typeof scatter>; tint?: string }) {
   const a = useRef<THREE.InstancedMesh>(null), b = useRef<THREE.InstancedMesh>(null), st = useRef<THREE.InstancedMesh>(null);
   const petal = useMemo(() => new THREE.SphereGeometry(1, 10, 6), []);
   const stem = useMemo(() => new THREE.CylinderGeometry(0.0025, 0.003, 1, 4).translate(0, 0.5, 0), []);
@@ -424,11 +426,11 @@ function Wildflowers({ items }: { items: ReturnType<typeof scatter> }) {
       const top = f.pos.clone().addScaledVector(up, h);
       st.current?.setMatrixAt(i, mx.compose(f.pos, f.quat, new THREE.Vector3(1, h, 1)));
       a.current?.setMatrixAt(i, mx.compose(top, f.quat, new THREE.Vector3(0.016 * it.s, 0.006, 0.016 * it.s)));
-      a.current?.setColorAt(i, col.set(tones[i % tones.length]));
+      a.current?.setColorAt(i, col.set(tint ?? tones[i % tones.length]));
       b.current?.setMatrixAt(i, mx.compose(top.clone().addScaledVector(up, 0.004), f.quat, new THREE.Vector3(0.006, 0.004, 0.006)));
     });
     for (const m of [a.current, b.current, st.current]) if (m) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
-  }, [items]);
+  }, [items,tint]);
   return (
     <>
       <instancedMesh ref={st} args={[stem, matte(C.stem), items.length]} frustumCulled={false} />
@@ -439,7 +441,7 @@ function Wildflowers({ items }: { items: ReturnType<typeof scatter> }) {
 }
 
 /** 回忆小径的石板（也是“回顾”入口的点击区域） */
-function MemoryPath({ setHover, onHotspot, poses }: { setHover: (k: string | null) => void; onHotspot?: (h: Hotspot) => void; poses: Record<string, { x: number; z: number; yaw: number }> }) {
+function MemoryPath({ setHover, onHotspot, poses, zoned, manual }: { setHover: (k: string | null) => void; onHotspot?: (h: Hotspot) => void; poses: Record<string, { x: number; z: number; yaw: number }>; zoned?: boolean; manual?: { x: number; z: number }[] }) {
   // H09：四条小路按当前建筑位置重建端点（书房/温室门口、观测台、种子棚），建筑搬走后不会留下旧印迹。
   const paths = useMemo(() => {
     const cDef = { x: SPOTS.cottage.x, z: SPOTS.cottage.z, yaw: SPOTS.cottage.yaw };
@@ -447,17 +449,24 @@ function MemoryPath({ setHover, onHotspot, poses }: { setHover: (k: string | nul
     const cDoor = doorOf(poses.cottage ?? SPOTS.cottage, cDef, SPOTS.cottageDoor);
     const gDoor = doorOf(poses.greenhouse ?? SPOTS.greenhouse, gDef, SPOTS.greenhouseDoor);
     const toPair = (p: { x: number; z: number }): [number, number] => [p.x, p.z];
+    if(zoned) return {
+      memory: [[0,1.2],[1.5,1.0],[1.55,-.1],toPair(cDoor)] as [number,number][],
+      green: [[0,1.2],[-1.5,.9],[-1.5,-.2],toPair(gDoor)] as [number,number][],
+      star: [toPair(cDoor),[1.5,-1.25],[(poses.observatory ?? SPOTS.observatory).x,(poses.observatory ?? SPOTS.observatory).z]] as [number,number][],
+      seed: [toPair(gDoor),[-.7,-1.5],[(poses.seedshed ?? SPOTS.seedShed).x,(poses.seedshed ?? SPOTS.seedShed).z]] as [number,number][],
+    };
     return {
       memory: [...MEMORY_PATH.slice(0, -1), toPair(cDoor)],
       green: [...GREEN_PATH.slice(0, -1), toPair(gDoor)],
       star: [toPair(gDoor), ...STAR_PATH.slice(1, -1), [(poses.observatory ?? SPOTS.observatory).x, (poses.observatory ?? SPOTS.observatory).z] as [number, number]],
       seed: [toPair(gDoor), ...SEED_PATH.slice(1, -1), [(poses.seedshed ?? SPOTS.seedShed).x, (poses.seedshed ?? SPOTS.seedShed).z] as [number, number]],
     };
-  }, [poses]);
+  }, [poses,zoned]);
   const stones = useMemo(() => pathCurve(paths.memory).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x + (i % 2 ? 0.025 : -0.02), z: v.z, s: 0.85 + rand(i, 7) * 0.4, i })), [paths]);
   const g2 = useMemo(() => pathCurve(paths.green).getSpacedPoints(6).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.7 + rand(i, 9) * 0.3, i: i + 20 })), [paths]);
   const g3 = useMemo(() => pathCurve(paths.star).getSpacedPoints(9).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 11) * 0.28, i: i + 40 })), [paths]);
   const g4 = useMemo(() => pathCurve(paths.seed).getSpacedPoints(5).slice(1, -1).map((v, i) => ({ x: v.x, z: v.z, s: 0.66 + rand(i, 13) * 0.26, i: i + 60 })), [paths]);
+  if (manual) return <>{manual.map((p,i)=><OnCap key={i} x={p.x} z={p.z}><SteppingStone s={0.8} seed={i}/></OnCap>)}</>;
   return (
     <>
       {stones.map((s) => (
@@ -514,11 +523,11 @@ function Sparks({ points, start }: { points: THREE.Vector3[]; start: number }) {
 }
 
 /* ───────── 镜头、拖动、入场 ───────── */
-function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone, worldRef }: {
+function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone, worldRef, zoneView }: {
   mode: "garden" | "focus"; reduced: boolean; paused?: boolean; focusPoint: THREE.Vector3 | null;
   drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>;
   intro: "long" | "short" | "none"; onIntroDone?: () => void;
-  worldRef: React.RefObject<THREE.Group | null>;
+  worldRef: React.RefObject<THREE.Group | null>; zoneView?: string;
 }) {
   const { camera, size } = useThree();
   const acc = useRef(0);
@@ -554,6 +563,12 @@ function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone
     let d = Math.max(4.4, halfW / Math.tan(hf));
     if (aspect < 0.8) d = Math.min(d, 9.5);
     const tgt = LOOK.clone();
+    if (zoneView) {
+      d = aspect < .8 ? 10 : 7.2; tgt.set(0,2.0,0);
+      if (zoneView === "mountains") { d = aspect < .8 ? 10 : 7.2; tgt.set(0,2,0); }
+      else if (zoneView === "roses") { d=6.7; tgt.set(0,1.7,1.8); }
+      else if (zoneView === "pond") { d=7.2; tgt.set(0,1.5,1.7); }
+    }
     if (aspect < 0.8 && mode === "garden") tgt.y -= 0.18;
     if (aspect < 0.8 && mode === "focus") { tgt.z += 0.55; tgt.y -= 0.12; } // 竖屏：把花园放在画面中上部，给底部卡片留空间
     if (focusPoint && mode === "garden") { tgt.lerp(focusPoint, 0.38); d *= 0.8; if (aspect > 1.1) tgt.x += 0.42; else { tgt.z += 0.95; tgt.y -= 0.1; } } // 侧卡 / 底部抽屉不遮住选中的花
@@ -631,6 +646,7 @@ function PerfProbe() {
 function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; nudge: React.MutableRefObject<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
+  const worldPointToCap = (p: THREE.Vector3) => surfaceCapFromWorld(p, world.current, PLANET_R);
   // H02：把「屏幕坐标 → 球冠坐标」暴露给外层 DOM 拖动。R3F 的 pointermove 在拖动期间不触发
   // （实测 [h02] move 无日志），DOM 层 pointermove 才稳定；用相机射线与球面求交，避免拿建筑表面点。
   const { camera, gl, scene } = useThree();
@@ -643,7 +659,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       dragNdc.set(((cx - r.left) / Math.max(1, r.width)) * 2 - 1, -((cy - r.top) / Math.max(1, r.height)) * 2 + 1);
       dragRay.setFromCamera(dragNdc, camera);
       const hit = dragRay.ray.intersectSphere(dragSphere, new THREE.Vector3());
-      return hit ? pointToCap(hit) : null;
+      return hit ? worldPointToCap(hit) : null;
     };
     return () => { props.pointerToCap.current = null; };
   }, [camera, gl, dragRay, dragNdc, dragSphere, props.pointerToCap]);
@@ -654,6 +670,10 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       const n = f.pos.clone().normalize();
       const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
       const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+      if (world.current) {
+        const inverse = world.current.matrixWorld.clone().invert();
+        right.transformDirection(inverse); up.transformDirection(inverse);
+      }
       const tr = right.clone().sub(n.clone().multiplyScalar(right.dot(n)));
       const tu = up.clone().sub(n.clone().multiplyScalar(up.dot(n)));
       if (tr.lengthSq() < 1e-8 || tu.lengthSq() < 1e-8) return null; // 极点退化：调用方保留原位
@@ -692,12 +712,6 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     return () => { delete (window as unknown as { __gardenBox?: unknown }).__gardenBox; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, gl]);
-
-  // V4-H04：星球本体色调跟随环境设置
-  useEffect(() => {
-    if (props.env?.planet) planetMat.color.set(props.env.planet);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.env?.planet]);
 
   // V4-R17：把「球冠坐标 → 屏幕 CSS 像素」暴露出来，用于测量拾取误差（真实相机投影）
   useEffect(() => {
@@ -759,19 +773,40 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   // H04：草/野花是「全星球群组」，操作单元 = 整组密度（scale 当倍率，0.2–3），不逐株进入编辑。
   const grassDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "grassGroup")?.scale ?? 1);
   const bloomDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "wildflowerGroup")?.scale ?? 1);
-  const grass = useMemo(() => [...scatter(beds, Math.round(380 * grassDensity), 11, 2.35), ...scatter(beds, Math.round(340 * grassDensity), 23, 4.05, 2.4)], [beds, grassDensity]);
-  const blooms = useMemo(() => [...scatter(beds, Math.round(140 * bloomDensity), 29, 2.35), ...scatter(beds, Math.round(120 * bloomDensity), 31, 4.05, 2.4)], [beds, bloomDensity]);
+  // Saved scenery and paths define clearances; deleted/moved defaults must not leave bald patches.
+  const vegetationObstacles = useMemo(() => props.bedMoves?.__manualPaths ? {
+    blocked: (props.decor ?? []).filter(d=>!d.hidden && (isBuildingKind(d.kind)||["tree","bush","chair"].includes(d.kind))).map(d=>({x:d.x,z:d.z,r:(d.kind==="chair"?.13:d.kind==="tree"?.10:d.kind==="bush"?.12:.3)*d.scale})),
+    paths: Object.entries(props.bedMoves).filter(([k])=>k.startsWith("__path-")).map(([,p])=>p)
+  } : undefined, [props.decor,props.bedMoves]);
+  const benchGroundcover = useMemo(() => (props.decor ?? []).filter(d=>d.kind === "chair" && !d.hidden).flatMap(d=>scatter([],42,197,.72,.19,{blocked:[],paths:[]}).map(p=>({...p,x:p.x+d.x,z:p.z+d.z,s:p.s*.8}))), [props.decor]);
+  const grass = useMemo(() => [...scatter(beds, Math.round(380 * grassDensity), 11, 2.4,0,vegetationObstacles), ...scatter(beds, Math.round(650 * grassDensity), 23, 4.05, 2.4,vegetationObstacles), ...scatter(beds, Math.round(1300 * grassDensity), 51, 6.3, 4.05,vegetationObstacles), ...benchGroundcover], [beds, grassDensity,vegetationObstacles,benchGroundcover]);
+  const blooms = useMemo(() => [...scatter(beds, Math.round(140 * bloomDensity), 29, 2.4,0,vegetationObstacles), ...scatter(beds, Math.round(220 * bloomDensity), 31, 4.05, 2.4,vegetationObstacles), ...scatter(beds, Math.round(440 * bloomDensity), 61, 6.3, 4.05,vegetationObstacles)], [beds, bloomDensity,vegetationObstacles]);
   // H09：场景锚点（门口/道路端点/地表印迹/星灯停靠）统一从布局实例推导，建筑搬走后跟着走
   const poses = useMemo(() => homePoses(props.decor), [props.decor]);
-  const terrain = useMemo(() => paintTerrain(beds, poses), [beds, poses]);
+  const terrain = useMemo(() => paintTerrain(beds, poses, !!props.bedMoves?.__manualPaths), [beds, poses, props.bedMoves?.__manualPaths]);
   // H09：poses 变化会重绘地表纹理；旧 CanvasTexture 必须 dispose，否则拖动建筑时纹理数单调增长（实测 12→20）
   useEffect(() => () => { (terrain as unknown as { dispose?: () => void })?.dispose?.(); }, [terrain]);
-  const planetGeo = useMemo(() => planetGeometry(props.terrainHeights), [props.terrainHeights]);
+  const editablePond = (props.decor ?? []).find(d=>d.id === "landscape-pond" && !d.hidden);
+  const pondAnchor = editablePond ?? (props.bedMoves?.__pondEditable ? undefined : props.bedMoves?.__pond);
+  const pondRadius = editablePond ? (editablePond.width ?? 2.36) * editablePond.scale / 2 : 1.18;
+  const pondDepth = editablePond?.length ?? .32;
+  const planetGeo = useMemo(() => planetGeometry(props.terrainHeights, false, pondAnchor ? {...pondAnchor,radius:pondRadius,depth:pondDepth} : undefined), [props.terrainHeights, pondAnchor, pondRadius, pondDepth]);
   // V4-R29：水面——只为「高度低于水位的格子」生成三角形，边界天然被盆地约束
   const waterGeo = useMemo(() => {
+    const pond = pondAnchor;
+    if (pond) {
+      const pos:number[]=[]; const idx:number[]=[]; const rings=12, seg=48;
+      for(let j=0;j<=rings;j++)for(let i=0;i<=seg;i++){
+        const a=i/seg*Math.PI*2, r=pondRadius*j/rings;
+        const p=capFrame(pond.x+Math.cos(a)*r,pond.z+Math.sin(a)*r,0,-.035).pos;
+        pos.push(p.x,p.y,p.z);
+      }
+      for(let j=0;j<rings;j++)for(let i=0;i<seg;i++){const a=j*(seg+1)+i,b=a+1,c=a+seg+1;idx.push(a,c,b,b,c,c+1);}
+      const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;
+    }
     const H = props.terrainHeights;
     const L = props.terrainWater;
-    if (!H || L == null || L <= 0) return null;
+    if (!H || L == null) return null;
     const N = 49, MIN = -3, MAX = 3;
     const step = (MAX - MIN) / (N - 1);
     const pos: number[] = [];
@@ -803,8 +838,10 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     g.setIndex(idx);
     g.computeVertexNormals();
     return g;
-  }, [props.terrainHeights, props.terrainWater]);
-  const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);
+  }, [props.terrainHeights, props.terrainWater, pondAnchor, pondRadius]);
+  // Default tone is already painted into the watercolor texture; do not multiply it by green twice.
+  const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, color: props.env?.planet && props.env.planet.toLowerCase() !== "#9db983" ? props.env.planet : "#ffffff", vertexColors: true, roughness: 1, metalness: 0 }), [terrain,props.env?.planet]);
+  useEffect(()=>()=>planetMat.dispose(),[planetMat]);
   const [lights, setLights] = useState(props.intro === "none" || reduced ? 1 : 0.05);
   const lightAcc = useRef(0);
   const [introDone, setIntroDone] = useState(props.intro === "none" || reduced);
@@ -860,12 +897,19 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     }
     // 坐姿略向前，避免背部穿过长椅靠背（靠背在 z≈-0.04，身体后半约 -0.056）
     return { ...capToAzPolar((poses.bench ?? SPOTS.bench).x, (poses.bench ?? SPOTS.bench).z + 0.022), yaw: (poses.bench ?? SPOTS.bench).yaw, lift: 0 };
-  }, [props.pose, sel, celebPos, poses]);
+  }, [props.pose, sel, celebPos, poses, props.bedMoves]);
   const lampAt = useMemo(() => {
     const t = celebPos ?? sel;
     if (t) return { ...capToAzPolar(t.x + 0.12, t.z + 0.05), lift: 0.5 };
     return { ...capToAzPolar((poses.lampSpot ?? SPOTS.lampSpot).x, (poses.lampSpot ?? SPOTS.lampSpot).z), lift: 0.36 };
   }, [sel, celebPos, poses]);
+  const travelerBench = (props.decor ?? []).find(d=>d.id === "home-bench" && d.kind === "chair" && !d.hidden) ?? (props.decor ?? []).find(d=>d.kind === "chair" && !d.hidden);
+  const freeTravel=!!props.travelerTarget && !props.editing;
+  const travelObstacles=useMemo(()=>[
+    ...beds.map(b=>({x:b.x,z:b.z,r:b.r+.12})),
+    ...(props.decor ?? []).filter(d=>!d.hidden && (isBuildingKind(d.kind)||d.kind==="tree") && d.id!=="landscape-pond").map(d=>({x:d.x,z:d.z,r:(d.kind==="tree"?.075:d.kind==="arch"?.12:.27)*d.scale+.06})),
+    ...(pondAnchor?[{x:pondAnchor.x,z:pondAnchor.z,r:pondRadius+.13}]:[])
+  ],[beds,props.decor,pondAnchor,pondRadius]);
   const travelerPose: Pose = (props.pose === "tend" && !sel) ? "idle" : props.pose;
 
   // V4-H09 诊断：曝光旅人/星灯/长椅的球冠位置，用于验证「移动长椅后旅人是否跟随」
@@ -883,12 +927,11 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const L = lights;
   return (
     <>
-      <color attach="background" args={[props.env?.sky ?? "#2A2338"]} />
       <hemisphereLight args={["#EDE4F7", "#8C7E86", 0.95]} />
       <ambientLight intensity={0.12} />
       <KeyLight />
       <directionalLight color="#A9BBD2" intensity={0.55} position={[6, 3, -3]} />
-      <Rig mode={props.mode} reduced={reduced} paused={!!props.paused} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
+      <Rig zoneView={props.zoneView} mode={props.mode} reduced={reduced} paused={!!props.paused} focusPoint={focusPoint} drag={props.drag} zoom={props.zoom} intro={props.intro ?? "none"} worldRef={world}
         onIntroDone={() => { setIntroDone(true); props.onIntroDone?.(); }} />
       <LabelTracker anchors={anchors} labelKey={hover ?? (selectedId ? `plant:${selectedId}` : null)} el={props.labelEl} />
       {/* H05：选中对象的紧凑操作条跟随对象投影（与悬停标签同一套投影，不触发 React 渲染） */}
@@ -914,17 +957,19 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         props.lastDecorMove.current = now;
         const hit = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
         if (!hit) return;
-        const c = pointToCap(hit);
+        const c = worldPointToCap(hit);
         props.onDecorMove?.(props.decorDrag.current, c.x, c.z);
       }}>
-        <mesh geometry={planetGeo} material={planetMat} receiveShadow
+        <mesh geometry={planetGeo} material={[planetMat, matte("#b3afbf", {rough:1})]} receiveShadow
           onClick={(e) => {
+            if(e.delta>6)return;
+            if(!props.editing && props.mode==="garden" && !props.readOnly){const c=rayToCap(e.ray,e.point,world.current);if(c){e.stopPropagation();props.onTravelTarget?.(c);}return;}
             // V4-R26：地形笔刷——一次点击 = 一笔；只改高度场，不写 DB（由上层决定）
             if (!props.terrainTool) return;
             e.stopPropagation();
             const hit = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
             if (!hit) return;
-            const c = pointToCap(hit);
+            const c = worldPointToCap(hit);
             const base = props.terrainHeights ?? makeHeights();
             const next = new Float32Array(base);
             if (applyBrush(next, c.x, c.z, props.terrainRadius ?? 0.45, 0.85, props.terrainTool)) {
@@ -933,17 +978,18 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           }} />
         {/* V4-R29：水面——只覆盖盆地（低于水位的格子），天然被地形约束 */}
         {waterGeo && (
-          <mesh geometry={waterGeo} renderOrder={1}>
-            <meshPhysicalMaterial color="#5FB6D9" transparent opacity={0.62} roughness={0.12} metalness={0.05}
+          <mesh name="decor:landscape-pond" geometry={waterGeo} renderOrder={1} onPointerUp={e=>{if(props.editing && editablePond && e.delta<6){e.stopPropagation();props.onDecorSelect?.(editablePond.id);}}}>
+            <meshPhysicalMaterial color={editablePond?.parts?.primary ?? editablePond?.color ?? "#5FB6D9"} transparent opacity={0.62} roughness={0.12} metalness={0.05}
               side={THREE.DoubleSide} depthWrite={false} />
           </mesh>
         )}
         {/* H06/H21：放置预览 ghost——跟随指针、半透明；只在放置/复制预览时挂载 */}
-        {props.placingKind && props.placingPreview && (
+        {((props.placingKind && props.placingPreview) || props.bedMoving) && (
           <group ref={ghost} visible={false}>
-            <group scale={props.placingPreview.scale}>
-              <DecorItem kind={props.placingPreview.kind as any} seed={99} lights={L} tint={props.placingPreview.color} stage={props.placingPreview.stage} signText={props.signText} signSub={props.signSub} />
-            </group>
+            {props.bedMoving ? <mesh rotation={[-Math.PI/2,0,0]}><circleGeometry args={[beds.find(b=>b.index===props.selectedBedIndex)?.r ?? .36,48]}/><meshStandardMaterial color="#d2b995" transparent opacity={.45} side={THREE.DoubleSide}/></mesh> : props.placingPreview && <group scale={props.placingPreview.scale}>
+              {props.placingPreview.id === "landscape-pond" ? <mesh rotation={[-Math.PI/2,0,0]}><circleGeometry args={[(props.placingPreview.width ?? 2.36)/2,48]}/><meshStandardMaterial color={props.placingPreview.parts?.primary ?? props.placingPreview.color ?? "#5fb6d9"} transparent opacity={.55} side={THREE.DoubleSide}/></mesh> : <DecorItem kind={props.placingPreview.kind as any} seed={99} lights={L} tint={props.placingPreview.parts?.primary ?? props.placingPreview.color} stage={props.placingPreview.stage} parts={props.placingPreview.parts} signText={props.signText} signSub={props.signSub} />}
+
+            </group>}
             <mesh geometry={torusGeo(0.26, 0.012, 6, 40)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.9 })} />
           </group>
         )}
@@ -953,8 +999,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             onPointerMove={(e) => {
               // H06：ghost 跟随指针（命令式改 transform，不触发 React 重渲染）
               if (!ghost.current) return;
-              if (!props.placingPreview) return;
-              const c = rayToCap(e.ray, e.point);
+              if (!props.placingPreview && !props.bedMoving) return;
+              const c = rayToCap(e.ray, e.point, world.current);
               if (!c) return;
               const f = capFrame(c.x, c.z, props.placingPreview?.rot ?? 0);
               ghost.current.position.copy(f.pos);
@@ -964,57 +1010,65 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             onPointerOut={() => { if (ghost.current) ghost.current.visible = false; }}
             onPointerUp={(e) => {
               if (e.delta > 6) return; // 拖动（镜头）时不放置
-              const c = rayToCap(e.ray, e.point);
+              const c = rayToCap(e.ray, e.point, world.current);
               e.stopPropagation();
               if (c) props.onPlace?.(c.x, c.z);
             }} />
         )}
         <CloudRing R={PLANET_R} />
-        <Grass items={grass} />
-        <Wildflowers items={blooms} />
+        <Grass tint={(props.decor ?? []).find(d=>d.kind==="grassGroup")?.parts?.primary} items={pondAnchor ? grass.filter(p=>Math.hypot(p.x-(pondAnchor?.x ?? 3.05),p.z-(pondAnchor?.z ?? -.6))/(pondRadius+.10)>1) : grass} />
+        <Wildflowers tint={(props.decor ?? []).find(d=>d.kind==="wildflowerGroup")?.parts?.primary} items={pondAnchor ? blooms.filter(p=>Math.hypot(p.x-(pondAnchor?.x ?? 3.05),p.z-(pondAnchor?.z ?? -.6))/(pondRadius+.10)>1) : blooms} />
 
         {beds.map((b) => (
-          <Bed onBedSelect={props.onSelectBed} bedSelected={props.selectedBedIndex === b.index} key={b.index} bed={b} terrainLift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, b.x, b.z) : 0} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
-            reduced={reduced} onSelect={props.onSelect} setHover={setHover} register={register} />
+          <Bed onBedSelect={props.editing ? props.onSelectBed : undefined} bedSelected={props.selectedBedIndex === b.index} key={b.index} bed={b} terrainLift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, b.x, b.z) : 0} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
+            reduced={reduced} onSelect={props.editing ? ()=>props.onSelectBed?.(b.index) : id=>{const p=b.plants.find(p=>p.id===id);if(p)props.onTravelTarget?.({x:b.x+p.x,z:b.z+p.z});props.onSelect?.(id);}} setHover={setHover} register={register} />
         ))}
 
         {/* H02/H03：建筑不再按 SPOTS 固定渲染，改为布局数据里的可编辑实例（见下方 decor 循环） */}
-        <MemoryPath setHover={setHover} onHotspot={props.onHotspot} poses={poses} />
+        <MemoryPath manual={props.bedMoves?.__manualPaths ? Object.entries(props.bedMoves).filter(([k])=>k.startsWith("__path-")).map(([,p])=>p) : undefined} zoned={!!props.bedMoves?.__fourzones} setHover={setHover} onHotspot={props.onHotspot} poses={poses} />
         <OnCap x={0.38} z={-0.48}><group ref={(o) => register("path", o)} position={[0, 0.12, 0]} /></OnCap>
         {/* 长椅/路灯/观测台/种子棚/拱门/池塘/木牌同样来自布局数据（H02 无双轨） */}
         {/* 内圈与外圈野生树木/灌木：按几何类型合批（FloraField 内 5 个 InstancedMesh） */}
-        <FloraField items={[...TREES.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: (t as any).tint })), ...WILD.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: t.tint }))]} />
-        {WILD_ROCKS.map((r, i) => (
+        {!props.bedMoves?.__fourzones && <FloraField items={[...TREES.filter((t) => !(props.decor ?? []).some((d) => d.id === `landscape-tree-${t.seed}`)).map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: (t as any).tint })), ...WILD.map((t) => ({ x: t.x, z: t.z, kind: t.kind, seed: t.seed, tint: t.tint }))]} />}
+        {WILD_ROCKS.filter(r=>!pondAnchor || Math.hypot(r.x-pondAnchor.x,r.z-pondAnchor.z)>pondRadius*1.36).map((r, i) => (
           <OnCap key={`r${i}`} x={r.x} z={r.z}><group scale={1.3}><DecorStone /></group></OnCap>
         ))}
         {/* 玩家摆放的装饰：surface 类（土壤/道路）走 SphereSurface 贴球面；其余走 OnCap + DecorItem */}
         {(props.decor ?? []).map((d, i) => {
+          if (d.id === "landscape-pond") return <OnCap key={d.id} x={d.x} z={d.z}><group ref={o=>register(`decor:${d.id}`,o)} position={[0,.12,0]}/></OnCap>;
           if (d.hidden) return null; // V4-H13：隐藏对象不渲染（数据保留，可恢复）
           const isSurface = d.kind === "soil" || d.kind === "road";
-          const isSel = props.selectedDecorId === d.id;
+          const isSel = props.selectedDecorId === d.id || !!props.selectedDecorIds?.includes(d.id);
           const isBld = isBuildingKind(d.kind);
           const hit = isBld ? BUILDING_HIT[d.kind as BuildingKind] : undefined;
           if (isSurface) {
             return (
-              <group key={d.id}
-                onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
-                <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} heights={props.terrainHeights} />
+              <group key={d.id} name={`decor:${d.id}`}
+                onPointerUp={(e) => { if (props.editing && props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
+                <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} color={d.parts?.primary ?? d.color} heights={props.terrainHeights} />
+                <OnCap x={d.x} z={d.z}><group ref={o=>register(`decor:${d.id}`,o)} position={[0,.08,0]}/></OnCap>
                 {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? (isBld ? buildingLift(props.terrainHeights, d.x, d.z, d.kind === "cottage" ? 0.62 : 0.5) : terrainHeightAt(props.terrainHeights, d.x, d.z)) : 0}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
               </group>
             );
           }
           return (
-            <OnCap key={d.id} name={`decor:${d.id}`} x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
-              <group scale={d.scale}
-                onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); }}
+            <OnCap key={d.id} name={`decor:${d.id}`} x={d.x} z={d.z} yaw={d.rot} lift={d.kind === "lotus" ? -.025 : props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
+              <group scale={d.scale} onClick={e=>{if(!props.editing && e.delta<6)e.stopPropagation();}}
+                onPointerDown={(e) => { if (!props.editing || props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); }}
                 onPointerUp={(e) => {
                   if (props.mode !== "garden" || props.readOnly || e.delta >= 6) return;
+                  if (!props.editing) {
+                    const c=rayToCap(e.ray,e.point,world.current);
+                    if(d.kind==="chair")props.onTravelTarget?.({x:d.x,z:d.z,sit:true});
+                    else if(c)props.onTravelTarget?.(c);
+                    if(isBld && hit?.clickable){e.stopPropagation();props.onHotspot?.(hit.name as Hotspot);}return;
+                  }
                   // V4-R10：放置/移动状态下点到对象表面，也要取「背后地形」交点确认，不把建筑表面当地面
                   if (props.placingKind || props.bedMoving) {
                     const hitPoint = e.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
                     if (hitPoint) {
                       e.stopPropagation();
-                      const c = pointToCap(hitPoint);
+                      const c = worldPointToCap(hitPoint);
                       props.onPlace?.(c.x, c.z);
                       return;
                     }
@@ -1029,6 +1083,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
                   props.onDecorSelect?.(d.id);
                 }}>
                 <DecorItem kind={d.kind} seed={i + 1} lights={L} tint={d.color} stage={d.stage} parts={d.parts} signText={props.signText} signSub={props.signSub} />
+                {!freeTravel && d.id === travelerBench?.id && (travelerPose === "idle" || travelerPose === "read") && <group name="bench-traveler" position={[TRAVELER_SEAT_X,TRAVELER_SEAT_Y,0]} rotation={[0,Math.PI/2,0]} scale={SEATED_TRAVELER_SCALE}><Traveler pose={travelerPose} reduced={reduced}/></group>}
                 {isSel && <mesh geometry={torusGeo(isBld ? 0.5 : 0.18, isBld ? 0.012 : 0.008, 6, 32)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />}
               </group>
               {/* 建筑热点：非编辑模式下保留原业务/标签入口（H08）；编辑模式点击只选中，不打开业务 */}
@@ -1044,9 +1099,10 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
           );
         })}
 
-        <SurfaceMover az={travelerAt.az} polar={travelerAt.polar} yaw={travelerAt.yaw} reduced={reduced} speed={1.6}>
+        {!freeTravel && !(travelerBench && (travelerPose === "idle" || travelerPose === "read")) && <SurfaceMover az={travelerAt.az} polar={travelerAt.polar} yaw={travelerAt.yaw} reduced={reduced} speed={1.6}>
           <group scale={1.25}><Traveler pose={travelerPose} reduced={reduced} /></group>
-        </SurfaceMover>
+        </SurfaceMover>}
+        <TravelerNavigator target={freeTravel ? props.travelerTarget ?? null : null} rest={{x:travelerBench?.x ?? SPOTS.bench.x,z:travelerBench?.z ?? SPOTS.bench.z}} obstacles={travelObstacles} reduced={reduced} onArrive={()=>props.onTravelArrive?.()} onBlocked={()=>props.onTravelBlocked?.()}/>
         <SurfaceMover az={lampAt.az} polar={lampAt.polar} lift={lampAt.lift} reduced={reduced} speed={1.8}>
           <StarLamp state={props.lampState} reduced={reduced} />
         </SurfaceMover>
@@ -1087,6 +1143,10 @@ export function GardenWorld(props: WorldProps) {
   const [hover, setHoverState] = useState<string | null>(null);
   const labelEl = useRef<HTMLDivElement>(null);
   const drag = useRef({ yaw: 0, tilt: 0 });
+  useEffect(() => {
+    if (!props.zoneView) return;
+    drag.current = props.zoneView === "pond" ? {yaw:-Math.atan2(3.05,-.6),tilt:-.30} : props.zoneView === "roses" ? {yaw:-Math.atan2(-4,.8),tilt:-.30} : {yaw:0,tilt:0};
+  }, [props.zoneView]);
   const decorDrag = useRef<string | null>(null);
   const lastDecorMove = useRef(0);
   const zoom = useRef(1);
@@ -1324,6 +1384,13 @@ export function GardenWorld(props: WorldProps) {
       )}
       {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
+      {props.editing && props.selectedBedIndex != null && <div className="bed-controls" role="group" aria-label="花圃编辑">
+        <strong>{props.gardens[props.selectedBedIndex]?.name ?? "花圃"}</strong>
+        <button aria-pressed={!!props.bedMoving} onClick={()=>props.onBedMoveStart?.(props.selectedBedIndex!)}>{props.bedMoving ? "点击地面确定位置" : "移动整圃"}</button>
+        {([["←",-1,0],["↑",0,1],["↓",0,-1],["→",1,0]] as const).map(([label,dx,dy])=><button key={label} aria-label={`花圃${label}微调`} onClick={()=>{if(!props.bedSelPos)return;const p=nudgeRef.current?.(props.bedSelPos,dx,dy,.005*PLANET_R*(props.nudgeScale??1));if(p)props.onBedNudge?.(props.selectedBedIndex!,p);}}>{label}</button>)}
+        <button onClick={props.onBedDeselect}>取消选择</button>
+        <small>花朵、泥土与木边一起移动</small>
+      </div>}
       {/* H05：选中对象的紧凑操作条——名称 + 复制/删除（位置由 Scene 的投影每帧写入，不参与 React 布局） */}
       {selItem && (
         <div ref={selEl} className="world-selbar" role="group" aria-label={`选中对象：${selLabel}`}>
