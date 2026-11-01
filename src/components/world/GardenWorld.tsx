@@ -245,7 +245,7 @@ function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, Wor
 }
 
 /* ───────── 地表上的物体 ───────── */
-function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, children }: { x: number; z: number; yaw?: number; lift?: number; upright?: number; children: React.ReactNode }) {
+function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, name, children }: { x: number; z: number; yaw?: number; lift?: number; upright?: number; name?: string; children: React.ReactNode }) {
   const f = useMemo(() => capFrame(x, z, yaw, lift), [x, z, yaw, lift]);
   const q = useMemo(() => {
     if (!upright) return f.quat;
@@ -257,7 +257,7 @@ function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, children }: { x: number; 
     const up = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (yaw * Math.PI) / 180);
     return f.quat.clone().slerp(up, k);
   }, [f.quat, yaw, upright, x, z]);
-  return <group position={f.pos} quaternion={q}>{children}</group>;
+  return <group name={name} position={f.pos} quaternion={q}>{children}</group>;
 }
 
 function Grass({ items }: { items: ReturnType<typeof scatter> }) {
@@ -626,6 +626,28 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     return () => { delete (window as unknown as { __gardenZoom?: unknown }).__gardenZoom; };
   }, [props.zoom]);
 
+  // V4-R18：装饰对象包围盒 → 屏幕中心（细物件用单点锚点会穿缝，改用包围盒投影）
+  useEffect(() => {
+    (window as unknown as { __gardenBox?: (id: string) => { x: number; y: number; w: number; h: number } | null }).__gardenBox = (id) => {
+      const root = world.current;
+      const obj = root?.getObjectByName(`decor:${id}`);
+      if (!obj) return null;
+      const box = new THREE.Box3().setFromObject(obj);
+      if (box.isEmpty()) return null;
+      const r = gl.domElement.getBoundingClientRect();
+      const xs: number[] = [], ys: number[] = [];
+      for (const cx of [box.min.x, box.max.x]) for (const cy of [box.min.y, box.max.y]) for (const cz of [box.min.z, box.max.z]) {
+        const v = new THREE.Vector3(cx, cy, cz).project(camera);
+        xs.push((v.x + 1) / 2 * r.width + r.left);
+        ys.push((1 - v.y) / 2 * r.height + r.top);
+      }
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+      return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, w: maxX - minX, h: maxY - minY };
+    };
+    return () => { delete (window as unknown as { __gardenBox?: unknown }).__gardenBox; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, gl]);
+
   // V4-R17：把「球冠坐标 → 屏幕 CSS 像素」暴露出来，用于测量拾取误差（真实相机投影）
   useEffect(() => {
     (window as unknown as { __gardenProject?: (cap: { x: number; z: number }, lift?: number) => { x: number; y: number } | null }).__gardenProject = (cap, lift = 0) => {
@@ -839,7 +861,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             );
           }
           return (
-            <OnCap key={d.id} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
+            <OnCap key={d.id} name={`decor:${d.id}`} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
                 onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); }}
                 onPointerUp={(e) => {
