@@ -238,6 +238,18 @@ export function useDecor() {
     },
     applyPreset: (p: DecorPreset) => commit(addPreset(list, p)),
     update: (id: string, patch: Partial<DecorPlacement>) => commit(updateDecor(list, id, patch), true, true),
+    // V4-R18：移动必须独立记一步历史——不走 coalesce（它会把 400ms 内的连续 update 合并掉），
+    // 也不受 transforming 影响（那是拖动/滑杆的专用标记）。一次确认 = 一步撤销。
+    move: (id: string, x: number, z: number) => {
+      const before = list;
+      const next = updateDecor(list, id, { x, z });
+      if (JSON.stringify(before) === JSON.stringify(next)) return; // 没真动就不占历史
+      history.current.push(before);
+      if (history.current.length > 50) history.current.shift();
+      future.current = [];
+      setVer((v) => v + 1);
+      saveDecor(next); setList(next);
+    },
     beginTransform,
     endTransform,
     remove: (id: string) => commit(removeDecor(list, id)),

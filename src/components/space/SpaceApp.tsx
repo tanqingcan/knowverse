@@ -691,7 +691,7 @@ export function SpaceApp() {
                   return;
                 }
                 if (moveId) {
-                  decorStore.update(moveId, { x, z });
+                  decorStore.move(moveId, x, z); // V4-R18：强制记一步历史（可撤销）
                   lastPlaceAt.current = performance.now();
                   setMoveId(null); setPlacingKind(null);
                   setLayoutMsg("已移到新位置（可撤销）");
