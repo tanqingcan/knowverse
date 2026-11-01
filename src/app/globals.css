@@ -838,3 +838,18 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .star-sp.s3 { --dx: 18px; --dy: 38px; }
 @keyframes sp-fly { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 55% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.9); } }
 @media (prefers-reduced-motion: reduce) { .star-fall { display: none; } }
+
+/* ── V4-R01：替换槽位提示条（固定在素材库顶部，不随内容滚动） ── */
+.cp-replace-bar { position: sticky; top: 0; z-index: 3; margin: 0 0 8px; padding: 8px 12px; border-radius: 10px;
+  background: rgba(255, 235, 190, 0.95); border: 1px solid rgba(200, 150, 60, 0.38); color: var(--ink);
+  font-size: 13px; font-weight: 600; line-height: 1.45; }
+/* V4-R01：槽位 = 容器 div + 主按钮 + 角上「放」按钮 */
+.hb-slot { position: relative; padding: 0; }
+.hb-slot .hb-main { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; border: 0; background: transparent; cursor: pointer; font-family: inherit; color: inherit; border-radius: inherit; padding: 0; }
+.hb-slot .hb-place { position: absolute; right: -2px; top: -2px; z-index: 2; width: 20px; height: 20px; min-height: 20px;
+  border-radius: 999px; border: 1px solid rgba(120, 95, 70, 0.35); background: rgba(255, 247, 232, 0.98);
+  color: var(--ink-2); font-size: 11px; line-height: 1; cursor: pointer; font-family: inherit; padding: 0; }
+.hb-slot .hb-place:hover { background: var(--honey); color: #3f3657; }
+.hb-slot.is-active .hb-place, .hb-slot.is-current .hb-place { border-color: rgba(200, 150, 60, 0.7); }
+@media (max-width: 860px) { .hb-slot .hb-place { width: 24px; height: 24px; min-height: 24px; font-size: 12px; } }

@@ -693,7 +693,7 @@ export function SpaceApp() {
           showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
           onFirstDefault={() => setFirstDismissed(true)}
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
-          slotMode={slotMode} activeSlot={activeSlot} onToggleSlotMode={() => setSlotMode((v) => !v)}
+          activeSlot={activeSlot}
           onClearSlot={() => { setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? null : v))); setLayoutMsg(`已清空第 ${activeSlot + 1} 槽`); }}
           replaceSlot={slotEdit}
           replaceLabel={slotEdit != null ? `替换第 ${slotEdit + 1} 槽 · 原「${hotbar[slotEdit] ? (DECOR_CATALOG.find((c) => c.kind === hotbar[slotEdit])?.label ?? hotbar[slotEdit]) : "空槽"}」 → 待选` : null}

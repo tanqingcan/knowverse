@@ -57,6 +57,8 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
 }) {
   // H18：滚轮必须用原生非 passive 监听才能可靠 preventDefault + 阻断向画布传播
   const barRef = useRef<HTMLDivElement>(null);
+  // R02：长按 500ms 进入替换（触摸设备的主要入口）
+  const lp = useRef<number | null>(null);
   const cbRef = useRef(onWheelSlot);
   cbRef.current = onWheelSlot;
   useEffect(() => {
@@ -83,7 +85,10 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
           const cur = currentSlot === i;
           return (
             <div key={`${kind ?? "empty"}-${i}`} className={`hb-slot ${active ? "is-active" : ""} ${cur ? "is-current" : ""} ${kind ? "" : "is-empty"}`}
-              onContextMenu={(e) => { e.preventDefault(); onEditSlot?.(i); }}>
+              onContextMenu={(e) => { e.preventDefault(); onEditSlot?.(i); }}
+              onPointerDown={() => { lp.current = window.setTimeout(() => onEditSlot?.(i), 500); }}
+              onPointerUp={() => { if (lp.current) { clearTimeout(lp.current); lp.current = null; } }}
+              onPointerLeave={() => { if (lp.current) { clearTimeout(lp.current); lp.current = null; } }}>
               <button type="button" className="hb-main" onClick={() => onEditSlot?.(i)}
                 aria-label={`第 ${i + 1} 槽 ${kind ? labelOf(kind) : "空槽"}（点击替换）`}
                 title={`替换第 ${i + 1} 槽${kind ? ` · 当前「${labelOf(kind)}」` : " · 当前空槽"}`}>

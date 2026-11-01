@@ -74,9 +74,6 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
       <div className="cp-head">
         <b>全部素材</b>
         {/* H20：明确的「放入槽位」按钮——点它进入选材模式，再点素材写入当前槽 */}
-        <button className={`btn btn-sm ${slotMode ? "btn-primary" : "btn-quiet"}`} onClick={onToggleSlotMode} aria-pressed={slotMode}>
-          {slotMode ? `选材放入第 ${(activeSlot ?? 0) + 1} 槽…` : `放入第 ${(activeSlot ?? 0) + 1} 槽`}
-        </button>
         {/* H20：空槽规则——可把当前槽清空（空槽在快捷栏显示为「+」） */}
         <button className="btn btn-quiet btn-sm" onClick={onClearSlot} title="把当前槽清空">清空槽</button>
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="收起素材栏">收起</button>
