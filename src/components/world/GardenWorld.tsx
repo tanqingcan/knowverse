@@ -14,7 +14,7 @@ import { C, matte, PLANET_R, haloTexture, sphereGeo, cylGeo, grassTuftGeo, rand,
 import { Flower3D } from "./Flower3D";
 import { Bench, CloudRing, Cottage, DistantPlanet, GardenArch, GardenBed, Greenhouse, Lamp, Observatory, PondBridge, SeedShed, Sign, SteppingStone } from "./Props3D";
 import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
-import { capFrame, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
+import { capFrame, worldToCap, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
 import type { StageKey } from "@/lib/flora";
@@ -548,7 +548,7 @@ function PerfProbe() {
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; nudge: React.MutableRefObject<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null> }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
   // H02：把「屏幕坐标 → 球冠坐标」暴露给外层 DOM 拖动。R3F 的 pointermove 在拖动期间不触发
@@ -567,6 +567,24 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     };
     return () => { props.pointerToCap.current = null; };
   }, [camera, gl, dragRay, dragNdc, dragSphere, props.pointerToCap]);
+  // R13/R14：把「屏幕方向 + 步长」换算成球冠坐标位移（相机基 → 切平面 → worldToCap）
+  useEffect(() => {
+    props.nudge.current = (item, dx, dy, step) => {
+      const f = capFrame(item.x, item.z);
+      const n = f.pos.clone().normalize();
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+      const tr = right.clone().sub(n.clone().multiplyScalar(right.dot(n)));
+      const tu = up.clone().sub(n.clone().multiplyScalar(up.dot(n)));
+      if (tr.lengthSq() < 1e-8 || tu.lengthSq() < 1e-8) return null; // 极点退化：调用方保留原位
+      tr.normalize(); tu.normalize();
+      const next = n.clone().multiplyScalar(PLANET_R).addScaledVector(tr, dx * step).addScaledVector(tu, dy * step).normalize();
+      const cap = worldToCap(next);
+      return { x: Math.max(-6, Math.min(6, cap.x)), z: Math.max(-6, Math.min(6, cap.z)) };
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera]);
+
   // H06：放置预览 ghost（跟随指针的半透明模型）
   const ghost = useRef<THREE.Group>(null);
   useEffect(() => {
@@ -844,6 +862,8 @@ export function GardenWorld(props: WorldProps) {
   const zoom = useRef(1);
   // H02：Screen→球冠坐标函数（由内部 Scene 用相机+射线注册），供 DOM 层拖动使用
   const pointerToCap = useRef<((cx: number, cy: number) => { x: number; z: number } | null) | null>(null);
+  // R13/R14：键盘微移用的「屏幕方向 → 球冠位移」函数（由 Scene 用真实相机基暴露）
+  const nudgeRef = useRef<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>(null);
   // H05：选中对象的紧凑操作条（DOM，位置由 Scene 的投影每帧写入）
   const selEl = useRef<HTMLDivElement>(null);
   const selItem = props.selectedDecorId ? (props.decor ?? []).find((d) => d.id === props.selectedDecorId) : undefined;
@@ -887,12 +907,39 @@ export function GardenWorld(props: WorldProps) {
     props.onDragged?.(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.focusBed?.key]);
-  // 键盘：←/→ 环绕、↑/↓ 俯仰、+/- 缩放、R 复位
+  // R13/R14：方向键优先移动「选中的对象」；无选中时才转相机
+  const selIdRef = useRef(props.selectedDecorId ?? null);
+  selIdRef.current = props.selectedDecorId ?? null;
+  const decorRef = useRef(props.decor);
+  decorRef.current = props.decor;
+  const nudgeAt = useRef(0);
+  // 键盘：←/→ 环绕、↑/↓ 俯仰、+/- 缩放、R 复位（有选中对象时方向键改为移动对象）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (props.mode !== "garden") return;
+      if (props.readOnly) return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      // ── R13/R14：选中对象时方向键移动对象（以相机屏幕方向投影到球面切平面） ──
+      const DIRS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+      if (DIRS[e.key]) {
+        const sid = selIdRef.current;
+        const item = sid ? (decorRef.current ?? []).find((d) => d.id === sid) : null;
+        if (item) {
+          e.preventDefault();
+          // 长按重复：初延迟交给系统，重复频率上限 ~10 次/秒（100ms 节流），不依赖 OS 极快重复
+          const now = performance.now();
+          if (e.repeat && now - nudgeAt.current < 100) return;
+          nudgeAt.current = now;
+          const R = PLANET_R;
+          const step = e.altKey ? 0.02 * R : e.shiftKey ? 0.001 * R : 0.005 * R;
+          const [dx, dy] = DIRS[e.key];
+          const cap = nudgeRef.current?.(item, dx, dy, step);
+          if (!cap) return; // 极点退化：不动，避免抖动
+          props.onDecorUpdate?.(item.id, { x: cap.x, z: cap.z });
+          return;
+        }
+      }
       const { yaw, tilt } = drag.current;
       if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") drag.current = { yaw: yaw - 0.12, tilt };
       else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") drag.current = { yaw: yaw + 0.12, tilt };
@@ -992,7 +1039,7 @@ export function GardenWorld(props: WorldProps) {
           onPointerMissed={() => setHover(null)}>
           <Suspense fallback={null}>
             <PerfProbe />
-            <Scene {...props} labelEl={labelEl} selEl={selEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} />
+            <Scene {...props} labelEl={labelEl} selEl={selEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} nudge={nudgeRef} />
           </Suspense>
         </Canvas>
       </GLBoundary>

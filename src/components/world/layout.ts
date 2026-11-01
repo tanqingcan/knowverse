@@ -11,6 +11,16 @@ import type { BedLayout } from "./bedLayout";
 export { layoutBeds } from "./bedLayout";
 export type { BedLayout, WorldPlant } from "./bedLayout";
 
+/** R13：世界法向量 → 球冠平面坐标（capToAzPolar 的逆），用于把切平面位移写回 x/z */
+export function worldToCap(p: { x: number; y: number; z: number }) {
+  const len = Math.hypot(p.x, p.y, p.z) || 1;
+  const nx = p.x / len, ny = p.y / len, nz = p.z / len;
+  const polar = Math.acos(Math.max(-1, Math.min(1, ny)));
+  const d = polar * PLANET_R;
+  const az = Math.atan2(nx, nz);
+  return { x: d * Math.sin(az), z: d * Math.cos(az) };
+}
+
 export function capToAzPolar(x: number, z: number) {
   const d = Math.hypot(x, z);
   return { az: d < 1e-6 ? 0 : (Math.atan2(x, z) * 180) / Math.PI, polar: ((d / PLANET_R) * 180) / Math.PI };
