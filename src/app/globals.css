@@ -949,3 +949,13 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
 .terrain-reset { min-height: 40px; padding: 0 10px; border: 1px solid var(--line); background: transparent; border-radius: 8px;
   cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink); }
 @media (max-width: 860px) { .terrain-bar { right: 8px; top: 56px; flex-wrap: wrap; max-width: calc(100vw - 16px); } }
+
+/* V4-H27：窄屏地形栏默认折叠——只留一个「地形 ▸」开关，避免 UI 面积超 25% */
+.terrain-toggle { display: none; }
+@media (max-width: 860px) {
+  .terrain-toggle { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px;
+    position: absolute; right: 8px; top: 52px; z-index: 8; border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(255, 247, 232, 0.94); font-family: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
+  .terrain-bar.is-collapsed { display: none; }
+  .terrain-bar { top: 100px; max-width: calc(100vw - 16px); overflow-x: auto; flex-wrap: nowrap; }
+}

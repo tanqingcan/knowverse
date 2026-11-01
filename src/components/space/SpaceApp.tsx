@@ -131,6 +131,12 @@ export function SpaceApp() {
   const [terrainRadius, setTerrainRadius] = useState(0.45);
   // V4-R29：水面高度（null=无水面）。水位取负值即「盆地积水」
   const [terrainWater, setTerrainWater] = useState<number | null>(null);
+  // V4-H27：小屏默认折叠地形栏（否则手机 UI 面积远超 25%）
+  const [terrainOpen, setTerrainOpen] = useState(true);
+  // V4-H27：小屏初始折叠地形栏
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 860) setTerrainOpen(false);
+  }, []);
   // V4-R30：地形撤销/重做（一次笔触一条历史，最多 40 步）
   const [terrainPast, setTerrainPast] = useState<Float32Array[]>([]);
   const [terrainFuture, setTerrainFuture] = useState<Float32Array[]>([]);
@@ -735,7 +741,9 @@ export function SpaceApp() {
         {creativeOpen && !focus && (
           <>
           {/* V4-R26：地形工具栏 */}
-          <div className="terrain-bar" role="toolbar" aria-label="地形工具">
+          <button type="button" className="terrain-toggle" aria-expanded={terrainOpen}
+            onClick={() => setTerrainOpen((v) => !v)}>地形 {terrainOpen ? "▾" : "▸"}</button>
+          <div className={`terrain-bar ${terrainOpen ? "" : "is-collapsed"}`} role="toolbar" aria-label="地形工具">
             <span className="terrain-label">地形</span>
             {([["up", "抬高"], ["down", "降低"], ["restore", "平滑恢复"]] as const).map(([k, t]) => (
               <button key={k} type="button" aria-pressed={terrainTool === k}
