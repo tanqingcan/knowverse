@@ -1025,13 +1025,14 @@ export function GardenWorld(props: WorldProps) {
     window.addEventListener("pointerdown", mark);
     window.addEventListener("wheel", mark, { passive: true });
     const t = window.setInterval(() => {
-      if (props.mode !== "garden" || props.reduced || props.readOnly) return;
+      // V4-R12：创造模式/浮窗/DIY/开场期间必须完全暂停空闲自转（此前漏判 paused，实测静置 5s yaw 仍漂 0.08）
+      if (props.mode !== "garden" || props.reduced || props.readOnly || props.paused) return;
       if (press.current || decorDrag.current) return;
       if (performance.now() - lastAct.current < 3000) return;
       drag.current = { yaw: drag.current.yaw + 0.0035, tilt: drag.current.tilt };
     }, 100);
     return () => { window.removeEventListener("pointerdown", mark); window.removeEventListener("wheel", mark); window.clearInterval(t); };
-  }, [props.mode, props.reduced, props.readOnly]);
+  }, [props.mode, props.reduced, props.readOnly, props.paused]);
   useEffect(() => () => { document.body.style.cursor = ""; }, []);
   const labelKey = hover ?? (props.selectedId ? `plant:${props.selectedId}` : null);
   const label = labelKey ? props.hoverLabel?.(labelKey) ?? null : null;
