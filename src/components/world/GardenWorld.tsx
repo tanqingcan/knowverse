@@ -985,7 +985,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             return (
               <group key={d.id}
                 onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
-                <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} />
+                <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} heights={props.terrainHeights} />
                 {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
               </group>
             );
