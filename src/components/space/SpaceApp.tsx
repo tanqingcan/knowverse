@@ -117,6 +117,8 @@ export function SpaceApp() {
   const [slotEdit, setSlotEdit] = useState<number | null>(null);
   // V4-R05：独立「布局」面板（服务器/模板/环境密度从素材库搬出）
   const [layoutOpen, setLayoutOpen] = useState(false);
+  // V4-H04：环境设置（天空底色/恒星密度/星球本体色调）——默认值等于修复前的外观
+  const [env, setEnv] = useState<{ sky: string; stars: number; planet: string }>({ sky: "#2A2338", stars: 1, planet: "#9DB983" });
   // V4-R14：方向键步长倍率（布局面板可改，默认 1× = 0.005R）
   const [nudgeScale, setNudgeScale] = useState(1);
   // V4-R19：花圃作为独立布局对象——位移覆盖（键=花圃索引）+ 选中索引
@@ -662,6 +664,7 @@ export function SpaceApp() {
               onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); setBedSel(null); }}
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
+              env={env}
               editing={creativeOpen}
               onDecorDuplicate={(id) => startCopy(id)}
               onDecorRemove={(id) => { decorStore.remove(id); setSelectedDecorId(null); }}
@@ -804,6 +807,8 @@ export function SpaceApp() {
             if (it) decorStore.update(it.id, { scale: v });
           }}
           revision={layoutRev} status={layoutStatus} message={layoutMsg}
+            env={env}
+            onEnv={(patch) => setEnv((prev) => ({ ...prev, ...patch }))}
           onSave={saveCreative} onPublish={publishCreative}
           onUndo={undo} onRedo={redo} canUndo={decorStore.canUndo} canRedo={decorStore.canRedo}
           onApplyTemplate={applyTemplate} onDiscard={discard}

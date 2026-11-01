@@ -46,6 +46,8 @@ export type WorldProps = {
   /** V4-R19：点击花圃土壤面选中整圃 */
   onSelectBed?: (index: number) => void;
   selectedBedIndex?: number | null;
+  /** V4-H04：环境设置（天空底色/恒星密度/星球色调） */
+  env?: { sky: string; stars: number; planet: string };
   /** V4-R19：正在平移花圃（需要落位拾取球，但没有素材 ghost） */
   bedMoving?: boolean;
   /** V4-R21：选中花圃时方向键整圃精调 */
@@ -665,6 +667,12 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera, gl]);
 
+  // V4-H04：星球本体色调跟随环境设置
+  useEffect(() => {
+    if (props.env?.planet) planetMat.color.set(props.env.planet);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.env?.planet]);
+
   // V4-R17：把「球冠坐标 → 屏幕 CSS 像素」暴露出来，用于测量拾取误差（真实相机投影）
   useEffect(() => {
     (window as unknown as { __gardenProject?: (cap: { x: number; z: number }, lift?: number) => { x: number; y: number } | null }).__gardenProject = (cap, lift = 0) => {
@@ -800,6 +808,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const L = lights;
   return (
     <>
+      <color attach="background" args={[props.env?.sky ?? "#2A2338"]} />
       <hemisphereLight args={["#EDE4F7", "#8C7E86", 0.95]} />
       <ambientLight intensity={0.12} />
       <KeyLight />

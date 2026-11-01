@@ -5,7 +5,7 @@
  */
 import React from "react";
 
-export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
+export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, env, onEnv, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
   open: boolean;
   onClose: () => void;
   /** V4-R14：方向键步长倍率（0.5×/1×/2×），并显示单位 */
@@ -17,6 +17,9 @@ export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensi
   onSave?: () => void; onPublish?: () => void;
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
   onApplyTemplate?: () => void; onDiscard?: () => void;
+  /** V4-H04：环境设置（天空底色/恒星密度/星球色调） */
+  env?: { sky: string; stars: number; planet: string };
+  onEnv?: (patch: Partial<{ sky: string; stars: number; planet: string }>) => void;
   importPrompt?: { local: number; server: number } | null;
   onImportLocal?: () => void; onKeepServer?: () => void;
   hasPublished?: boolean; onRevert?: () => void;
@@ -54,7 +57,21 @@ export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensi
           {groupDensities && (
             <section className="lm-sec" aria-label="星球环境与群组">
               <div className="lm-sec-title">星球环境</div>
-              <p className="lm-note">天空/恒星/星球本体不可编辑；草与野花按整组调整密度。</p>
+              <p className="lm-note">天空底色 / 恒星密度 / 星球本体色调均可编辑；草与野花还能按整组调整密度。</p>
+              {env && (
+                <>
+                  <label className="cp-prop">天空底色
+                    <input type="color" value={env.sky} onChange={(e) => onEnv?.({ sky: e.target.value })} aria-label="天空底色" />
+                  </label>
+                  <label className="cp-prop">恒星密度
+                    <input type="range" min={0} max={2} step={0.1} value={env.stars}
+                      onChange={(e) => onEnv?.({ stars: +e.target.value })} aria-label="恒星密度" />
+                  </label>
+                  <label className="cp-prop">星球色调
+                    <input type="color" value={env.planet} onChange={(e) => onEnv?.({ planet: e.target.value })} aria-label="星球色调" />
+                  </label>
+                </>
+              )}
               <label className="cp-prop">草地密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.grass} onChange={(e) => onGroupDensity?.("grassGroup", +e.target.value)} /><span>{groupDensities.grass.toFixed(1)}</span></label>
               <label className="cp-prop">野花密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.blooms} onChange={(e) => onGroupDensity?.("wildflowerGroup", +e.target.value)} /><span>{groupDensities.blooms.toFixed(1)}</span></label>
             </section>
