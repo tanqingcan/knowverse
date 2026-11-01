@@ -277,6 +277,18 @@ function Bed({ bed, plants, terrainLift = 0, ...rest }: { bed: BedLayout; plants
 }
 
 /* ───────── 地表上的物体 ───────── */
+/** V4-R28：建筑「平整基座」——取 footprint 内最高点作为抬升量，保证不埋入、不悬空 */
+function buildingLift(H: Float32Array | null | undefined, x: number, z: number, r: number): number {
+  if (!H) return 0;
+  let m = terrainHeightAt(H, x, z);
+  const r1 = r * 0.7;
+  for (const [dx, dz] of [[r1, 0], [-r1, 0], [0, r1], [0, -r1], [r1 * 0.7, r1 * 0.7], [-r1 * 0.7, -r1 * 0.7], [r1 * 0.7, -r1 * 0.7], [-r1 * 0.7, r1 * 0.7]]) {
+    const v = terrainHeightAt(H, x + dx, z + dz);
+    if (v > m) m = v;
+  }
+  return m;
+}
+
 function OnCap({ x, z, yaw = 0, lift = 0, upright = 0, name, children }: { x: number; z: number; yaw?: number; lift?: number; upright?: number; name?: string; children: React.ReactNode }) {
   const f = useMemo(() => capFrame(x, z, yaw, lift), [x, z, yaw, lift]);
   const q = useMemo(() => {
@@ -986,7 +998,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
               <group key={d.id}
                 onPointerUp={(e) => { if (props.mode === "garden" && !props.readOnly && e.delta < 6) { e.stopPropagation(); props.onDecorSelect?.(d.id); } }}>
                 <SphereSurface cx={d.x} cz={d.z} width={d.width ?? 0.7} length={d.length ?? 0.7} rot={d.rot} colorKey={d.kind} heights={props.terrainHeights} />
-                {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
+                {isSel && <OnCap x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? (isBld ? buildingLift(props.terrainHeights, d.x, d.z, d.kind === "cottage" ? 0.62 : 0.5) : terrainHeightAt(props.terrainHeights, d.x, d.z)) : 0}><mesh geometry={sphereGeo(0.02, 8, 6)} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.8 })} position={[0, 0.05, 0]} /></OnCap>}
               </group>
             );
           }
