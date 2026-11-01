@@ -807,6 +807,18 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   }, [sel, celebPos, poses]);
   const travelerPose: Pose = (props.pose === "tend" && !sel) ? "idle" : props.pose;
 
+  // V4-H09 诊断：曝光旅人/星灯/长椅的球冠位置，用于验证「移动长椅后旅人是否跟随」
+  useEffect(() => {
+    (window as unknown as { __gardenPose?: () => unknown }).__gardenPose = () => ({
+      traveler: travelerAt,
+      lamp: lampAt,
+      bench: poses.bench,
+      lampSpot: poses.lampSpot ?? null,
+    });
+    return () => { delete (window as unknown as { __gardenPose?: unknown }).__gardenPose; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [travelerAt, lampAt, poses]);
+
   const L = lights;
   return (
     <>
