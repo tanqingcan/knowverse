@@ -126,19 +126,42 @@ export function SpaceApp() {
   const savedSnap = useRef<string>('');
   const [askExit, setAskExit] = useState(false);
   const applyLayout = (arr: DecorPlacement[]) => { decorStore.setAll(arr); savedSnap.current = JSON.stringify(arr); };
+  // ── V4-R07：快捷栏配置「按账号」存储（键 kv-hotbar:<userId>），与布局存储（kv-decor / 服务器）彻底分开 ──
+  const hotbarKey = (uid?: string) => `${HOTBAR_KEY}:${uid ?? "anon"}`;
+  const hotbarKeyRef = useRef(hotbarKey(undefined));
+  const hotbarReady = useRef(false);
+  const isValidHotbar = (v: unknown): v is (DecorKind | null)[] =>
+    Array.isArray(v) && v.length === 9 && v.every((k) => k === null || DECOR_CATALOG.some((c) => c.kind === k));
   useEffect(() => {
+    const uid = space?.user.id;
+    const key = hotbarKey(uid);
+    hotbarKeyRef.current = key;
     try {
-      const raw = localStorage.getItem(HOTBAR_KEY);
+      const raw = localStorage.getItem(key);
       if (raw) {
         const arr = JSON.parse(raw);
-        // H20：允许空槽（null）；材质 ID 用 kind，绝不用场景实例 ID
-        if (Array.isArray(arr) && arr.length === 9 && arr.every((k) => k === null || DECOR_CATALOG.some((c) => c.kind === k))) setHotbar(arr);
+        if (isValidHotbar(arr)) { setHotbar(arr); }
+        else { setHotbar(DEFAULT_HOTBAR); setLayoutMsg("快捷栏配置已损坏，已恢复默认（旧数据保留在本地）"); }
+      } else if (uid) {
+        // 从旧版全局键迁移一次（旧版本不区分账号）
+        const legacyRaw = localStorage.getItem(HOTBAR_KEY);
+        if (legacyRaw) {
+          try {
+            const arr = JSON.parse(legacyRaw);
+            if (isValidHotbar(arr)) { setHotbar(arr); setLayoutMsg("已把旧版快捷栏配置迁移到当前账号"); }
+          } catch { localStorage.setItem(key + ":legacy-broken", legacyRaw); }
+        }
       }
-    } catch { /* 忽略损坏的快捷栏配置 */ }
-  }, []);
-  // H20：槽位个人配置持久化（改完即存，刷新后保持）
+    } catch {
+      setHotbar(DEFAULT_HOTBAR);
+      setLayoutMsg("快捷栏配置读取失败，已恢复默认");
+    }
+    hotbarReady.current = true;
+  }, [space?.user.id]);
+  // 只跟随 hotbar 变化写回；键用 ref，账号切换时不会把上一个账号的槽位写到新键
   useEffect(() => {
-    try { localStorage.setItem(HOTBAR_KEY, JSON.stringify(hotbar)); } catch { /* 隐私模式等写失败忽略 */ }
+    if (!hotbarReady.current) return;
+    try { localStorage.setItem(hotbarKeyRef.current, JSON.stringify(hotbar)); } catch { /* 隐私模式等写失败忽略 */ }
   }, [hotbar]);
   const [placingKind, setPlacingKind] = useState<string | null>(null);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
