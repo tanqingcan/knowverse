@@ -570,10 +570,28 @@ export function SpaceApp() {
   // 浮窗语义：Esc 关闭、焦点进出、Tab 不出窗（只对需要专注的浮窗与设置弹窗生效）
   const closePanel = useCallback(() => { setFocusLarge(false); open({ panel: null }); }, [open]);
   const focusWinRef = useRef<HTMLElement | null>(null);
+  // V4-H47：学习窗打开前的焦点元素（关闭后归还）
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const focusWinOpen = !!panel.panel && FOCUS_PANELS.includes(panel.panel);
   // H47：窗口真的渲染出来（星落结束后）才算「打开」，否则 ref 为 null、焦点与 Tab 陷阱会失效
   const focus = !!panel.panel && FOCUS_PANELS.includes(panel.panel) && !starFall;
+
+  // V4-H47：焦点进入与归还——开窗时记录触发元素并把焦点移入窗内；关闭时归还
+  useEffect(() => {
+    const opened = !!(focus && panel.panel);
+    if (opened) {
+      lastFocusRef.current = (document.activeElement as HTMLElement | null) ?? null;
+      const t = window.setTimeout(() => focusWinRef.current?.focus(), 30);
+      return () => window.clearTimeout(t);
+    }
+    if (lastFocusRef.current) {
+      const el = lastFocusRef.current;
+      lastFocusRef.current = null;
+      window.setTimeout(() => { try { el.focus(); } catch { /* 元素已卸载 */ } }, 30);
+    }
+  }, [focus, panel.panel]);
   // H47：必须用「窗口已渲染」的 focus（星落期间窗口还没挂载，ref 为 null，focus/Tab 陷阱会全部失效）
   useDialog(focus, focusWinRef, closePanel, 'nav.sections button[aria-current="page"]');
   useDialog(panel.panel === "settings", settingsRef, closePanel, 'button[aria-label="设置"]');
