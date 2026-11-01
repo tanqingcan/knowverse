@@ -245,6 +245,8 @@ export function SpaceApp() {
       // V4-R30：地形高度场还原（旧布局无此字段 → 默认平地）
       if (Array.isArray(l.terrain) && l.terrain.length > 0) setTerrainHeights(fromSparse(l.terrain as { i: number; j: number; h: number }[]));
       else setTerrainHeights(null);
+      // V4-R29：水面高度还原
+      setTerrainWater(typeof l.water === "number" ? l.water : null);
       // H03：初始模板只负责「首次创建」。之后用户草稿（即使还没保存）优先于模板，
       // 刷新不会把搬走的建筑弹回原位；服务端一旦有建筑实例即以其为权威。
       const local = loadDecor();
@@ -292,9 +294,9 @@ export function SpaceApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const saveCreative = useCallback(async () => {
-    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
+    try { setLayoutMsg("保存中…"); const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null, terrainWater); setLayoutRev(r.revision); setLayoutStatus(r.status); savedSnap.current = JSON.stringify(decorStore.decor); setLayoutMsg(`已保存到服务器（revision ${r.revision}）`); }
     catch (e: any) { setLayoutMsg(`保存失败：${e?.message ?? "网络错误"}`); }
-  }, [layoutRev, decorStore.decor, bedMoves, terrainHeights]);
+  }, [layoutRev, decorStore.decor, bedMoves, terrainHeights, terrainWater]);
   // H25：退出创造的三条路径（右上退出按钮 / 快捷栏退出 / Esc 最后一级）统一走这里
   const doExit = () => {
     setAskExit(false); setCreativeOpen(false); setPlacingKind(null); setMoveId(null);
@@ -308,7 +310,7 @@ export function SpaceApp() {
   const saveThenExit = async () => {
     try {
       setLayoutMsg("保存中…");
-      const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null);
+      const r = await saveLayout(layoutRev, decorStore.decor, bedMoves, terrainHeights ? toSparse(terrainHeights) : null, terrainWater);
       setLayoutRev(r.revision); setLayoutStatus(r.status);
       savedSnap.current = JSON.stringify(decorStore.decor);
       setLayoutMsg(`已保存到服务器（revision ${r.revision}）`);

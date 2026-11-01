@@ -39,13 +39,13 @@ async function findPlanet(user: CurrentUser): Promise<string> {
 export async function getLayout(user: CurrentUser) {
   const planetId = await findPlanet(user);
   const layout = await q1(
-    `SELECT id, revision, status, schema_version AS "schemaVersion", published_revision AS "publishedRevision", terrain, (published_items IS NOT NULL) AS "hasPublished", bed_moves AS "bedMoves", updated_at AS "updatedAt"
+    `SELECT id, revision, status, schema_version AS "schemaVersion", published_revision AS "publishedRevision", terrain, water, (published_items IS NOT NULL) AS "hasPublished", bed_moves AS "bedMoves", updated_at AS "updatedAt"
      FROM planet_layouts WHERE planet_id = $1`, [planetId]);
-  if (!layout) return { planetId, revision: 0, status: "draft" as const, schemaVersion: 1, publishedRevision: null, hasPublished: false, bedMoves: {} as BedMoves, terrain: null as TerrainPoints | null, items: [] as LayoutItemInput[] };
+  if (!layout) return { planetId, revision: 0, status: "draft" as const, schemaVersion: 1, publishedRevision: null, hasPublished: false, bedMoves: {} as BedMoves, terrain: null as TerrainPoints | null, water: null as number | null, items: [] as LayoutItemInput[] };
   const items = await q(
     `SELECT instance_id AS "instanceId", kind, x, z, rot, scale, width, length, color, stage, parts
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
-  return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, bedMoves: (layout.bedMoves as BedMoves) ?? {}, items: items as LayoutItemInput[] , terrain: (layout.terrain as TerrainPoints | null) ?? null };
+  return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, bedMoves: (layout.bedMoves as BedMoves) ?? {}, items: items as LayoutItemInput[] , terrain: (layout.terrain as TerrainPoints | null) ?? null, water: (layout.water as number | null) ?? null };
 }
 
 export type BedMoves = Record<string, { x: number; z: number; rot?: number }>;
@@ -66,7 +66,7 @@ function cleanBedMoves(input: unknown): BedMoves {
   return out;
 }
 
-export async function saveDraft(user: CurrentUser, baseRevision: number, items: LayoutItemInput[], bedMoves?: unknown, terrain?: unknown) {
+export async function saveDraft(user: CurrentUser, baseRevision: number, items: LayoutItemInput[], bedMoves?: unknown, terrain?: unknown, water?: unknown) {
   const planetId = await findPlanet(user);
   if (!Array.isArray(items)) throw new AppError("bad_layout", "items 必须是数组", 400);
   if (items.length > MAX_ITEMS) throw new AppError("too_many", `对象太多（上限 ${MAX_ITEMS}）`, 400);
@@ -94,12 +94,12 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
     const cur = await c.query(`SELECT id, revision FROM planet_layouts WHERE planet_id = $1 FOR UPDATE`, [planetId]);
     let layoutId: string, nextRevision: number;
     if (!cur.rowCount) {
-      const r = await c.query(`INSERT INTO planet_layouts (planet_id, revision, status, schema_version, bed_moves, terrain) VALUES ($1, 1, 'draft', 2, $2, $3) RETURNING id, revision`, [planetId, JSON.stringify(beds), terrain ? JSON.stringify(terrain) : null]);
+      const r = await c.query(`INSERT INTO planet_layouts (planet_id, revision, status, schema_version, bed_moves, terrain, water) VALUES ($1, 1, 'draft', 2, $2, $3, $4) RETURNING id, revision`, [planetId, JSON.stringify(beds), terrain ? JSON.stringify(terrain) : null, typeof water === 'number' ? water : null]);
       layoutId = r.rows[0].id; nextRevision = 1;
     } else {
       if (baseRevision !== cur.rows[0].revision) throw new AppError("conflict", "布局已被其他窗口修改，请重载", 409);
       layoutId = cur.rows[0].id; nextRevision = cur.rows[0].revision + 1;
-      await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', schema_version = 2, bed_moves = $3, terrain = $4, updated_at = now() WHERE id = $1`, [layoutId, nextRevision, JSON.stringify(beds), terrain ? JSON.stringify(terrain) : null]);
+      await c.query(`UPDATE planet_layouts SET revision = $2, status = 'draft', schema_version = 2, bed_moves = $3, terrain = $4, water = $5, updated_at = now() WHERE id = $1`, [layoutId, nextRevision, JSON.stringify(beds), terrain ? JSON.stringify(terrain) : null, typeof water === 'number' ? water : null]);
       await c.query(`DELETE FROM planet_layout_items WHERE layout_id = $1`, [layoutId]);
     }
     for (const it of clean) {

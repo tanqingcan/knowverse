@@ -697,6 +697,8 @@ export const planetLayouts = pgTable("planet_layouts", {
   bedMoves: jsonb("bed_moves"),
   /** V4-R30：地形稀疏高度场 [{i,j,h}]（49×49 网格，只存非零格点）；null=平地 */
   terrain: jsonb("terrain"),
+  /** V4-R29：水面高度（相对基础球面的径向增量；null=无水面） */
+  water: real("water"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").defaultNow().notNull(),
 }, (t) => [

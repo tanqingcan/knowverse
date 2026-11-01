@@ -22,7 +22,8 @@ export const PUT = authed(async (req, user) => {
     items: z.array(itemSchema).max(300),
     // V4-R22：花圃位移随布局一起保存（与装饰 items 分开的字段）
     bedMoves: bedMovesSchema.nullish(),
+  water: z.number().min(-0.35).max(0.6).nullish(),
   terrain: z.array(z.object({ i: z.number().int().min(0).max(48), j: z.number().int().min(0).max(48), h: z.number().min(-1).max(1) })).max(600).nullish(),
   }));
-  return saveDraft(user, body.baseRevision, body.items, body.bedMoves, body.terrain);
+  return saveDraft(user, body.baseRevision, body.items, body.bedMoves, body.terrain, body.water);
 });
