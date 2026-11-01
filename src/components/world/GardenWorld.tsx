@@ -48,6 +48,10 @@ export type WorldProps = {
   selectedBedIndex?: number | null;
   /** V4-R19：正在平移花圃（需要落位拾取球，但没有素材 ghost） */
   bedMoving?: boolean;
+  /** V4-R21：选中花圃时方向键整圃精调 */
+  onBedNudge?: (index: number, cap: { x: number; z: number }) => void;
+  /** V4-R21：当前选中花圃的坐标（键盘整圃平移用） */
+  bedSelPos?: { x: number; z: number } | null;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
@@ -231,7 +235,7 @@ function BedContacts({ items }: { items: { x: number; z: number; s: number }[] }
   return <instancedMesh ref={ref} args={[contactGeo(), contactMat(), Math.max(1, items.length)]} visible={items.length > 0} frustumCulled={false} />;
 }
 
-function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant>; onBedSelect?: (index: number) => void } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
+function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant>; onBedSelect?: (index: number) => void; bedSelected?: boolean } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
   const f = useMemo(() => capFrame(bed.x, bed.z, bed.rot ?? 0), [bed.x, bed.z, bed.rot]);
   const { selectedId, hover, fx, ...pass } = rest as any;
   const hitItems = useMemo(() => bed.plants.map((pp) => ({ id: pp.id, x: pp.x, z: pp.z })), [bed.plants]);
@@ -241,6 +245,11 @@ function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, Wor
       <mesh geometry={cylGeo(bed.r * 1.05, bed.r * 1.08, 0.12, 40)} material={matte(C.soilDeep)} position={[0, -0.05, 0]}
         onPointerUp={(e) => { if (e.delta > 6) return; e.stopPropagation(); pass.onBedSelect?.(bed.index); }} />
       <GardenBed r={bed.r} />
+      {/* R19：整圃选中框——外圈高亮环 */}
+      {pass.bedSelected && (
+        <mesh geometry={torusGeo(bed.r * 1.12, 0.012, 6, 48)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.055, 0]}
+          material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.7 })} />
+      )}
       {bed.plants.map((pp) => {
         const p = plants.get(pp.id); if (!p) return null;
         return <PlantNode key={pp.id} p={p} x={pp.x} z={pp.z} k={bed.main ? 1 : 0.8} selected={selectedId === p.id} hovered={hover === `plant:${p.id}`}
@@ -841,7 +850,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <Wildflowers items={blooms} />
 
         {beds.map((b) => (
-          <Bed onBedSelect={props.onSelectBed} key={b.index} bed={b} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
+          <Bed onBedSelect={props.onSelectBed} bedSelected={props.selectedBedIndex === b.index} key={b.index} bed={b} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
             reduced={reduced} onSelect={props.onSelect} setHover={setHover} register={register} />
         ))}
 
@@ -1025,6 +1034,20 @@ export function GardenWorld(props: WorldProps) {
       // ── R13/R14：选中对象时方向键移动对象（以相机屏幕方向投影到球面切平面） ──
       const DIRS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
       if (DIRS[e.key]) {
+        // V4-R21：选中花圃时，方向键整圃平移
+        const bi = props.selectedBedIndex;
+        if (bi != null && bi >= 0 && props.bedSelPos) {
+          const bd = props.bedSelPos;
+          {
+            e.preventDefault();
+            const R = PLANET_R;
+            const step = (e.altKey ? 0.02 : e.shiftKey ? 0.001 : 0.005) * R * (props.nudgeScale ?? 1);
+            const [bdx, bdy] = DIRS[e.key];
+            const cap = nudgeRef.current?.(bd, bdx, bdy, step);
+            if (cap) props.onBedNudge?.(bi, cap);
+            return;
+          }
+        }
         const sid = selIdRef.current;
         const item = sid ? (decorRef.current ?? []).find((d) => d.id === sid) : null;
         if (item) {

@@ -28,13 +28,13 @@ function bedSlot(i: number) {
 
 export type BedMove = { x: number; z: number; rot?: number };
 export type BedLayout = {
-  index: number; name: string; x: number; z: number; r: number; main: boolean; rot: number;
+  index: number; gardenId: string; name: string; x: number; z: number; r: number; main: boolean; rot: number;
   plants: { id: string; x: number; z: number }[];
   /** 超出单圃环位容量、未摆放的株数（分页/收起提示用，不静默丢弃） */
   overflow: number;
 };
 
-export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[], moves?: Record<string, BedMove | undefined>): BedLayout[] {
+export function layoutBeds(gardens: { id?: string; name: string }[], plants: WorldPlant[], moves?: Record<string, BedMove | undefined>): BedLayout[] {
   const n = Math.max(1, gardens.length);
   // 本命花所在的花圃放在正中（主花圃）
   const natalG = plants.find((p) => p.isNatal)?.gardenIndex ?? 0;
@@ -67,11 +67,12 @@ export function layoutBeds(gardens: { name: string }[], plants: WorldPlant[], mo
     if (natal) placed.unshift({ id: natal.id, x: 0, z: 0.06 });
     const far = placed.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.z)), 0);
     const r = Math.max(natal ? 0.36 : 0.28, far + 0.13);
-    // V4-R19：花圃作为独立布局对象——moves 以 garden 索引为键覆盖位置/朝向（未设置则用默认槽位）
-    const mv = moves?.[String(gi)];
+    // V4-R19：花圃作为独立布局对象——moves 以 **gardenId** 为稳定键覆盖位置/朝向（未设置则用默认槽位）
+    const gardenId = gardens[gi]?.id ?? String(gi);
+    const mv = moves?.[gardenId];
     const bx = mv ? mv.x : slot.x;
     const bz = mv ? mv.z : slot.z;
     const brot = mv?.rot ?? 0;
-    return { index: gi, name: gardens[gi]?.name ?? "花圃", x: bx, z: bz, r, main: si === 0, rot: brot, plants: placed, overflow };
+    return { index: gi, gardenId, name: gardens[gi]?.name ?? "花圃", x: bx, z: bz, r, main: si === 0, rot: brot, plants: placed, overflow };
   });
 }
