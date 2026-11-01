@@ -30,7 +30,7 @@ export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number 
   return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
 }
 
-export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, continuous, onToggleContinuous, onEditSlot, onPlaceSlot, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
+export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, continuous, onToggleContinuous, onEditSlot, onPlaceSlot, onPick, onOpenLibrary, onOpenLayout, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
   /** H20：槽位可为空（null），配置存 localStorage；材质 ID 用 kind，不用场景实例 ID */
   slots: (DecorKind | null)[];
   currentSlot?: number;
@@ -46,6 +46,8 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
   onPlaceSlot?: (i: number) => void;
   onPick?: (k: DecorKind) => void;
   onOpenLibrary: () => void;
+  /** V4-R05：打开独立「布局」面板（服务器/模板/环境） */
+  onOpenLayout?: () => void;
   onSave: () => void;
   onExit: () => void;
   onUndo: () => void;
@@ -105,6 +107,7 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
         })}
       </div>
       <div className="hb-side hb-right">
+        <button className="hb-mini" type="button" onClick={onOpenLayout} aria-label="布局设置" title="布局：服务器/模板/环境">⋯</button>
         <button className="hb-mini" type="button" onClick={onUndo} disabled={!canUndo} aria-label="撤销">↶</button>
         <button className="hb-mini" type="button" onClick={onRedo} disabled={!canRedo} aria-label="重做">↷</button>
         <button className="hb-mini hb-save" type="button" onClick={onSave}>保存</button>

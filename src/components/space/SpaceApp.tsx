@@ -37,6 +37,7 @@ import { GalaxyPanel } from "./panels/GalaxyPanel";
 import { MemoryPanel } from "./panels/MemoryPanel";
 import { SettingsPanel } from "./panels/SettingsPanel";
 import { CreativePalette } from "./CreativePalette";
+import { LayoutMenu } from "./LayoutMenu";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false, loading: () => null });
 const GardenWorld = dynamic(() => import("@/components/world/GardenWorld").then((m) => m.GardenWorld), { ssr: false, loading: () => null });
@@ -114,6 +115,8 @@ export function SpaceApp() {
   const [diyTarget, setDiyTarget] = useState<string | null>(null); // H28：DIY 工作台目标对象
   // V4-R01：正在替换的槽位（点槽位打开素材库时设置；null = 不是替换态）
   const [slotEdit, setSlotEdit] = useState<number | null>(null);
+  // V4-R05：独立「布局」面板（服务器/模板/环境密度从素材库搬出）
+  const [layoutOpen, setLayoutOpen] = useState(false);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
   // H43/H44/H45：星落动画——最多一颗星 + 3 个光点，可取消；低动效直接开窗
   const [starFall, setStarFall] = useState(false);
@@ -654,6 +657,7 @@ export function SpaceApp() {
             onEditSlot={(i) => { setActiveSlot(i); setSlotEdit(i); setPlacingKind(null); setCopyFrom(null); setLibOpen(true); }}
           onPlaceSlot={(i) => { const k = hotbar[i]; if (!k) return; setActiveSlot(i); setSlotEdit(null); setCopyFrom(null); setPlacingKind(k); setLibOpen(false); }}
             onOpenLibrary={() => setLibOpen(true)}
+            onOpenLayout={() => setLayoutOpen(true)}
             onSave={() => void saveCreative()}
             onExit={requestExit}
             onUndo={() => decorStore.undo()}
@@ -676,6 +680,20 @@ export function SpaceApp() {
           onUpdate={(patch) => { if (selectedDecorId) { decorStore.update(selectedDecorId, patch); } }}
           onRemove={() => { if (selectedDecorId) { decorStore.remove(selectedDecorId); setSelectedDecorId(null); } }}
           onDuplicate={duplicateDecor}
+          activeSlot={activeSlot}
+          onClearSlot={() => { setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? null : v))); setLayoutMsg(`已清空第 ${activeSlot + 1} 槽`); }}
+          replaceLabel={slotEdit != null ? `替换第 ${slotEdit + 1} 槽 · 原「${hotbar[slotEdit] ? (DECOR_CATALOG.find((c) => c.kind === hotbar[slotEdit])?.label ?? hotbar[slotEdit]) : "空槽"}」 → 待选` : null}
+          onSelect={(k) => {
+            const target = slotEdit ?? activeSlot;
+            setHotbar((prev) => prev.map((v, i) => (i === target ? k : v)));
+            setLayoutMsg(`第 ${target + 1} 槽已换成「${DECOR_CATALOG.find((c) => c.kind === k)?.label ?? k}」`);
+            setSlotEdit(null); setPlacingKind(null); setCopyFrom(null); setLibOpen(false);
+          }}
+          onCancel={() => { setPlacingKind(null); setCopyFrom(null); }}
+          onClose={() => { setLibOpen(false); setSlotMode(false); setSlotEdit(null); }}
+        />
+        {/* V4-R05：布局面板——服务器/模板/环境密度独立于素材库 */}
+        <LayoutMenu open={creativeOpen && layoutOpen && !focus} onClose={() => setLayoutOpen(false)}
           groupDensities={{
             grass: decorStore.decor.find((d) => d.kind === "grassGroup")?.scale ?? 1,
             blooms: decorStore.decor.find((d) => d.kind === "wildflowerGroup")?.scale ?? 1,
@@ -693,16 +711,7 @@ export function SpaceApp() {
           showFirstEntry={layoutRev === 0 && decorStore.decor.length === 0 && !firstDismissed}
           onFirstDefault={() => setFirstDismissed(true)}
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
-          activeSlot={activeSlot}
-          onClearSlot={() => { setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? null : v))); setLayoutMsg(`已清空第 ${activeSlot + 1} 槽`); }}
-          replaceSlot={slotEdit}
-          replaceLabel={slotEdit != null ? `替换第 ${slotEdit + 1} 槽 · 原「${hotbar[slotEdit] ? (DECOR_CATALOG.find((c) => c.kind === hotbar[slotEdit])?.label ?? hotbar[slotEdit]) : "空槽"}」 → 待选` : null}
-          onSelect={(k) => {
-            const target = slotEdit ?? activeSlot;
-            setHotbar((prev) => prev.map((v, i) => (i === target ? k : v)));
-            setLayoutMsg(`第 ${target + 1} 槽已换成「${DECOR_CATALOG.find((c) => c.kind === k)?.label ?? k}」${slotEdit != null ? "" : "（直接放置请按该槽上的「放」）"}`);
-            setSlotEdit(null); setPlacingKind(null); setCopyFrom(null); setLibOpen(false);
-          }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setLibOpen(false); setSlotMode(false); setSlotEdit(null); }} />
+        />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">
