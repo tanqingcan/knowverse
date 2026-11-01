@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { PLANET_R } from "./geo";
 import { capToWorldXZ, pathCurve, MEMORY_PATH, GREEN_PATH, STAR_PATH, SPOTS, type BedLayout } from "./layout";
+import { terrainHeightAt } from "@/lib/home/terrain";
 
 const S = 1024;
 function toPx(x: number, z: number) {
@@ -98,14 +99,29 @@ export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: numb
 }
 
 /** 球体，UV 改为俯视投影（与纹理一致） */
-export function planetGeometry() {
+export function planetGeometry(heights?: Float32Array | null) {
   const geo = new THREE.SphereGeometry(PLANET_R, 160, 120);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   const uv = geo.attributes.uv as THREE.BufferAttribute;
+  let displaced = false;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i);
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     uv.setXY(i, x / (2 * PLANET_R) + 0.5, 0.5 - z / (2 * PLANET_R));
+    // V4-R26/R27：有高度场则按局部采样把顶点沿径向推出/压入（真实地形起伏，不是贴图）
+    if (heights) {
+      const h = terrainHeightAt(heights, x, z);
+      if (h !== 0) {
+        const r = Math.hypot(x, y, z) || 1;
+        const k = (r + h) / r;
+        pos.setXYZ(i, x * k, y * k, z * k);
+        displaced = true;
+      }
+    }
   }
   uv.needsUpdate = true;
+  if (displaced) {
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
   return geo;
 }
