@@ -227,3 +227,53 @@ UPDATE planet_layouts SET terrain = NULL, water = NULL, revision = revision + 1 
 - ✅ 未推 main、未自动合并部署
 - ✅ 使用 demo 账号做常规测试；H53 用 `fresh` 账号验证权限隔离
 - ✅ 用户真实布局与学习记录未被破坏（14 件装饰、13 株植物均保留）
+
+### 3.9 续作指南（在真机 / 真 GPU 上完成剩余 4 项）
+
+剩余 4 项的根因只有 2 个，每项都有可执行的续作方案。
+
+#### A. R31 / H55 —— 需要真 GPU
+
+**当前限制**：本机 Playwright 用 `--use-gl=angle --use-angle=swiftshader`，属 **软件渲染**，实测 `fps ≈ 1–2`，无参考意义；`triangles: 418516`、`calls: 284`、`geometries: 162`、`textures: 12` 这些**结构性指标已可用**（见 H45），只是 FPS 不可用。
+
+**续作步骤**（在有独立显卡的机器上）：
+1. 删掉 `--use-angle=swiftshader` 启动参数，改为 `--use-gl=angle --use-angle=default`（或直接不带参数，让 Chrome 用真 GPU）；
+2. 用 `window.__gardenPerf` 采样：连续 20 次地形笔触 + 静置 60s，每 500ms 记录一次 `{fps, calls, triangles}`；
+3. 记录预热阶段（前 5s）与稳态（后 30s）的均值，判断是否单调累积；
+4. 对比基线：`calls` 应稳定在 ~284（无泄漏），`geometries` 应稳定在 ~162（无几何泄漏）；
+5. 把结果填入 R31 / H55。
+
+**已可交付的部分**：`calls` 305→305→304 的**无泄漏**已实测（SwiftShader 下 draw call 计数与 GPU 无关，可信）。
+
+#### B. R18 五类 / R24 移圃 —— 需要真人操作
+
+**当前限制**：脚本化 3D 拾取不可复现——同一方法、同一布局、不同轮次结果不同（4 轮印证：第 132 轮扫描找到 3 个命中点；第 145 轮零命中；第 147 轮包围盒中心点击选中「长椅」；第 151 轮同样方法全部未选中）。`__gardenPick`（`__gardenPick(x,y)` → `[{name, dist}]`）在 1440/390 视口直方图里**完全没有 `decor:*`**，只有 `Mesh` / `Node-Mesh`。
+
+**续作步骤**（真人操作，5–10 分钟）：
+1. 桌面/手机浏览器打开 `/space`，进入创造模式；
+2. 依次点击 **小屋 / 树(草) / 玫瑰(野花) / 围栏 / 泥土** 五类对象，每次观察：
+   - 是否出现 `.world-selbar`（选中条）且名字正确；
+   - 按 `M` 后指针移动是否只显示落点预览；
+   - 点地面确认后位置是否变化；
+   - 按 `Ctrl+Z` / 点 `.decor-history` 的「撤销」是否还原；
+   - 点「重做」是否恢复；
+3. 花圃移圃：点花圃边界或在「花圃」列表里点任一圃的「定位」→ 观察是否出现整体选中框 → 按 `M` → 点目标 → 确认 → 撤销 → 重做；
+4. 把「围栏 / 泥土」记为**需求与实现不符**（素材库只有 11 种：`cottage / greenhouse / observatory / seedshed / arch / pond / chair / lamp / sign / grassGroup / wildflowerGroup`，无围栏/泥土）。
+
+**已可交付的部分**：**核心编辑链路（选中→移动→确认→撤销→重做）已实测全通**（H37 的移动 + 撤销 + 重做，以及 R24 的 30 株 UI 计数）；**只差 5 类的逐个覆盖**。
+
+#### C. 环境准备（两项共通）
+
+```bash
+cd knowverse
+npm install
+# PostgreSQL 16 需在 知识库路径（见 README）；或用 npm run db:seed 建演示库（注意：会覆盖业务库，只在隔离环境用）
+npm run db:migrate     # 应用 0010/0011/0012 三个 additive 迁移
+npm run dev            # http://127.0.0.1:3000
+```
+
+**数据边界**：真机验证若需造 30 株，**用 `owner_user_id` 建用户私有学科**（不要写全局 `subjects`/`concepts`），
+脚本模板见 `.dsh-tools/r24z-seed.sql` 与 `r24z-clean.sql`（含按依赖顺序清理）。
+
+**最后**：完成上述任一项后，更新 `docs/home-mode-v4-acceptance.md` 与 `docs/home-mode-v4-h60-recheck.md` 对应行，
+并记下「第几轮、用什么设备、什么参数」，不要用历史数据充当本轮采样（R37 要求）。
