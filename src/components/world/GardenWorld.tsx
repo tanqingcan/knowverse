@@ -626,8 +626,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
 
   // V4-R17：把「球冠坐标 → 屏幕 CSS 像素」暴露出来，用于测量拾取误差（真实相机投影）
   useEffect(() => {
-    (window as unknown as { __gardenProject?: (cap: { x: number; z: number }) => { x: number; y: number } | null }).__gardenProject = (cap) => {
-      const f = capFrame(cap.x, cap.z);
+    (window as unknown as { __gardenProject?: (cap: { x: number; z: number }, lift?: number) => { x: number; y: number } | null }).__gardenProject = (cap, lift = 0) => {
+      const f = capFrame(cap.x, cap.z, 0, lift);
       const v = f.pos.clone().project(camera);
       const r = gl.domElement.getBoundingClientRect();
       if (!r.width || !r.height) return null;
