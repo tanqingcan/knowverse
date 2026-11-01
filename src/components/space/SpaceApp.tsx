@@ -692,7 +692,7 @@ export function SpaceApp() {
 
         {showIntro && <div className="intro-skip" aria-hidden="true">点击任意处跳过</div>}
 
-        <header className="topnav">
+        <header className={"topnav" + (creativeOpen ? " is-hidden" : "")}>
           <div className="brand" aria-label="知屿 KNOWVERSE">知屿<small>KNOWVERSE</small></div>
           <nav className="sections" aria-label="主导航">
             {SECTIONS.map((s) => (

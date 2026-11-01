@@ -931,3 +931,6 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
   background: rgba(255, 247, 232, 0.92); color: var(--ink); font-size: 14px; cursor: pointer; font-family: inherit; }
 .view-zoom button:hover { background: var(--honey); }
 @media (max-width: 860px) { .view-zoom { bottom: 190px; } .view-zoom button { width: 44px; height: 44px; } }
+
+/* V4-H16：创造模式隐藏原顶栏（display:none 也使其内部按钮不再可聚焦） */
+.topnav.is-hidden { display: none !important; }
