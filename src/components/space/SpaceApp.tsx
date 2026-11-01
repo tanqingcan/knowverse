@@ -117,6 +117,8 @@ export function SpaceApp() {
   const [slotEdit, setSlotEdit] = useState<number | null>(null);
   // V4-R05：独立「布局」面板（服务器/模板/环境密度从素材库搬出）
   const [layoutOpen, setLayoutOpen] = useState(false);
+  // V4-R14：方向键步长倍率（布局面板可改，默认 1× = 0.005R）
+  const [nudgeScale, setNudgeScale] = useState(1);
   // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
   const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
@@ -585,6 +587,7 @@ export function SpaceApp() {
                 setLayoutMsg(`移动「${DECOR_CATALOG.find((c) => c.kind === it.kind)?.label ?? it.kind}」：点击星球表面确认；Esc 取消（原位不动）`);
               }}
               onPlaceMiss={() => { if (moveId || placingKind) setLayoutMsg("这里放不了：请点击星球表面"); }}
+              nudgeScale={nudgeScale}
               placingKind={placingKind}
               onPlace={(x, z) => {
                 // V4-R09/R11：移动确认——只在这里写一次 update（预览期间不写 store，不产生多步 undo）
@@ -749,6 +752,7 @@ export function SpaceApp() {
         />
         {/* V4-R05：布局面板——服务器/模板/环境密度独立于素材库 */}
         <LayoutMenu open={creativeOpen && layoutOpen && !focus} onClose={() => setLayoutOpen(false)}
+          nudgeScale={nudgeScale} onNudgeScale={setNudgeScale}
           groupDensities={{
             grass: decorStore.decor.find((d) => d.kind === "grassGroup")?.scale ?? 1,
             blooms: decorStore.decor.find((d) => d.kind === "wildflowerGroup")?.scale ?? 1,

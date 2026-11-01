@@ -5,9 +5,12 @@
  */
 import React from "react";
 
-export function LayoutMenu({ open, onClose, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
+export function LayoutMenu({ open, onClose, nudgeScale, onNudgeScale, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate }: {
   open: boolean;
   onClose: () => void;
+  /** V4-R14：方向键步长倍率（0.5×/1×/2×），并显示单位 */
+  nudgeScale?: number;
+  onNudgeScale?: (v: number) => void;
   groupDensities?: { grass: number; blooms: number };
   onGroupDensity?: (kind: "grassGroup" | "wildflowerGroup", v: number) => void;
   revision?: number; status?: string; message?: string | null;
@@ -56,6 +59,17 @@ export function LayoutMenu({ open, onClose, groupDensities, onGroupDensity, revi
               <label className="cp-prop">野花密度 <input type="range" min={0.2} max={2} step={0.1} value={groupDensities.blooms} onChange={(e) => onGroupDensity?.("wildflowerGroup", +e.target.value)} /><span>{groupDensities.blooms.toFixed(1)}</span></label>
             </section>
           )}
+          <section className="lm-sec" aria-label="编辑步长">
+            <div className="lm-sec-title">编辑步长</div>
+            <p className="lm-note">方向键沿球面移动的步长（单位：星球半径 R）。普通 0.005R、Shift 0.001R、Alt 0.02R；此处可整体加速/减速。</p>
+            <div className="cp-foot-actions">
+              {[0.5, 1, 2].map((v) => (
+                <button key={v} type="button" className={`btn btn-sm ${(nudgeScale ?? 1) === v ? "btn-primary" : "btn-quiet"}`}
+                  aria-pressed={(nudgeScale ?? 1) === v} onClick={() => onNudgeScale?.(v)}>{v}×</button>
+              ))}
+            </div>
+            <p className="lm-note">当前：普通 {(0.005 * 3 * (nudgeScale ?? 1)).toFixed(3)} · Shift {(0.001 * 3 * (nudgeScale ?? 1)).toFixed(3)} · Alt {(0.02 * 3 * (nudgeScale ?? 1)).toFixed(3)}</p>
+          </section>
           <section className="lm-sec">
             <div className="lm-sec-title">历史</div>
             <div className="cp-foot-actions">

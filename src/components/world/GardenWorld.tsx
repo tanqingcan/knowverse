@@ -39,6 +39,8 @@ export type WorldProps = {
   onDecorMoveStart?: (id: string) => void;
   /** V4-R10：落点无效（点空中/星球外）时提示 */
   onPlaceMiss?: () => void;
+  /** V4-R14：方向键步长倍率（0.5 / 1 / 2，可在布局面板设置） */
+  nudgeScale?: number;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
@@ -976,6 +978,12 @@ export function GardenWorld(props: WorldProps) {
   const decorRef = useRef(props.decor);
   decorRef.current = props.decor;
   const nudgeAt = useRef(0);
+  // V4-R14：自己驱动长按重复（初延迟 300ms，之后 100ms/次），不依赖 OS 的极快重复
+  const holdRef = useRef<{ t: number | null; i: number | null }>({ t: null, i: null });
+  const stopHold = () => {
+    if (holdRef.current.t !== null) { clearTimeout(holdRef.current.t); holdRef.current.t = null; }
+    if (holdRef.current.i !== null) { clearInterval(holdRef.current.i); holdRef.current.i = null; }
+  };
   // 键盘：←/→ 环绕、↑/↓ 俯仰、+/- 缩放、R 复位（有选中对象时方向键改为移动对象）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -990,16 +998,25 @@ export function GardenWorld(props: WorldProps) {
         const item = sid ? (decorRef.current ?? []).find((d) => d.id === sid) : null;
         if (item) {
           e.preventDefault();
-          // 长按重复：初延迟交给系统，重复频率上限 ~10 次/秒（100ms 节流），不依赖 OS 极快重复
-          const now = performance.now();
-          if (e.repeat && now - nudgeAt.current < 100) return;
-          nudgeAt.current = now;
+          if (e.repeat) return; // 由下面的定时器驱动，忽略 OS 重复
           const R = PLANET_R;
-          const step = e.altKey ? 0.02 * R : e.shiftKey ? 0.001 * R : 0.005 * R;
+          const scale = props.nudgeScale ?? 1;
+          const step = (e.altKey ? 0.02 : e.shiftKey ? 0.001 : 0.005) * R * scale;
           const [dx, dy] = DIRS[e.key];
-          const cap = nudgeRef.current?.(item, dx, dy, step);
-          if (!cap) return; // 极点退化：不动，避免抖动
-          props.onDecorUpdate?.(item.id, { x: cap.x, z: cap.z });
+          const doNudge = () => {
+            // 每次都重读当前对象位置，避免长按期间用过期坐标
+            const cur = (decorRef.current ?? []).find((d) => d.id === selIdRef.current);
+            if (!cur) { stopHold(); return; }
+            const cap = nudgeRef.current?.(cur, dx, dy, step);
+            if (!cap) { stopHold(); return; } // 极点退化：停止而不是抖动
+            nudgeAt.current = performance.now();
+            props.onDecorUpdate?.(cur.id, { x: cap.x, z: cap.z });
+          };
+          doNudge();
+          stopHold();
+          holdRef.current.t = window.setTimeout(() => {
+            holdRef.current.i = window.setInterval(doNudge, 100);
+          }, 300);
           return;
         }
       }
@@ -1015,8 +1032,11 @@ export function GardenWorld(props: WorldProps) {
       lastAct.current = performance.now();
       e.preventDefault();
     };
+    const onUp = (e: KeyboardEvent) => { if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) stopHold(); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", stopHold);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onUp); window.removeEventListener("blur", stopHold); stopHold(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.mode]);
   // 空闲缓慢自转：3 秒无操作后开始；按下/滚轮/按键立即暂停；低动效禁用
