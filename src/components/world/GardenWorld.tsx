@@ -610,6 +610,25 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera]);
 
+  // V4-R16：暴露 zoom ref 供测量（倍率变化）
+  useEffect(() => {
+    (window as unknown as { __gardenZoom?: React.MutableRefObject<number> }).__gardenZoom = props.zoom;
+    return () => { delete (window as unknown as { __gardenZoom?: unknown }).__gardenZoom; };
+  }, [props.zoom]);
+
+  // V4-R17：把「球冠坐标 → 屏幕 CSS 像素」暴露出来，用于测量拾取误差（真实相机投影）
+  useEffect(() => {
+    (window as unknown as { __gardenProject?: (cap: { x: number; z: number }) => { x: number; y: number } | null }).__gardenProject = (cap) => {
+      const f = capFrame(cap.x, cap.z);
+      const v = f.pos.clone().project(camera);
+      const r = gl.domElement.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top };
+    };
+    return () => { delete (window as unknown as { __gardenProject?: unknown }).__gardenProject; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera, gl]);
+
   // H06：放置预览 ghost（跟随指针的半透明模型）
   const ghost = useRef<THREE.Group>(null);
   useEffect(() => {
@@ -976,10 +995,10 @@ export function GardenWorld(props: WorldProps) {
         }
       }
       const { yaw, tilt } = drag.current;
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") drag.current = { yaw: yaw - 0.12, tilt };
-      else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") drag.current = { yaw: yaw + 0.12, tilt };
-      else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") drag.current = { yaw, tilt: Math.min(TILT_MAX, tilt + 0.08) };
-      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") drag.current = { yaw, tilt: Math.max(TILT_MIN, tilt - 0.08) };
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") drag.current = { yaw: yaw - 0.06, tilt };
+      else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") drag.current = { yaw: yaw + 0.06, tilt };
+      else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") drag.current = { yaw, tilt: Math.min(TILT_MAX, tilt + 0.05) };
+      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") drag.current = { yaw, tilt: Math.max(TILT_MIN, tilt - 0.05) };
       else if (e.key === "+" || e.key === "=") zoom.current = Math.max(0.75, zoom.current - 0.1);
       else if (e.key === "-" || e.key === "_") zoom.current = Math.min(2.2, zoom.current + 0.1);
       else if (e.key === "r" || e.key === "R" || e.key === "0") resetView();
@@ -1063,7 +1082,8 @@ export function GardenWorld(props: WorldProps) {
       onWheel={(e) => {
         if (props.mode !== "garden") return;
         lastAct.current = performance.now();
-        applyZoom(zoom.current + Math.sign(e.deltaY) * 0.07);
+        // R16：Shift = 慢速档；固定步长，不随滚轮硬件 delta 大小突然冲进地面
+        applyZoom(zoom.current + Math.sign(e.deltaY) * (e.shiftKey ? 0.03 : 0.07));
       }}
       onPointerUp={(e) => endPointer(e.pointerId)} onPointerCancel={(e) => endPointer(e.pointerId)}
       onPointerLeave={(e) => endPointer(e.pointerId)}>
@@ -1080,6 +1100,13 @@ export function GardenWorld(props: WorldProps) {
       </GLBoundary>
       {props.mode === "garden" && !props.readOnly && (
         <button className="view-reset" type="button" onClick={resetView} aria-label="回到默认视角">⟲ 视角</button>
+      )}
+      {props.mode === "garden" && !props.readOnly && (
+        <div className="view-zoom" role="group" aria-label="缩放">
+          <button type="button" onClick={() => applyZoom(zoom.current - 0.1)} aria-label="放大（慢速档 0.1）" title="放大 0.1">＋</button>
+          <button type="button" onClick={() => applyZoom(zoom.current + 0.1)} aria-label="缩小（慢速档 0.1）" title="缩小 0.1">－</button>
+          <button type="button" onClick={resetView} aria-label="复位倍率" title="复位倍率">1×</button>
+        </div>
       )}
       {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
