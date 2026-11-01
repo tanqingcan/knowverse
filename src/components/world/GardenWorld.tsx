@@ -616,7 +616,8 @@ function PerfProbe() {
     if (now - last.current >= 500) {
       const fps = Math.round((frames.current * 1000) / (now - last.current));
       const mem = gl.info.memory;
-      const sample = { fps, calls: gl.info.render.calls, triangles: gl.info.render.triangles, geometries: mem.geometries, textures: mem.textures, programs: gl.info.programs?.length ?? 0, t: Date.now() };
+        // V4-H45：把三角形数从 null 补成实测值（此前 tris 恒为 null，粒子数不可验证）
+        const sample = { fps, calls: gl.info.render.calls, triangles: gl.info.render.triangles, points: gl.info.render.points, lines: gl.info.render.lines, geometries: mem.geometries, textures: mem.textures };
       const el = document.getElementById("perf-hud");
       if (el) el.textContent = `${fps} fps · ${sample.calls} draw · ${sample.triangles} tri`;
       (window as any).__gardenPerf = sample;
