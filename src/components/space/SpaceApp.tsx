@@ -395,6 +395,12 @@ export function SpaceApp() {
       if (diyTarget) return; // H36：工作台打开时屏蔽 1–9 / E 等场景快捷键
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      // V4-R18：Ctrl/⌘+Z 撤销、Ctrl/⌘+Shift+Z 重做（此前只有按钮，没有键盘快捷键）
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateDecor(); }
     };
     window.addEventListener("keydown", f);
