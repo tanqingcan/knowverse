@@ -33,7 +33,7 @@ const CATEGORY: Record<DecorKind, string> = {
 
 const CATEGORY_ORDER = ["花卉", "树木", "建筑", "围栏", "地板", "道路", "灯具"];
 
-export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, slotMode, activeSlot, onToggleSlotMode, onClearSlot, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
+export function CreativePalette({ open, placingKind, selected, onUpdate, onRemove, onDuplicate, slotMode, activeSlot, onToggleSlotMode, replaceLabel, onClearSlot, groupDensities, onGroupDensity, revision, status, message, onSave, onPublish, onUndo, onRedo, canUndo, canRedo, onApplyTemplate, onDiscard, importPrompt, onImportLocal, onKeepServer, hasPublished, onRevert, showFirstEntry, onFirstDefault, onFirstTemplate, onSelect, onCancel, onClose }: {
   open: boolean; placingKind: string | null;
   selected?: { id: string; kind: string; x?: number; z?: number; scale: number; width?: number; length?: number; rot?: number; stage?: string; color?: string } | null;
   onUpdate?: (patch: { x?: number; z?: number; scale?: number; width?: number; length?: number; rot?: number; stage?: string; color?: string }) => void;
@@ -41,6 +41,10 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   onDuplicate?: () => void;
   /** H20：素材库内「放入槽位」模式——点素材写入当前槽（覆盖已有），而不是直接放置 */
   slotMode?: boolean;
+  /** V4-R01：从某个槽位点开库时 = 该槽索引；此时「点素材」是替换该槽，不进场景放置 */
+  replaceSlot?: number | null;
+  /** R01：顶部固定提示「替换第N槽 · 原素材→待选」文案 */
+  replaceLabel?: string | null;
   activeSlot?: number;
   onToggleSlotMode?: () => void;
   onClearSlot?: () => void;
@@ -64,6 +68,9 @@ export function CreativePalette({ open, placingKind, selected, onUpdate, onRemov
   const selSurface = selected && (selected.kind === "soil" || selected.kind === "road");
   return (
     <aside className="creative-palette paper" aria-label="创造模式素材栏">
+      {replaceLabel && (
+        <div className="cp-replace-bar" role="status" aria-live="polite">{replaceLabel}</div>
+      )}
       <div className="cp-head">
         <b>全部素材</b>
         {/* H20：明确的「放入槽位」按钮——点它进入选材模式，再点素材写入当前槽 */}

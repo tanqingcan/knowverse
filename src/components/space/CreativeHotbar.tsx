@@ -30,7 +30,7 @@ export function KindThumb({ kind, size = 26 }: { kind: DecorKind; size?: number 
   return <span className="hb-thumb hb-dot" data-kind={kind} aria-hidden="true" />;
 }
 
-export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, continuous, onToggleContinuous, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
+export function CreativeHotbar({ slots, activeKind, currentSlot, picking, message, continuous, onToggleContinuous, onEditSlot, onPlaceSlot, onPick, onOpenLibrary, onSave, onExit, onUndo, onRedo, canUndo, canRedo, onWheelSlot }: {
   /** H20：槽位可为空（null），配置存 localStorage；材质 ID 用 kind，不用场景实例 ID */
   slots: (DecorKind | null)[];
   currentSlot?: number;
@@ -40,7 +40,11 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
   /** H21：连续放置开关——放完一个仍保持该素材 */
   continuous?: boolean;
   onToggleContinuous?: () => void;
-  onPick: (k: DecorKind) => void;
+  /** R01：点击槽位 = 进入替换（打开素材库），不再直接进入场景放置 */
+  onEditSlot?: (i: number) => void;
+  /** R01：独立「直接放置」次要动作 */
+  onPlaceSlot?: (i: number) => void;
+  onPick?: (k: DecorKind) => void;
   onOpenLibrary: () => void;
   onSave: () => void;
   onExit: () => void;
@@ -78,14 +82,20 @@ export function CreativeHotbar({ slots, activeKind, currentSlot, picking, messag
           const active = kind !== null && activeKind === kind;
           const cur = currentSlot === i;
           return (
-            <button key={`${kind ?? "empty"}-${i}`} type="button" className={`hb-slot ${active ? "is-active" : ""} ${cur ? "is-current" : ""} ${kind ? "" : "is-empty"}`}
-              aria-pressed={active} aria-label={`${i + 1} ${kind ? labelOf(kind) : "空槽"}`}
-              title={`${i + 1} · ${kind ? labelOf(kind) : "空槽（在素材库里「放入槽位」）"}`}
-              onClick={() => kind && onPick(kind)}>
-              <span className="hb-num" aria-hidden="true">{i + 1}</span>
-              {kind ? <KindThumb kind={kind} /> : <span className="hb-empty" aria-hidden="true">+</span>}
-              <span className="hb-name">{kind ? labelOf(kind) : "空"}</span>
-            </button>
+            <div key={`${kind ?? "empty"}-${i}`} className={`hb-slot ${active ? "is-active" : ""} ${cur ? "is-current" : ""} ${kind ? "" : "is-empty"}`}
+              onContextMenu={(e) => { e.preventDefault(); onEditSlot?.(i); }}>
+              <button type="button" className="hb-main" onClick={() => onEditSlot?.(i)}
+                aria-label={`第 ${i + 1} 槽 ${kind ? labelOf(kind) : "空槽"}（点击替换）`}
+                title={`替换第 ${i + 1} 槽${kind ? ` · 当前「${labelOf(kind)}」` : " · 当前空槽"}`}>
+                <span className="hb-num" aria-hidden="true">{i + 1}</span>
+                {kind ? <KindThumb kind={kind} /> : <span className="hb-empty" aria-hidden="true">+</span>}
+                <span className="hb-name">{kind ? labelOf(kind) : "空"}</span>
+              </button>
+              {kind && (
+                <button type="button" className="hb-place" onClick={(e) => { e.stopPropagation(); onPlaceSlot?.(i); }}
+                  aria-label={`直接放置第 ${i + 1} 槽：${labelOf(kind)}`} title={`直接放置「${labelOf(kind)}」`}>放</button>
+              )}
+            </div>
           );
         })}
       </div>

@@ -112,6 +112,8 @@ export function SpaceApp() {
   const [slotMode, setSlotMode] = useState(false);   // H20：素材库内「放入槽位」选材模式
   const [continuous, setContinuous] = useState(false); // H21：连续放置开关
   const [diyTarget, setDiyTarget] = useState<string | null>(null); // H28：DIY 工作台目标对象
+  // V4-R01：正在替换的槽位（点槽位打开素材库时设置；null = 不是替换态）
+  const [slotEdit, setSlotEdit] = useState<number | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
   // H43/H44/H45：星落动画——最多一颗星 + 3 个光点，可取消；低动效直接开窗
   const [starFall, setStarFall] = useState(false);
@@ -649,7 +651,8 @@ export function SpaceApp() {
             onToggleContinuous={() => setContinuous((v) => !v)}
             message={layoutMsg}
             currentSlot={activeSlot}
-            onPick={(k) => { setActiveSlot(hotbar.indexOf(k)); setCopyFrom(null); setPlacingKind(placingKind === k ? null : k); }}
+            onEditSlot={(i) => { setActiveSlot(i); setSlotEdit(i); setPlacingKind(null); setCopyFrom(null); setLibOpen(true); }}
+          onPlaceSlot={(i) => { const k = hotbar[i]; if (!k) return; setActiveSlot(i); setSlotEdit(null); setCopyFrom(null); setPlacingKind(k); setLibOpen(false); }}
             onOpenLibrary={() => setLibOpen(true)}
             onSave={() => void saveCreative()}
             onExit={requestExit}
@@ -692,15 +695,14 @@ export function SpaceApp() {
           onFirstTemplate={() => { setFirstDismissed(true); applyTemplate(); }}
           slotMode={slotMode} activeSlot={activeSlot} onToggleSlotMode={() => setSlotMode((v) => !v)}
           onClearSlot={() => { setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? null : v))); setLayoutMsg(`已清空第 ${activeSlot + 1} 槽`); }}
+          replaceSlot={slotEdit}
+          replaceLabel={slotEdit != null ? `替换第 ${slotEdit + 1} 槽 · 原「${hotbar[slotEdit] ? (DECOR_CATALOG.find((c) => c.kind === hotbar[slotEdit])?.label ?? hotbar[slotEdit]) : "空槽"}」 → 待选` : null}
           onSelect={(k) => {
-            // H20：库内「放入槽位」模式下点素材 = 放入当前槽（可覆盖已有素材），否则正常进入放置
-            if (slotMode) {
-              setHotbar((prev) => prev.map((v, i) => (i === activeSlot ? k : v)));
-              setSlotMode(false); setLibOpen(false); setLayoutMsg(`已放入第 ${activeSlot + 1} 槽`);
-              return;
-            }
-            setCopyFrom(null); setPlacingKind(k); setLibOpen(false);
-          }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setLibOpen(false); setSlotMode(false); }} />
+            const target = slotEdit ?? activeSlot;
+            setHotbar((prev) => prev.map((v, i) => (i === target ? k : v)));
+            setLayoutMsg(`第 ${target + 1} 槽已换成「${DECOR_CATALOG.find((c) => c.kind === k)?.label ?? k}」${slotEdit != null ? "" : "（直接放置请按该槽上的「放」）"}`);
+            setSlotEdit(null); setPlacingKind(null); setCopyFrom(null); setLibOpen(false);
+          }} onCancel={() => { setPlacingKind(null); setCopyFrom(null); }} onClose={() => { setLibOpen(false); setSlotMode(false); setSlotEdit(null); }} />
 
         {!focus && panel.panel === "dossier" && (
           <aside className="side-card paper" aria-label="植物档案">
