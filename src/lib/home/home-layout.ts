@@ -54,7 +54,10 @@ export type HomePose = { x: number; z: number; yaw: number };
  * 建筑被搬走/旋转后这些附件跟着走，不再用 `SPOTS` 固定值。找不到实例时回落到 `SPOTS` 默认位。
  */
 export function homePoses(decor: { kind: string; x: number; z: number; rot: number }[] | undefined): Record<string, HomePose> {
-  const fallback: Record<string, HomePose> = {
+  // V4-H13：只有在「还没有任何布局」时才用 SPOTS 兜底；
+  // 一旦布局已初始化(含初始实例 id)，缺失的 kind 就是被用户删掉的，不能再用 SPOTS 补回来
+  const initialized = (decor ?? []).some((d) => !!(d as unknown as { id?: string }).id && INITIAL_ITEM_IDS.has((d as unknown as { id: string }).id));
+  const fallback: Record<string, HomePose> = initialized ? {} : {
     cottage: { x: SPOTS.cottage.x, z: SPOTS.cottage.z, yaw: SPOTS.cottage.yaw },
     greenhouse: { x: SPOTS.greenhouse.x, z: SPOTS.greenhouse.z, yaw: SPOTS.greenhouse.yaw },
     observatory: { x: SPOTS.observatory.x, z: SPOTS.observatory.z, yaw: SPOTS.observatory.yaw },
