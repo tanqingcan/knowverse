@@ -41,6 +41,13 @@ export type WorldProps = {
   onPlaceMiss?: () => void;
   /** V4-R14：方向键步长倍率（0.5 / 1 / 2，可在布局面板设置） */
   nudgeScale?: number;
+  /** V4-R19：花圃布局位移（键=花圃索引） */
+  bedMoves?: Record<string, { x: number; z: number; rot?: number }>;
+  /** V4-R19：点击花圃土壤面选中整圃 */
+  onSelectBed?: (index: number) => void;
+  selectedBedIndex?: number | null;
+  /** V4-R19：正在平移花圃（需要落位拾取球，但没有素材 ghost） */
+  bedMoving?: boolean;
   placingKind?: string | null;   // 创造模式：正在放置的素材 kind；非空时点击球面放置
   /** H06/H21：放置预览（跟随指针的半透明 ghost）+ 选中确认。
    *  素材栏选材时用该 kind 的默认参数；复制时用被复制实例的参数，保证预览=最终结果。 */
@@ -224,14 +231,15 @@ function BedContacts({ items }: { items: { x: number; z: number; s: number }[] }
   return <instancedMesh ref={ref} args={[contactGeo(), contactMat(), Math.max(1, items.length)]} visible={items.length > 0} frustumCulled={false} />;
 }
 
-function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant> } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
-  const f = useMemo(() => capFrame(bed.x, bed.z), [bed.x, bed.z]);
+function Bed({ bed, plants, ...rest }: { bed: BedLayout; plants: Map<string, WorldPlant>; onBedSelect?: (index: number) => void } & Omit<React.ComponentProps<typeof PlantNode>, "p" | "x" | "z" | "selected" | "hovered" | "fx"> & { selectedId?: string | null; hover: string | null; fx: { id: string; from: StageKey; to: StageKey; start: number } | null }) {
+  const f = useMemo(() => capFrame(bed.x, bed.z, bed.rot ?? 0), [bed.x, bed.z, bed.rot]);
   const { selectedId, hover, fx, ...pass } = rest as any;
   const hitItems = useMemo(() => bed.plants.map((pp) => ({ id: pp.id, x: pp.x, z: pp.z })), [bed.plants]);
   const contactItems = useMemo(() => bed.plants.map((pp) => ({ x: pp.x, z: pp.z, s: plants.get(pp.id)?.stage === "bloom" ? 0.11 : 0.08 })), [bed.plants, plants]);
   return (
     <group position={f.pos} quaternion={f.quat}>
-      <mesh geometry={cylGeo(bed.r * 1.05, bed.r * 1.08, 0.12, 40)} material={matte(C.soilDeep)} position={[0, -0.05, 0]} />
+      <mesh geometry={cylGeo(bed.r * 1.05, bed.r * 1.08, 0.12, 40)} material={matte(C.soilDeep)} position={[0, -0.05, 0]}
+        onPointerUp={(e) => { if (e.delta > 6) return; e.stopPropagation(); pass.onBedSelect?.(bed.index); }} />
       <GardenBed r={bed.r} />
       {bed.plants.map((pp) => {
         const p = plants.get(pp.id); if (!p) return null;
@@ -682,7 +690,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   }, [props.placingKind, props.placingPreview?.kind]);
   const anchors = useRef(new Map<string, THREE.Object3D>());
   const register = useMemo(() => (k: string, o: THREE.Object3D | null) => { if (o) anchors.current.set(k, o); else anchors.current.delete(k); }, []);
-  const beds = useMemo(() => layoutBeds(gardens, plants), [gardens, plants]);
+  const beds = useMemo(() => layoutBeds(gardens, plants, props.bedMoves), [gardens, plants, props.bedMoves]);
   const plantMap = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   // 内圈（花园）保持原来的密度；外圈铺满整个可见球面，转到侧面/背面也有草
   // H04：草/野花是「全星球群组」，操作单元 = 整组密度（scale 当倍率，0.2–3），不逐株进入编辑。
@@ -806,12 +814,13 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             <mesh geometry={torusGeo(0.26, 0.012, 6, 40)} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} material={matte(C.honey, { emissive: C.honey, emissiveIntensity: 0.9 })} />
           </group>
         )}
-        {/* 创造模式放置层：比地表/草/云略大的不可见球，截获点击换算球冠坐标；仅放置时存在 */}
-        {props.placingKind && (
+        {/* 创造模式放置层：比地表/草/云略大的不可见球，截获点击换算球冠坐标；放置或平移花圃时存在 */}
+        {(props.placingKind || props.bedMoving) && (
           <mesh geometry={sphereGeo(3.12, 24, 16)} material={hitMat}
             onPointerMove={(e) => {
               // H06：ghost 跟随指针（命令式改 transform，不触发 React 重渲染）
               if (!ghost.current) return;
+              if (!props.placingPreview) return;
               const c = rayToCap(e.ray, e.point);
               if (!c) return;
               const f = capFrame(c.x, c.z, props.placingPreview?.rot ?? 0);
@@ -832,7 +841,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
         <Wildflowers items={blooms} />
 
         {beds.map((b) => (
-          <Bed key={b.index} bed={b} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
+          <Bed onBedSelect={props.onSelectBed} key={b.index} bed={b} plants={plantMap} selectedId={selectedId} hover={hover} fx={fx}
             reduced={reduced} onSelect={props.onSelect} setHover={setHover} register={register} />
         ))}
 

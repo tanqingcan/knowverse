@@ -119,6 +119,9 @@ export function SpaceApp() {
   const [layoutOpen, setLayoutOpen] = useState(false);
   // V4-R14：方向键步长倍率（布局面板可改，默认 1× = 0.005R）
   const [nudgeScale, setNudgeScale] = useState(1);
+  // V4-R19：花圃作为独立布局对象——位移覆盖（键=花圃索引）+ 选中索引
+  const [bedMoves, setBedMoves] = useState<Record<string, { x: number; z: number; rot?: number }>>({});
+  const [bedSel, setBedSel] = useState<number | null>(null);
   // V4-R09：移动模式——先选中 → 点「移动」/按 M → 指针预览 → 点地面确认（一次确认才写一次历史）
   const [moveId, setMoveId] = useState<string | null>(null);
   const [focusLarge, setFocusLarge] = useState(false); // H40：学习窗「放大/专注」模式（默认不自动变大）
@@ -393,6 +396,13 @@ export function SpaceApp() {
         return;
       }
       if (e.key === "m" || e.key === "M") {
+        // V4-R19：选中花圃时，M 平移整圃
+        if (bedSel != null) {
+          e.preventDefault();
+          setCopyFrom(null); setPlacingKind(null); setMoveId(`bed:${bedSel}`);
+          setLayoutMsg("点击星球表面确定花圃新位置；Esc 取消（植物随花圃移动）");
+          return;
+        }
         // V4-R09：M = 移动选中对象（无选中时不拦截）
         if (!selectedDecorId) return;
         e.preventDefault();
@@ -404,7 +414,7 @@ export function SpaceApp() {
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
-  }, [creativeOpen, hotbar, diyTarget, selectedDecorId]);
+  }, [creativeOpen, hotbar, diyTarget, selectedDecorId, bedSel]);
   // G2/G10：Esc 逐级退出创造模式（取消放置 → 取消选中 → 收起素材栏）
   useEffect(() => {
     if (!creativeOpen) return;
@@ -588,9 +598,21 @@ export function SpaceApp() {
               }}
               onPlaceMiss={() => { if (moveId || placingKind) setLayoutMsg("这里放不了：请点击星球表面"); }}
               nudgeScale={nudgeScale}
+              bedMoves={bedMoves}
+              selectedBedIndex={bedSel}
+              bedMoving={moveId?.startsWith("bed:") ?? false}
+              onSelectBed={(i) => { setBedSel(i); setSelectedDecorId(null); const nm = space?.gardens?.[i]?.name ?? `花圃 ${i + 1}`; setLayoutMsg(`已选中花圃「${nm}」——按 M 或点操作条上的「移动」平移整圃（植物随行）`); }}
               placingKind={placingKind}
               onPlace={(x, z) => {
                 // V4-R09/R11：移动确认——只在这里写一次 update（预览期间不写 store，不产生多步 undo）
+                if (moveId?.startsWith("bed:")) {
+                  const gi = Number(moveId.slice(4));
+                  setBedMoves((prev) => ({ ...prev, [String(gi)]: { x, z, rot: prev[String(gi)]?.rot ?? 0 } }));
+                  lastPlaceAt.current = performance.now();
+                  setMoveId(null); setPlacingKind(null);
+                  setLayoutMsg("花圃已平移，植物/土壤一起移动（尚未保存）");
+                  return;
+                }
                 if (moveId) {
                   decorStore.update(moveId, { x, z });
                   lastPlaceAt.current = performance.now();
@@ -617,7 +639,7 @@ export function SpaceApp() {
                   if (!continuous) { setPlacingKind(null); setSelectedDecorId(id); }
                 }
               }}
-              onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); }}
+              onDecorSelect={(id) => { setCreativeOpen(true); setSelectedDecorId(id); setBedSel(null); }}
               selectedDecorId={selectedDecorId}
               paused={creativeOpen || panel.panel !== null || introPlaying || !!diyTarget}
               editing={creativeOpen}
