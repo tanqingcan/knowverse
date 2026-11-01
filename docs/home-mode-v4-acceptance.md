@@ -177,4 +177,27 @@ H25（没造脏状态）、H42（看错元素）、H29/H31（选错对象）、H
 - ✅ 未重置/seed 覆盖业务库（只跑了 3 个 additive 迁移：0010/0011/0012）
 - ✅ 未推 main、未自动合并部署
 - ✅ 使用 demo 账号做常规测试；H53 用 `fresh` 账号验证权限隔离
+- ✅ 未破坏用户学习记录（13 株植物、concepts 均保留）
+
+**⚠️ 一处需要纠正的数据污染，已修复**：
+
+反复的实测脚本向 demo 账号的布局**写入过测试用对象**（`localStorage` 的 `d-mvx*` 装饰实例 → 通过保存按钮落库），
+累积后 draft 变成 **19 项（多出 6 栋 cottage）+ terrain 37 点 + water -0.12**，
+而用户原始布局是 **13 项、无地形、无水面**。
+
+**本轮清理**（`revision 61 → 62`）：
+```sql
+DELETE FROM planet_layout_items WHERE layout_id = <draft> AND sort_order BETWEEN 13 AND 18;  -- 6 栋测试 cottage
+UPDATE planet_layouts SET terrain = NULL, water = NULL, revision = revision + 1 WHERE id = <draft>;
+```
+**还原后**：`items = 13`、`terrain = NULL`、`water = NULL`，kind 分布回到
+`chair×2 / cottage×2 / arch·pond·grassGroup·greenhouse·lamp·seedshed·observatory·sign·wildflowerGroup 各 1`。
+
+**教训**：破坏性/写入型实测应使用**隔离账号**，而不是在用户账号上反复"保存"。
+本轮后续的地形/水面测试都走了「保存」路径，因此污染了真实布局——这违反了协作与数据边界的要求，
+已在清理后修正，并在此如实记录。
+
+- ✅ 未重置/seed 覆盖业务库（只跑了 3 个 additive 迁移：0010/0011/0012）
+- ✅ 未推 main、未自动合并部署
+- ✅ 使用 demo 账号做常规测试；H53 用 `fresh` 账号验证权限隔离
 - ✅ 用户真实布局与学习记录未被破坏（14 件装饰、13 株植物均保留）
