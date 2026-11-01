@@ -1,6 +1,6 @@
 # B8 · 界面章草稿（真实实现 + 实测数据）
 
-> Owner：B。用于替换/补充 `report-draft.md` §3.6。图号与报告模板**待与 D 对齐**；文中数字均来自本仓库实测（`/dev/garden?perf=1`、`docs/progress-sphere.md`、`.dsh-tools` 截图），非估算。
+> Owner：B。用于替换/补充 `report-draft.md` §3.6。图号与报告模板**待与 D 对齐**；文中数字均来自本仓库实测（`/dev/garden?perf=1`、`CHANGELOG.md`、`.dsh-tools` 截图），非估算。
 
 ## 1 视觉方向
 
@@ -85,4 +85,4 @@
 
 **完整球体**：四方位（0/90/180/270°）连续地表 + 景物；空闲慢转（按下暂停/释放 3 秒恢复/编辑浮窗/低动效不自转）。
 
-**视觉证据**（本仓库实测）：`docs/creative-mode-acceptance.md` 附 G1–G12 表与截图索引（`rose-{seed,sprout,leaf,bud,bloom}.png`、`dir-{0,90,180,270}.png`、`visit-demo.png`、`g3-pole.png`、`b6-{desktop,mobile,static,lowmotion}.png` 等）。
+**视觉证据**（本仓库实测）：`CHANGELOG.md` 与 `docs/screenshots/` 截图（`rose-{seed,sprout,leaf,bud,bloom}.png`、`dir-{0,90,180,270}.png`、`visit-demo.png`、`g3-pole.png`、`b6-{desktop,mobile,static,lowmotion}.png` 等）。

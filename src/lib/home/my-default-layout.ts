@@ -5,8 +5,8 @@
  * 用途：作为「默认模板 / 恢复默认模板」的内容，
  * 避免用户点「恢复默认模板」时把 141 件换成旧的 6 件示例。
  *
- * 原始数据备份：docs/home-mode-v4/my-planet-layout-v94.json
- * 重新导出方式见 docs/home-mode-v4/README-layout-export.md
+ * 原始数据备份：data/default-layout.json
+ * 重新导出方式见 CHANGELOG.md「如何更新默认布局」
  */
 import type { DecorPlacement } from "@/lib/decor";
 

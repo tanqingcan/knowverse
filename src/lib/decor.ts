@@ -62,7 +62,7 @@ export const DECOR_CATALOG: { kind: DecorKind; label: string; load: number; surf
  * V4 起改为**我的星球实际搭好的布局**（141 件，由 `planet_layout_items` revision 94 导出），
  * 不再是早期那 6 件示例。这样「恢复默认模板」= 恢复我自己的星球，
  * 而不会把辛苦搭的 141 件换回示例小样。
- * 源文件：`src/lib/home/my-default-layout.ts`；原始数据备份：`docs/home-mode-v4/my-planet-layout-v94.json`
+ * 源文件：`src/lib/home/my-default-layout.ts`；原始数据备份：`data/default-layout.json`
  */
 export const DEFAULT_TEMPLATE: DecorPlacement[] = MY_PLANET_LAYOUT;
 
