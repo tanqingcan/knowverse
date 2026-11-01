@@ -17,7 +17,7 @@ import { StarLamp, SurfaceMover, Traveler, type Pose } from "./Characters3D";
 import { capFrame, worldToCap, capToAzPolar, layoutBeds, MEMORY_PATH, GREEN_PATH, STAR_PATH, SEED_PATH, pathCurve, scatter, SPOTS, TREES, WILD, WILD_ROCKS, type BedLayout, type WorldPlant } from "./layout";
 import { DecorStone } from "./Decor3D";
 import { paintTerrain, planetGeometry } from "./terrain";
-import { makeHeights, applyBrush } from "@/lib/home/terrain";
+import { terrainHeightAt, makeHeights, applyBrush } from "@/lib/home/terrain";
 import type { StageKey } from "@/lib/flora";
 import { DECOR_CATALOG, isBuildingKind, type BuildingKind, type DecorPlacement } from "@/lib/decor";
 import { doorOf, homePoses } from "@/lib/home/home-layout";
@@ -945,7 +945,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             );
           }
           return (
-            <OnCap key={d.id} name={`decor:${d.id}`} x={d.x} z={d.z} yaw={d.rot} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
+            <OnCap key={d.id} name={`decor:${d.id}`} x={d.x} z={d.z} yaw={d.rot} lift={props.terrainHeights ? terrainHeightAt(props.terrainHeights, d.x, d.z) : 0} upright={d.kind === "chair" || d.kind === "lamp" || d.kind === "fence" || d.kind === "sign" ? 1 : 0}>
               <group scale={d.scale}
                 onPointerDown={(e) => { if (props.mode !== "garden" || props.readOnly) return; e.stopPropagation(); }}
                 onPointerUp={(e) => {
