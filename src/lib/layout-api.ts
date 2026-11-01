@@ -14,6 +14,8 @@ export type LayoutResponse = {
   planetId: string; revision: number; status: string;
   /** H52：1=迁移前旧布局；2=v3 全场景布局（用户可能删光建筑，不能再补模板） */
   schemaVersion?: number;
+  /** V4-R22：花圃位移（键=gardenId） */
+  bedMoves?: Record<string, { x: number; z: number; rot?: number }> | null;
   publishedRevision: number | null; hasPublished?: boolean; items: LayoutItem[];
 };
 
@@ -34,8 +36,11 @@ export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
 });
 
 export function loadLayout() { return api<LayoutResponse>("/api/planet-layout"); }
-export function saveLayout(baseRevision: number, list: DecorPlacement[]) {
-  return api<{ revision: number; status: string }>("/api/planet-layout", { method: "PUT", body: { baseRevision, items: list.map(toLayoutItem) } });
+export function saveLayout(baseRevision: number, list: DecorPlacement[], bedMoves?: Record<string, { x: number; z: number; rot?: number }>) {
+  return api<{ revision: number; status: string }>("/api/planet-layout", {
+    method: "PUT",
+    body: { baseRevision, items: list.map(toLayoutItem), bedMoves: bedMoves ?? {} },
+  });
 }
 export function publishLayout(baseRevision: number) {
   return api<{ revision: number; status: string }>("/api/planet-layout/publish", { method: "POST", body: { baseRevision } });

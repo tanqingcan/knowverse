@@ -15,6 +15,12 @@ const itemSchema = z.object({
 export const GET = authed(async (_req, user) => getLayout(user));
 
 export const PUT = authed(async (req, user) => {
-  const body = await parseBody(req, z.object({ baseRevision: z.number().int().min(0), items: z.array(itemSchema).max(300) }));
-  return saveDraft(user, body.baseRevision, body.items);
+  const bedMovesSchema = z.record(z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), z.object({ x: z.number(), z: z.number(), rot: z.number().optional() }));
+  const body = await parseBody(req, z.object({
+    baseRevision: z.number().int().min(0),
+    items: z.array(itemSchema).max(300),
+    // V4-R22：花圃位移随布局一起保存（与装饰 items 分开的字段）
+    bedMoves: bedMovesSchema.nullish(),
+  }));
+  return saveDraft(user, body.baseRevision, body.items, body.bedMoves);
 });

@@ -693,6 +693,8 @@ export const planetLayouts = pgTable("planet_layouts", {
   publishedRevision: integer("published_revision"),
   /** 最近一次发布的布局快照（可「恢复上一已发布版本」，且参观只读用） */
   publishedItems: jsonb("published_items"),
+  /** V4-R22：花圃（知识花圃）布局位移——键为 gardenId，值为 {x,z,rot}；与装饰 items 分开存 */
+  bedMoves: jsonb("bed_moves"),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").defaultNow().notNull(),
 }, (t) => [
