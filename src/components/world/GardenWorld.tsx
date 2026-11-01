@@ -67,6 +67,8 @@ export type WorldProps = {
   terrainTool?: "up" | "down" | "restore" | null;
   /** V4-R26：一次点击 = 一笔，回调把新高度场交回上层（写历史/存 DB） */
   onTerrainBrush?: (heights: Float32Array) => void;
+  /** V4-R29：水面高度（相对基础球面；null=无水面） */
+  terrainWater?: number | null;
   /** V4-R26：笔刷半径（球冠坐标单位） */
   terrainRadius?: number;
   onPlace?: (x: number, z: number) => void; // 点击球面放置回调
@@ -752,6 +754,43 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   // H09：poses 变化会重绘地表纹理；旧 CanvasTexture 必须 dispose，否则拖动建筑时纹理数单调增长（实测 12→20）
   useEffect(() => () => { (terrain as unknown as { dispose?: () => void })?.dispose?.(); }, [terrain]);
   const planetGeo = useMemo(() => planetGeometry(props.terrainHeights), [props.terrainHeights]);
+  // V4-R29：水面——只为「高度低于水位的格子」生成三角形，边界天然被盆地约束
+  const waterGeo = useMemo(() => {
+    const H = props.terrainHeights;
+    const L = props.terrainWater;
+    if (!H || L == null || L <= 0) return null;
+    const N = 49, MIN = -3, MAX = 3;
+    const step = (MAX - MIN) / (N - 1);
+    const pos: number[] = [];
+    const idx: number[] = [];
+    const vert = new Map<string, number>();
+    const push = (i: number, j: number) => {
+      const key = `${i},${j}`;
+      const got = vert.get(key);
+      if (got != null) return got;
+      const p = capFrame(MIN + i * step, MIN + j * step, 0, L).pos;
+      const id = pos.length / 3;
+      pos.push(p.x, p.y, p.z);
+      vert.set(key, id);
+      return id;
+    };
+    for (let j = 0; j < N - 1; j++) {
+      for (let i = 0; i < N - 1; i++) {
+        // 四个格点里只要有一个低于水位就铺水面（近似，但不越出盆地）
+        const h00 = H[j * N + i] ?? 0, h10 = H[j * N + i + 1] ?? 0;
+        const h01 = H[(j + 1) * N + i] ?? 0, h11 = H[(j + 1) * N + i + 1] ?? 0;
+        if (Math.min(h00, h10, h01, h11) >= L) continue;
+        const a = push(i, j), b = push(i + 1, j), c = push(i, j + 1), d = push(i + 1, j + 1);
+        idx.push(a, c, b, b, c, d);
+      }
+    }
+    if (idx.length === 0) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }, [props.terrainHeights, props.terrainWater]);
   const planetMat = useMemo(() => new THREE.MeshStandardMaterial({ map: terrain, roughness: 1, metalness: 0 }), [terrain]);
   const [lights, setLights] = useState(props.intro === "none" || reduced ? 1 : 0.05);
   const lightAcc = useRef(0);
@@ -879,6 +918,13 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
               props.onTerrainBrush?.(next);
             }
           }} />
+        {/* V4-R29：水面——只覆盖盆地（低于水位的格子），天然被地形约束 */}
+        {waterGeo && (
+          <mesh geometry={waterGeo} renderOrder={1}>
+            <meshPhysicalMaterial color="#5FB6D9" transparent opacity={0.62} roughness={0.12} metalness={0.05}
+              side={THREE.DoubleSide} depthWrite={false} />
+          </mesh>
+        )}
         {/* H06/H21：放置预览 ghost——跟随指针、半透明；只在放置/复制预览时挂载 */}
         {props.placingKind && props.placingPreview && (
           <group ref={ghost} visible={false}>

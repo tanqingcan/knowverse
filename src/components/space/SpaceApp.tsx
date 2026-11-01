@@ -129,6 +129,8 @@ export function SpaceApp() {
   const [terrainHeights, setTerrainHeights] = useState<Float32Array | null>(null);
   const [terrainTool, setTerrainTool] = useState<"up" | "down" | "restore" | null>(null);
   const [terrainRadius, setTerrainRadius] = useState(0.45);
+  // V4-R29：水面高度（null=无水面）。水位取负值即「盆地积水」
+  const [terrainWater, setTerrainWater] = useState<number | null>(null);
   // V4-R30：地形撤销/重做（一次笔触一条历史，最多 40 步）
   const [terrainPast, setTerrainPast] = useState<Float32Array[]>([]);
   const [terrainFuture, setTerrainFuture] = useState<Float32Array[]>([]);
@@ -624,6 +626,7 @@ export function SpaceApp() {
               terrainHeights={terrainHeights}
               terrainTool={terrainTool}
               terrainRadius={terrainRadius}
+              terrainWater={terrainWater}
               onTerrainBrush={(h) => {
                 setTerrainPast((prev) => [...prev.slice(-39), terrainHeights ? new Float32Array(terrainHeights) : new Float32Array(49 * 49)]);
                 setTerrainFuture([]);
@@ -764,6 +767,14 @@ export function SpaceApp() {
                 });
                 setLayoutMsg("地形已重做一步");
               }}>重做</button>
+            <label className="terrain-water">水面
+              <input type="checkbox" checked={terrainWater != null}
+                onChange={(e) => setTerrainWater(e.target.checked ? -0.12 : null)} aria-label="添加水面" />
+              {terrainWater != null && (
+                <input type="range" min={-0.3} max={0.1} step={0.01} value={terrainWater}
+                  onChange={(ev) => setTerrainWater(Number(ev.target.value))} aria-label="水位高度" />
+              )}
+            </label>
             <button type="button" className="terrain-reset" onClick={() => { setTerrainHeights(null); setTerrainPast([]); setTerrainFuture([]); }}>全部恢复平地</button>
           </div>
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
