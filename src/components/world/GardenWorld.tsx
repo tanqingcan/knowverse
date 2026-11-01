@@ -87,6 +87,14 @@ const BUILDING_HIT: Record<string, { name: string; r: number; h: number; labelY:
   sign: { name: "sign", r: 0.2, h: 0.3, labelY: 0.2, clickable: false },
 };
 
+/** V4-R17：拾取坐标——优先用射线与「理想球」求交（精确），避免低模拾取球的多面体方向误差 */
+function rayToCap(ray: THREE.Ray, fallbackPoint?: THREE.Vector3) {
+  const hit = ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), PLANET_R), new THREE.Vector3());
+  if (hit) return pointToCap(hit);
+  if (fallbackPoint) return pointToCap(fallbackPoint);
+  return null;
+}
+
 /** 世界坐标点 → 球冠平面坐标 (x,z)，与 capToAzPolar 互逆 */
 function pointToCap(p: THREE.Vector3) {
   const r = p.length() || 1;
@@ -780,7 +788,8 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             onPointerMove={(e) => {
               // H06：ghost 跟随指针（命令式改 transform，不触发 React 重渲染）
               if (!ghost.current) return;
-              const c = pointToCap(e.point);
+              const c = rayToCap(e.ray, e.point);
+              if (!c) return;
               const f = capFrame(c.x, c.z, props.placingPreview?.rot ?? 0);
               ghost.current.position.copy(f.pos);
               ghost.current.quaternion.copy(f.quat);
@@ -789,9 +798,9 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
             onPointerOut={() => { if (ghost.current) ghost.current.visible = false; }}
             onPointerUp={(e) => {
               if (e.delta > 6) return; // 拖动（镜头）时不放置
-              const c = pointToCap(e.point);
+              const c = rayToCap(e.ray, e.point);
               e.stopPropagation();
-              props.onPlace?.(c.x, c.z);
+              if (c) props.onPlace?.(c.x, c.z);
             }} />
         )}
         <CloudRing R={PLANET_R} />
