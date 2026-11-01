@@ -228,6 +228,8 @@ export function SpaceApp() {
   // 创造模式：从服务端加载已保存布局（G4）；失败/未保存过则保留本地草稿
   useEffect(() => {
     loadLayout().then((l) => {
+        // V4-R22：加载时恢复花圃位移（键=gardenId）
+        if (l.bedMoves && typeof l.bedMoves === "object") setBedMoves(l.bedMoves as Record<string, { x: number; z: number; rot?: number }>);
       // H03：初始模板只负责「首次创建」。之后用户草稿（即使还没保存）优先于模板，
       // 刷新不会把搬走的建筑弹回原位；服务端一旦有建筑实例即以其为权威。
       const local = loadDecor();
@@ -331,6 +333,8 @@ export function SpaceApp() {
   const discard = () => {
     if (!window.confirm("放弃未保存的改动，恢复服务器上的布局？")) return;
     loadLayout().then((l) => {
+        // V4-R22：加载时恢复花圃位移（键=gardenId）
+        if (l.bedMoves && typeof l.bedMoves === "object") setBedMoves(l.bedMoves as Record<string, { x: number; z: number; rot?: number }>);
       // H03：服务端还没有建筑实例时，恢复服务器布局也要补回初始建筑，否则会被清空成「没有房子」
       const serverHasBuildings = l.items.some((it) => isBuildingKind(it.kind));
       applyLayout(serverHasBuildings ? l.items.map(fromLayoutItem) : [...DEFAULT_HOME_LAYOUT, ...l.items.map(fromLayoutItem)]);
