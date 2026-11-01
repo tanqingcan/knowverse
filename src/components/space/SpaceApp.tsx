@@ -811,6 +811,11 @@ export function SpaceApp() {
             </label>
             <button type="button" className="terrain-reset" onClick={() => { setTerrainHeights(null); setTerrainPast([]); setTerrainFuture([]); }}>全部恢复平地</button>
           </div>
+          {/* V4-R18：装饰撤销/重做按钮——此前创造模式下只有地形栏的撤销，装饰只能靠键盘 */}
+          <div className="decor-history" role="group" aria-label="装饰撤销重做">
+            <button type="button" className="dh-btn" disabled={!decorStore.canUndo} onClick={undo} title="撤销装饰改动（Ctrl+Z）" aria-label="撤销装饰改动">撤销</button>
+            <button type="button" className="dh-btn" disabled={!decorStore.canRedo} onClick={redo} title="重做装饰改动（Ctrl+Shift+Z）" aria-label="重做装饰改动">重做</button>
+          </div>
           <button className="create-exit" type="button" onClick={requestExit} aria-label="退出创造模式">退出创造</button>
           </>
         )}

@@ -959,3 +959,14 @@ mark { background: rgba(221, 181, 109, 0.5); color: inherit; padding: 0 2px; bor
   .terrain-bar.is-collapsed { display: none; }
   .terrain-bar { top: 100px; max-width: calc(100vw - 16px); overflow-x: auto; flex-wrap: nowrap; }
 }
+
+/* V4-R18：装饰撤销/重做按钮组（创造模式左下，与地形栏呼应） */
+.decor-history { position: absolute; left: 16px; bottom: 96px; z-index: 8; display: flex; gap: 6px; }
+.dh-btn { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: rgba(255, 247, 232, 0.94); font-family: inherit; font-size: 13px; color: var(--ink);
+  cursor: pointer; }
+.dh-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 860px) {
+  .decor-history { left: 8px; bottom: 150px; }
+  .dh-btn { min-height: 44px; }
+}
