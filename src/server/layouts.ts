@@ -43,7 +43,7 @@ export async function getLayout(user: CurrentUser) {
      FROM planet_layouts WHERE planet_id = $1`, [planetId]);
   if (!layout) return { planetId, revision: 0, status: "draft" as const, schemaVersion: 1, publishedRevision: null, hasPublished: false, bedMoves: {} as BedMoves, items: [] as LayoutItemInput[] };
   const items = await q(
-    `SELECT kind, x, z, rot, scale, width, length, color, stage, parts
+    `SELECT instance_id AS "instanceId", kind, x, z, rot, scale, width, length, color, stage, parts
      FROM planet_layout_items WHERE layout_id = $1 ORDER BY sort_order`, [layout.id]);
   return { planetId, revision: layout.revision as number, status: layout.status as string, schemaVersion: (layout.schemaVersion as number) ?? 1, publishedRevision: layout.publishedRevision as number | null, hasPublished: !!layout.hasPublished, bedMoves: (layout.bedMoves as BedMoves) ?? {}, items: items as LayoutItemInput[] };
 }
@@ -72,6 +72,7 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
   const clean = items.map((it, i) => {
     if (!it || !VALID_KINDS.has(it.kind)) throw new AppError("bad_kind", `未知素材 ${it?.kind}`, 400);
     return {
+      instanceId: (it as { instanceId?: unknown }).instanceId != null ? String((it as { instanceId?: unknown }).instanceId).slice(0, 64) : null,
       kind: it.kind,
       x: num(it.x, -6, 6, "x"), z: num(it.z, -6, 6, "z"),
       rot: it.rot == null ? 0 : num(it.rot, -3600, 3600, "rot"),
@@ -101,9 +102,9 @@ export async function saveDraft(user: CurrentUser, baseRevision: number, items: 
     }
     for (const it of clean) {
       await c.query(
-        `INSERT INTO planet_layout_items (layout_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [layoutId, it.kind, it.x, it.z, it.rot, it.scale, it.width, it.length, it.color, it.stage, it.parts ?? null, it.sortOrder]);
+        `INSERT INTO planet_layout_items (layout_id, instance_id, kind, x, z, rot, scale, width, length, color, stage, parts, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [layoutId, it.instanceId, it.kind, it.x, it.z, it.rot, it.scale, it.width, it.length, it.color, it.stage, it.parts ?? null, it.sortOrder]);
     }
     return { planetId, revision: nextRevision, status: "draft" as const };
   });

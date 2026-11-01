@@ -3,6 +3,8 @@ import { api } from "./api";
 import type { DecorPlacement } from "./decor";
 
 export type LayoutItem = {
+  /** V4-H51：客户端实例 ID（跨刷新/重登稳定） */
+  instanceId?: string | null;
   kind: string; x: number; z: number;
   rot?: number; scale?: number;
   width?: number | null; length?: number | null;
@@ -21,13 +23,15 @@ export type LayoutResponse = {
 
 let seq = 0;
 export const toLayoutItem = (d: DecorPlacement): LayoutItem => ({
+  instanceId: d.id,
   kind: d.kind, x: d.x, z: d.z, rot: d.rot, scale: d.scale,
   width: d.width ?? null, length: d.length ?? null, color: d.color ?? null, stage: d.stage ?? null,
   // H51：颜色统一小写（服务端也会归一化，这里先做一次保证本地/服务器同口径）
   parts: d.parts ? Object.fromEntries(Object.entries(d.parts).map(([k, v]) => [k, String(v).toLowerCase()])) : null,
 });
 export const fromLayoutItem = (it: LayoutItem): DecorPlacement => ({
-  id: `s-${Date.now().toString(36)}-${(seq++).toString(36)}`,
+  // V4-H51：优先用持久化的实例 ID（跨刷新/重登/独立上下文稳定），旧数据无则重建
+  id: it.instanceId && it.instanceId.length > 0 ? it.instanceId : `s-${Date.now().toString(36)}-${(seq++).toString(36)}`,
   kind: it.kind as DecorPlacement["kind"], x: it.x, z: it.z,
   rot: it.rot ?? 0, scale: it.scale ?? 1,
   width: it.width ?? undefined, length: it.length ?? undefined,

@@ -707,6 +707,8 @@ export const planetLayoutItems = pgTable("planet_layout_items", {
   id: id(),
   layoutId: uuid("layout_id").notNull().references(() => planetLayouts.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),
+  /** V4-H51：客户端实例 ID（跨会话稳定；旧数据为 null → 加载时重建） */
+  instanceId: text("instance_id"),
   x: real("x").notNull(),
   z: real("z").notNull(),
   rot: real("rot").notNull().default(0),

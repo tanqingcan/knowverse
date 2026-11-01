@@ -3,6 +3,7 @@ import { authed, parseBody } from "@/server/http";
 import { getLayout, saveDraft } from "@/server/layouts";
 
 const itemSchema = z.object({
+  instanceId: z.string().max(64).nullish(),
   kind: z.string(),
   x: z.number(), z: z.number(),
   rot: z.number().optional(), scale: z.number().optional(),
