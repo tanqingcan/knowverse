@@ -50,29 +50,44 @@ export async function setSharing(user: CurrentUser, classId: string, prefs: { sh
   return { ok: true };
 }
 
-/** 班级星系：只返回对方明确公开的内容 */
+/** 班级星系：跨用户读只走数据库函数 fn_class_galaxy（成员校验 + 分享规则都在库里） */
 export async function galaxy(user: CurrentUser, classId: string) {
   await requireMember(user.id, classId);
-  const cls = await q1(`SELECT id, name, join_code AS "joinCode" FROM classes WHERE id = $1`, [classId]);
-  const members = await q(`SELECT u.id AS "userId", u.display_name AS "displayName", u.id = $2 AS "isMe", sp.share_planet AS "sharePlanet", sp.share_stages AS "shareStages",
-                                  pl.name AS "planetName", np.species AS "natalSpecies", np.color AS "natalColor"
-                           FROM class_members m JOIN users u ON u.id = m.user_id
-                           JOIN sharing_preferences sp ON sp.class_id = m.class_id AND sp.user_id = m.user_id
-                           LEFT JOIN planets pl ON pl.user_id = u.id LEFT JOIN plants np ON np.id = pl.natal_plant_id
-                           WHERE m.class_id = $1 ORDER BY m.joined_at`, [classId, user.id]);
-  const visible = members.filter((m) => m.isMe || m.sharePlanet);
-  const ids = visible.filter((m) => m.isMe || m.shareStages).map((m) => m.userId);
-  const plants = ids.length ? await q(`SELECT pl.user_id AS "userId", k.name AS "conceptName", p.species, p.color, coalesce(ls.stage,'seed') AS stage, p.lon, p.lat
-                                       FROM plants p JOIN gardens g ON g.id = p.garden_id JOIN planets pl ON pl.id = g.planet_id JOIN concepts k ON k.id = p.concept_id
-                                       LEFT JOIN learning_states ls ON ls.user_id = pl.user_id AND ls.concept_id = p.concept_id
-                                       WHERE pl.user_id = ANY($1::uuid[]) AND p.archived_at IS NULL`, [ids]) : [];
+  const row = await q1<{ doc: any }>(`SELECT fn_class_galaxy($1, $2) AS doc`, [user.id, classId]);
+  const doc = row?.doc;
+  if (!doc?.class) throw notFound("班级");
+
+  const members: any[] = doc.members ?? [];
+  const ids = members.filter((m) => m.user_id === user.id || m.share_stages).map((m) => m.user_id);
+  const plants = ids.length
+    ? await q(`SELECT pl.user_id AS "userId", k.name AS "conceptName", p.species, p.color, coalesce(ls.stage,'seed') AS stage, p.lon, p.lat
+               FROM plants p JOIN gardens g ON g.id = p.garden_id JOIN planets pl ON pl.id = g.planet_id JOIN concepts k ON k.id = p.concept_id
+               LEFT JOIN learning_states ls ON ls.user_id = pl.user_id AND ls.concept_id = p.concept_id
+               WHERE pl.user_id = ANY($1::uuid[]) AND p.archived_at IS NULL`, [ids])
+    : [];
+
+  const stageSummary = (userId: string) => {
+    const own = plants.filter((p) => p.userId === userId);
+    const out: Record<string, number> = {};
+    for (const p of own) out[p.stage as string] = (out[p.stage as string] ?? 0) + 1;
+    return out;
+  };
+
   return {
-    class: cls,
-    hiddenCount: members.length - visible.length,
-    planets: visible.map((m) => ({
-      userId: m.userId, displayName: m.displayName, isMe: m.isMe, planetName: m.planetName ?? "（尚未建立星球）",
-      natalSpecies: m.natalSpecies, natalColor: m.natalColor,
-      plants: m.isMe || m.shareStages ? plants.filter((p) => p.userId === m.userId) : null,
+    class: doc.class,
+    hiddenCount: Number(doc.memberCount ?? 0) - Number(doc.visibleCount ?? 0),
+    memberCount: Number(doc.memberCount ?? 0),
+    planets: members.map((m) => ({
+      userId: m.user_id,
+      displayName: m.display_name,
+      isMe: m.user_id === user.id,
+      planetName: m.planet_name ?? "（尚未建立星球）",
+      natalSpecies: m.natal_species,
+      natalColor: m.natal_color,
+      plantCount: Number(m.plant_count ?? 0),
+      lastActiveAt: m.last_active_at ?? null,
+      stageSummary: m.user_id === user.id || m.share_stages ? stageSummary(m.user_id) : null,
+      plants: m.user_id === user.id || m.share_stages ? plants.filter((p) => p.userId === m.user_id) : null,
     })),
   };
 }

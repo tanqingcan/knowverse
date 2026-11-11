@@ -307,6 +307,71 @@ async function seedQA(userId: string, convTitle: string, subjectId: string, at: 
   return { conversationId: convId!, turns: out };
 }
 
+async function seedDemoHistory(demo: string, ids: Record<string, string>, subj: Record<string, string>) {
+  const taskTitles = (await q<{ title: string }>(`SELECT t.title FROM tasks t ORDER BY t.title`)).map((r) => r.title);
+  const concepts = ["左外连接", "内连接", "分组聚合", "函数依赖", "条件概率", "贝叶斯公式", "全概率公式", "NULL 与三值逻辑", "SELECT 查询", "索引", "连接条件与过滤条件", "范式与规范化"];
+
+  // 三段跨周的日常问答，让“每日活动”和“历史检索”有真实的时间分布
+  const qa = [
+    { d: 25, title: "周末复习：连接与过滤", q: "WHERE 里的条件和 ON 里的条件，放到一起时结果为什么不一样？" },
+    { d: 18, title: "期中前的三个小问题", q: "NULL 参与比较时为什么结果是 unknown，而不是 false？" },
+    { d: 11, title: "概率题的两种解法", q: "先有全概率公式还是先用贝叶斯公式？我做题时总是分不清。" },
+  ];
+  for (const x of qa) {
+    await seedQA(demo, x.title, subj.dbms, ago(x.d, 20, 10), [
+      { q: x.q, tags: [{ id: ids["左外连接"], status: "candidate" }] },
+    ]);
+  }
+
+  // 近 30 天的学习足迹：有节奏地留白，形成连续段与间隔
+  const gaps = new Set([3, 9, 16, 22, 27]);
+  const pattern = ["attempt-wrong", "note", "read", "attempt-right", "note", "asked"];
+  for (let d = 29; d >= 0; d--) {
+    if (d !== 0 && gaps.has(d)) continue;
+    const at = ago(d, 20 + (d % 3), (d * 7) % 60);
+    const kind = pattern[d % pattern.length];
+    const conceptName = concepts[(d * 3) % concepts.length];
+    const cid = ids[conceptName];
+    await withTx(async (c) => {
+      if (kind.startsWith("attempt")) {
+        const title = taskTitles[(d * 5) % taskTitles.length];
+        const correct = kind === "attempt-right";
+        const guided = d % 2 === 0;
+        const attemptId = await seedAttempt(c, demo, title, guided ? "guided" : "independent",
+          correct ? "SELECT 1" : "SELECT 0", correct ? "correct" : "incorrect",
+          correct ? "正确：与参考结果一致。" : "与参考结果不一致，建议回到资料里核对条件。", at, guided ? 1 : 0);
+        await seedEvidence(c, {
+          userId: demo, conceptId: cid,
+          kind: guided ? "guided_practice" : "independent_attempt",
+          detail: `《${title}》${guided ? "引导模式，使用提示 1 次" : "独立作答，未使用提示"}，结果：${correct ? "正确" : "未通过"}`,
+          attemptId, usedHints: guided,
+        }, at);
+      } else if (kind === "note") {
+        const n = await c.query(
+          `INSERT INTO notes (user_id, concept_id, title, content, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$5) RETURNING id`,
+          [demo, cid, `第 ${30 - d} 天的笔记`, "把今天卡住的地方记下来；下次先看这条，再做题。", at],
+          );
+        await seedEvidence(c, { userId: demo, conceptId: cid, kind: "note", detail: `写下笔记《第 ${30 - d} 天的笔记》`, noteId: n.rows[0].id }, at);
+      } else if (kind === "read") {
+        await seedEvidence(c, { userId: demo, conceptId: cid, kind: "read", detail: "阅读资料《第3章 SQL 连接查询（讲义）》第 2 段" }, at);
+      } else {
+        await seedEvidence(c, { userId: demo, conceptId: cid, kind: "asked", detail: `复习提问：关于「${conceptName}」我还有一个疑问` }, at);
+      }
+    });
+  }
+
+  // 回填后按“有效证据的最大时间”校正汇总字段（不变量 E9）
+  await q(`UPDATE learning_states ls
+              SET last_evidence_at = (SELECT max(e.created_at) FROM learning_evidence e
+                                       WHERE e.user_id = ls.user_id AND e.concept_id = ls.concept_id AND e.revoked_at IS NULL),
+                  updated_at = now()
+            WHERE ls.user_id = $1`, [demo]);
+  // 让最近有记录的几株花保留“待复习”的演示效果
+  await q(`UPDATE learning_states ls SET review_due_at = now() - interval '1 day'
+            WHERE ls.user_id = $1 AND ls.concept_id = $2`, [demo, ids["内连接"]]);
+}
+
 async function seedDemo(ids: Record<string, string>, subj: Record<string, string>) {
   await removeDemoUsers();
   const demo = await makeUser("demo", "小屿", "knowverse", ago(14, 21));
@@ -435,6 +500,8 @@ async function seedDemo(ids: Record<string, string>, subj: Record<string, string
     await c.query(`INSERT INTO study_group_members (group_id, user_id) VALUES ($1,$2)`, [g.rows[0].id, xy]);
     return id;
   });
+  console.log(`  · 近 30 天学习足迹（预置，用于周报与连续学习演示）`);
+  await seedDemoHistory(demo, ids, subj);
   console.log(`  · 演示账号 demo / knowverse（小屿），演示同学 xingye、ahe（密码 knowverse），班级邀请码 KV2026 (${cls.slice(0, 8)})`);
 }
 

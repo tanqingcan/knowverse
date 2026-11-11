@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ZodError, type ZodTypeAny, type z } from "zod";
 import { AppError } from "./errors";
 import { requireUser, type CurrentUser } from "./auth";
+import { runAsUser } from "@/db";
 
 export function ok(data: unknown, init?: ResponseInit) {
   return NextResponse.json({ ok: true, data }, init);
@@ -31,7 +32,8 @@ export function authed<P = Record<string, string>>(fn: (req: NextRequest, user: 
     try {
       const user = await requireUser();
       const params = (await ctx?.params) ?? ({} as P);
-      const r = await fn(req, user, params);
+      // 把用户放进请求级上下文：数据库在事务内以 app.user_id 执行行级安全策略
+      const r = await runAsUser(user.id, () => fn(req, user, params));
       return r instanceof Response ? r : ok(r);
     } catch (e) {
       return fail(e);

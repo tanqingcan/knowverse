@@ -85,6 +85,35 @@ async function main() {
     md += `## ${title}\n\n参数：\`${JSON.stringify(input)}\`\n\n| 方案 | Execution Time |\n|---|---|\n| ${a.label} | ${a.exec} ms |\n| ${b.label} | ${b.exec} ms |\n\n<details><summary>默认方案执行计划</summary>\n\n\`\`\`\n${a.plan}\n\`\`\`\n</details>\n\n`;
     console.log(title, a.exec, "ms /", b.exec, "ms");
   }
+  // 运维查询：待复习与待重试，用来验证“部分索引”的收益
+  await pool.query(`UPDATE messages SET status = 'pending'
+                    WHERE id IN (SELECT id FROM messages WHERE role = 'assistant' LIMIT 60)`);
+  await pool.query(`ANALYZE`);
+  const ops: [string, string, unknown[]][] = [
+    ["Q6 待复习知识点（部分索引：stage = 'bud'）",
+      `SELECT concept_id, review_due_at FROM learning_states WHERE user_id = $1 AND stage = 'bud' ORDER BY review_due_at LIMIT 5`, [user]],
+    ["Q7 待重试消息（部分索引：status = 'pending'）",
+      `SELECT id FROM messages WHERE status = 'pending' ORDER BY created_at LIMIT 20`, []],
+  ];
+  for (const [title, text, params] of ops) {
+    const runOne = async (pre: string[]) => {
+      const c = await pool.connect();
+      try {
+        await c.query("BEGIN");
+        for (const p of pre) await c.query(p);
+        await c.query({ text: `EXPLAIN (ANALYZE, BUFFERS) ${text}`, values: params as any[] });
+        const r = await c.query({ text: `EXPLAIN (ANALYZE, BUFFERS) ${text}`, values: params as any[] });
+        await c.query("ROLLBACK");
+        const plan = r.rows.map((x) => x["QUERY PLAN"]).join("\n");
+        return { plan, exec: plan.match(/Execution Time: ([\d.]+) ms/)?.[1] };
+      } finally { c.release(); }
+    };
+    const a = await runOne([]);
+    const b = await runOne(["SET LOCAL enable_indexscan = off", "SET LOCAL enable_bitmapscan = off"]);
+    md += `## ${title}\n\n| 方案 | Execution Time |\n|---|---|\n| 使用索引 | ${a.exec} ms |\n| 强制全表扫描（对照） | ${b.exec} ms |\n\n<details><summary>使用索引的执行计划</summary>\n\n\`\`\`\n${a.plan}\n\`\`\`\n</details>\n\n`;
+    console.log(title, a.exec, "ms /", b.exec, "ms");
+  }
+
   fs.writeFileSync("docs/sql/explain-results.md", md);
   await pool.end();
   console.log("✓ 写入 docs/sql/explain-results.md");
