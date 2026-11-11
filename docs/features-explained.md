@@ -37,14 +37,14 @@
 - **用了什么知识**：数据库安全性（自主存取控制、角色、视图）；PostgreSQL 的 `ROW LEVEL SECURITY` 与会话变量 `current_setting`。
 - **例子**：用应用角色连库，不设置“当前用户”时查 `messages` 返回 **0 行**；设置成 demo 后返回自己的 12 条；想插入别人的消息，数据库报 **42501**。
 - **怎么演示**：`npm test -- tests/security.test.ts`；或看 `docs/sql/rls.md` 里的 psql 脚本。
-- **在哪**：`drizzle/0002_rls.sql`、`src/db/index.ts`、`src/server/http.ts`。
+- **在哪**：`drizzle/0014_rls.sql`、`src/db/index.ts`、`src/server/http.ts`。
 
 ### 2. 教师子模式 + 视图授权
 - **意义**：真实系统里不是“要么全给、要么不给”。老师需要看全班汇总，但不能看学生聊天；访客只能看公开聚合。用视图做“同一份数据的另一种看法”，再用角色控制谁能看哪个视图。
 - **知识**：第 4 章视图机制与 `GRANT/REVOKE`、`WITH GRANT OPTION`、列级授权；第 7 章“设计用户子模式”。
 - **例子**：`kv_teacher` 角色能读 `v_teacher_class_overview`（成员数、植物数、证据数），但读 `messages` 直接 `42501`；把它的视图权限 `REVOKE` 后立刻读不到；`GRANT SELECT (id, name) ON concepts` 之后 `SELECT *` 反而被拒绝（因为其他列没授权）。
 - **怎么演示**：`npm run demo:grants`（7 项检查，4 项按预期被拒）。
-- **在哪**：`drizzle/0014_procedure_views.sql`、`drizzle/0016_fix_teacher_schema.sql`。
+- **在哪**：`drizzle/0026_procedure_views.sql`、`drizzle/0028_fix_teacher_schema.sql`。
 
 ### 3. SQL 注入防护 + 安全自查
 - **意义**：注入是最常见、也最容易被问的攻击。我们不攻击别人，而是**攻击自己**，证明防线有效。
@@ -62,7 +62,7 @@
 - **知识**：第 5 章实体完整性（主键）、参照完整性（外键四种删除策略）、用户定义完整性（CHECK/NOT NULL/UNIQUE）、约束命名、触发器、延迟约束。
 - **例子**：重复加同一个成员 → `23505`；消息指向不存在的会话 → `23503`；状态写成非法值 → `23514`；本命花换成别人星球的花 → 延迟约束在 `COMMIT` 时才报错（故意允许“先建星球再建花”）。
 - **怎么演示**：`npm run demo:integrity`（9 种违约 9 个 SQLSTATE，全部回滚不留脏数据）。
-- **在哪**：`drizzle/0001`、`0005`、`0008`、`0010`、`0011`、`0013`、`scripts/integrity-demo.ts`。
+- **在哪**：`drizzle/0001`、`0017`、`0020`、`0022`、`0023`、`0025`、`scripts/integrity-demo.ts`。
 
 ### 5. 不变量自检 + 随机负载
 - **意义**：约束管“单条写入”，但跨时间、跨表的规则会悄悄漂移（例如汇总表算错）。我们写了一套 SQL 体检，每次改完都能自查。
@@ -76,21 +76,21 @@
 - **知识**：第 8 章存储过程/PL/pgSQL、事务、`FOR UPDATE` 行锁、幂等键、唯一约束、异常处理。
 - **例子**：同一个 `submit_key` 并发 5 次提交，数据库里只产生 **1 条评价、1 组证据**；函数中途报错，评价/证据/状态/成长事件全部回滚，作答可以安全重试。
 - **怎么演示**：`npm test -- tests/settle-function.test.ts`。
-- **在哪**：`drizzle/0004_procedures.sql`、`src/server/practice.ts`。
+- **在哪**：`drizzle/0016_procedures.sql`、`src/server/practice.ts`。
 
 ### 7. 时间机器：回看任意一天
 - **意义**：成长时间轴不只说“现在”，还要能回答“10 月 20 日那天这株花是什么状态”。不做每日快照（太占空间），而是按证据的有效期重放。
 - **知识**：第 8 章过程化 SQL / 时态查询思想；区间判断（`created_at ≤ t` 且 `revoked_at > t`）。
 - **例子**：查 2026-10-20 的花园，7 株花里有 **5 株** 与现在不同；查“现在”时与当前状态 **0 差异**（证明重放规则一致）。
 - **怎么演示**：`GET /api/timeline/asof?at=2026-10-20T00:00:00Z`；测试 `tests/asof.test.ts`。
-- **在哪**：`drizzle/0007_asof.sql`、`src/server/world.ts`。
+- **在哪**：`drizzle/0019_asof.sql`、`src/server/world.ts`。
 
 ### 8. 增量统计 + 对账（班级人数）
 - **意义**：班级页面要显示人数、公开星球数、最近活跃。如果每次都全量重算，班级一多就慢。改成“进出时加减”，再用对账兜底。
 - **知识**：第 5 章触发器、第 8 章存储函数；增量物化维护（IVM）思想。
 - **例子**：加成员 `+1`、退成员 `-1`、分享开关只按真假变化 `±1`、活跃时间取最大值；对账函数按真实聚合修复，修完再查差异为 0。
 - **怎么演示**：`npm test -- tests/class-stats.test.ts`；`npm run verify:invariants` 里的 E11。
-- **在哪**：`drizzle/0008_class_stats.sql`、`0010`、`0011`、`0013`。
+- **在哪**：`drizzle/0020_class_stats.sql`、`0022`、`0023`、`0025`。
 
 ---
 
@@ -101,7 +101,7 @@
 - **知识**：第 7 章物理设计、B+ 树、部分索引、查询优化与执行计划。
 - **例子**：待重试消息查询从 **5.3 ms → 0.017 ms**（部分索引只索引几十行）；而另一个“看起来很合理”的覆盖索引，让两字中文检索从 88 ms 退化到 **1412 ms**，被我们删掉并记录。
 - **怎么演示**：`npm run explain`、`docs/sql/index-decisions.md`。
-- **在哪**：`drizzle/0006_indexes.sql`、`scripts/explain.ts`。
+- **在哪**：`drizzle/0018_indexes.sql`、`scripts/explain.ts`。
 
 ### 10. 物理设计：B 树 / HASH / 聚簇
 - **意义**：不是“加索引就快”。索引类型、聚簇方式都要按查询模式选。
@@ -133,21 +133,21 @@
 - **知识**：第 8 章 / 动态 Web；PostgreSQL 逻辑复制槽、WAL、至少一次投递 + 幂等 = 效果上的恰好一次。
 - **例子**：写入测试事件 #31 → 从 WAL 解码出 `table public.outbox_events: INSERT: id[bigint]:31 topic[text]:'demo.cdc'`，消费一次后重复消费不再计数。
 - **怎么演示**：`npm run cdc -- --demo`、`npm run cdc -- --check`。
-- **在哪**：`scripts/cdc.ts`、`drizzle/0009_cdc.sql`。
+- **在哪**：`scripts/cdc.ts`、`drizzle/0021_cdc.sql`。
 
 ### 14. 存储过程 + 游标 + 动态 SQL（夜间维护）
 - **意义**：清理超时消息、对账统计、更新统计信息这些“后台活”，不该由每个请求顺手做；应该有一个可重复执行的维护过程。
 - **知识**：第 8 章游标（DECLARE/FETCH/CLOSE）、存储过程（`CALL`、INOUT 参数）、动态 SQL（`EXECUTE format`）、异常处理。
 - **例子**：`CALL kv_nightly_maintenance(7, NULL)` 用游标遍历归档会话、清理 pending 消息、对账班级统计、对 4 张表执行 `ANALYZE`，30 ms 内返回结构化报告。
 - **怎么演示**：`npm run maintenance`。
-- **在哪**：`drizzle/0014_procedure_views.sql`、`scripts/maintenance.ts`。
+- **在哪**：`drizzle/0026_procedure_views.sql`、`scripts/maintenance.ts`。
 
 ### 15. 班级星系：跨用户读的唯一入口
 - **意义**：全班唯一必须“读别人数据”的场景。如果给应用角色直接开表权限，隔离就废了；如果只在应用层过滤，漏写就泄露。
 - **知识**：第 4 章权限控制 + 第 8 章存储函数；`SECURITY DEFINER`、固定 `search_path`、成员资格校验。
 - **例子**：`fn_class_galaxy(我, 班级)` 只返回“我 + 主动分享星球的同学”；不是班级成员直接 `42501`；未分享的同学只出现人数、不出现星球内容。
 - **怎么演示**：页面「共学」→ 星系；`tests/galaxy-view.test.ts`。
-- **在哪**：`drizzle/0003_views.sql`、`src/server/classes.ts`。
+- **在哪**：`drizzle/0015_views.sql`、`src/server/classes.ts`。
 
 ---
 
@@ -158,7 +158,7 @@
 - **知识**：第 8 章 `WITH RECURSIVE`（递归查询）、图的拓扑排序、加权排序。
 - **例子**：目标「贝叶斯公式」→ 5 步：样本空间与事件（种子）→ 条件概率（已开花，可跳过）→ 乘法公式 → 全概率公式（有 1 次错题，优先补）→ 贝叶斯公式。
 - **怎么演示**：界面顶栏「成长」→「学习路线」；或 `npm run plan -- --handle demo --goal 贝叶斯公式`。
-- **在哪**：`drizzle/0012_plan_path.sql`、`src/server/plan.ts`、`PlanPanel.tsx`。
+- **在哪**：`drizzle/0024_plan_path.sql`、`src/server/plan.ts`、`PlanPanel.tsx`。
 
 ### 17. 学习周报（扩展 SQL 大集合）
 - **意义**：让学生/老师一眼看到这周学得怎么样：活跃几天、连续几天、卡在哪个阶段、错题集中在哪。
@@ -186,9 +186,9 @@
 
 | 怎么发现的 | 问题 | 修复 |
 |---|---|---|
-| 不变量 E11 | 用户入班前已有的学习记录，入班时没有回填班级活跃时间 | 迁移 `0010`：成员变化时按真实聚合重算 |
-| 不变量 E11 | 撤销证据会让活跃时间“变小”，触发器只处理了“变大” | 迁移 `0011` |
-| 重新播种（真实使用） | 删除班级时，成员触发器还在往已删除的班级写统计，外键报错 | 迁移 `0013`：写统计前确认班级还在 |
+| 不变量 E11 | 用户入班前已有的学习记录，入班时没有回填班级活跃时间 | 迁移 `0022`：成员变化时按真实聚合重算 |
+| 不变量 E11 | 撤销证据会让活跃时间“变小”，触发器只处理了“变大” | 迁移 `0023` |
+| 重新播种（真实使用） | 删除班级时，成员触发器还在往已删除的班级写统计，外键报错 | 迁移 `0025`：写统计前确认班级还在 |
 
 这三条比任何功能都更能说明：**数据库的价值不是“能存”，而是“能证明它没坏”**。
 

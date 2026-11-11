@@ -58,7 +58,7 @@
 | 数据字典 | 从 `information_schema` 反向生成 15 张表 / 337 列 | `npm run docs:dictionary` | 文档与数据库不会漂移 |
 | E-R 模型（Chen 表示法） | 5 张图：实体矩形、属性椭圆、**主键下划线**、弱实体双线 | `docs/er/` | 用 Graphviz 脚本生成，避免大模型自由发挥 |
 | 大模型画 E-R 的坑（PPT 第 15–19 页） | 不用模型直接出图：模型只给实体/联系，脚本负责标准画法 | `python docs/er/gen_er.py` | 这正好回应课件“大模型画的往往不是教材格式” |
-| E-R 图 → 关系模式 | `src/db/schema.ts` + `drizzle/0000`–`0016` | `npm run db:migrate` | 迁移可重放，约束与触发器分文件 |
+| E-R 图 → 关系模式 | `src/db/schema.ts` + `drizzle/0000`–`0028` | `npm run db:migrate` | 迁移可重放，约束与触发器分文件 |
 | 数据模型优化 | 规范化分析 + 两处受控冗余 + 宽表反例 | `docs/schema/wide-table-vs-decomposed.md` | 用函数依赖和无损连接论证，而不是“感觉 3NF” |
 | 设计用户子模式 | 教师视图 + `kv_teacher` 角色 | `npm run demo:grants` | 子模式 = 视图 + 授权，二者一起讲 |
 | 物理设计：B+ 树 / GIN / 部分索引 | 99 个索引；1 个 `pg_trgm` GIN；2 个部分索引 | `docs/sql/index-decisions.md` | 用 EXPLAIN 前后对比，还记录了被否决的负优化 |

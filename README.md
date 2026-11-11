@@ -47,7 +47,7 @@ npm run build && npm run start   # 生产模式（课堂展示更流畅）
 
 演示账号：`demo / knowverse`（预置历史在界面上标注“预置”）。首页也可以点“体验新旅人开场”，从零走一遍开场流程。演示前运行 `npm run demo:reset` 恢复演示账号的初始状态。
 
-**权限在数据库里**：第 4 步的迁移会创建应用角色 `kv_app` 并授予最小权限，应用通过 `.env` 的 `APP_DATABASE_URL` 以该角色连接；`drizzle/0002_rls.sql` 为 18 张表启用行级安全策略，请求进入时在事务内写入 `app.user_id`，越权读写由 PostgreSQL 直接拦截。演示命令见 `docs/sql/rls.md`，设计说明见 `docs/database-design.md` §8。不配置 `APP_DATABASE_URL` 时应用回退为 `DATABASE_URL`（所有者），功能正常但数据库层隔离不生效。
+**权限在数据库里**：第 4 步的迁移会创建应用角色 `kv_app` 并授予最小权限，应用通过 `.env` 的 `APP_DATABASE_URL` 以该角色连接；`drizzle/0014_rls.sql` 为 18 张表启用行级安全策略，请求进入时在事务内写入 `app.user_id`，越权读写由 PostgreSQL 直接拦截。演示命令见 `docs/sql/rls.md`，设计说明见 `docs/database-design.md` §8。不配置 `APP_DATABASE_URL` 时应用回退为 `DATABASE_URL`（所有者），功能正常但数据库层隔离不生效。
 
 不用 Docker 时：安装 PostgreSQL 16，按 `.env` 中的 `DATABASE_URL` 创建数据库 `knowverse`；`ADMIN_DATABASE_URL` 需要能创建角色与数据库的账户（用于建立只读 SQL 沙箱 `knowverse_sandbox` 与角色 `kv_sandbox`，以及创建运行角色 `kv_app`）。若没有这个权限，迁移会提示，SQL 题会显示“沙箱未配置”，其它功能不受影响；也可以由管理员手动执行 `sandbox/setup.ts` 与 `scripts/security-setup.ts` 中的步骤。
 

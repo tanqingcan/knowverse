@@ -1,4 +1,4 @@
-# 关系数据理论：函数依赖、范式与我们的取舍
+﻿# 关系数据理论：函数依赖、范式与我们的取舍
 
 > 依据课程第 6 章“关系数据理论”。候选键由 `npm run docs:keys` 从 `pg_index` 自动导出（见 `docs/schema/candidate-keys.md`，48 张表、19 张有额外唯一键）；本文件在其上做函数依赖与范式判定。
 > 一句话结论：**40 张 BCNF、4 张 2NF、4 张 1NF**；所有“降级”都只为同一件事——把 `user_id`（归属用户）冗余进子表，让权限过滤与查询不必多层 JOIN，代价用约束和补偿性不变量兜住。
@@ -214,7 +214,7 @@ A：仍然会保留 `messages.user_id` 与 `learning_evidence.user_id`（收益�
 npm run docs:keys          # 候选键清单（48 张表）
 npm run docs:dictionary    # 列、约束、索引
 npm run verify:invariants  # 15 项一致性检查
-npm test                   # 94 个集成测试
+npm test                   # 180 个测试（94 集成 + 86 单元）
 ```
 
 术语速查：
