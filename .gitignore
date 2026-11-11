@@ -16,6 +16,7 @@ docker-compose.local.yml
 # 项目打包备份
 /knowverse-v2.zip
 /knowverse-v2-screenshots.zip
+storage/test-uploads
 
 # 构建产物（TypeScript 增量编译缓存）
 tsconfig.tsbuildinfo
