@@ -204,6 +204,13 @@
       "when": 1793600028000,
       "tag": "0028_fix_teacher_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793610000000,
+      "tag": "0029_rls_new_tables",
+      "breakpoints": true
     }
   ]
 }
