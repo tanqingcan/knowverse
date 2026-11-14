@@ -261,3 +261,27 @@ export async function createSubject(user: CurrentUser, name: string) {
   if (existing) return existing;
   return q1(`INSERT INTO subjects (owner_user_id, code, name) VALUES ($1,$2,$3) RETURNING id, name`, [user.id, code, n]);
 }
+
+/**
+ * 时间机器：某时刻的花园快照。
+ * 不依赖快照表——按证据的有效期（created_at ≤ t < revoked_at 或未撤销）在数据库里重放。
+ */
+export async function gardenAsOf(user: CurrentUser, at: Date) {
+  const plants = await q<{ plantId: string; conceptName: string; species: string; color: string; gardenName: string; stageAt: string; stageNow: string }>(
+    `SELECT plant_id AS "plantId", concept_name AS "conceptName", species, color,
+            garden_name AS "gardenName", stage_at AS "stageAt", stage_now AS "stageNow"
+       FROM fn_garden_at($1, $2)`, [user.id, at]);
+  const count = (key: "stageAt" | "stageNow") => {
+    const out: Record<string, number> = {};
+    for (const p of plants) out[p[key]] = (out[p[key]] ?? 0) + 1;
+    return out;
+  };
+  const diff = plants.filter((p) => p.stageAt !== p.stageNow).length;
+  return {
+    at: at.toISOString(),
+    plants,
+    countsAt: count("stageAt"),
+    countsNow: count("stageNow"),
+    changedSince: diff,
+  };
+}

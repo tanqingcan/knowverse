@@ -1,4 +1,4 @@
-# 数据库设计说明：概念模型、关系模式与规范化
+﻿# 数据库设计说明：概念模型、关系模式与规范化
 
 > 本文档为**草稿，待团队审阅**。数字（表数、约束数）由当前 migration 在 PostgreSQL 16 上实际统计得出。
 
@@ -166,6 +166,10 @@ growth_events 的设计：它记录的是**发生过的事件**（含当时的 f
 | 时间轴 | `growth_events_user_created_idx (user_id, created_at)` |
 | outbox 未投递 | 部分索引 `outbox_undelivered_idx (id) WHERE delivered_at IS NULL` |
 | 伙伴匹配 | `learning_intents_match_idx (class_id, concept_id, direction)`，有效意愿部分唯一索引 |
+| 待重试消息 | 部分索引 `messages_pending_idx (created_at) WHERE status = 'pending'` |
+| 待复习/待验证 | 部分索引 `learning_states_bud_due_idx (user_id, review_due_at) WHERE stage = 'bud'` |
+
+索引决策的前后实测与一次被否决的覆盖索引（两字中文检索 88.6 ms → 1412.5 ms）见 `docs/sql/index-decisions.md`。
 
 中文关键词说明：pg_trgm 对中文同样提取三元组（测试库中 `show_trgm('条件概率')` 返回 5 个三元组），因此 ≥3 字的中文词可以使用 GIN 索引；**两个字**的词短于三元组，只能在本人的消息范围内扫描，正确性仍由 ILIKE 保证。实测计划与耗时见 `docs/sql/explain-results.md`。用户输入的 `%`、`_`、`\` 会被转义。
 
@@ -190,3 +194,83 @@ growth_events 的设计：它记录的是**发生过的事件**（含当时的 f
 - **并发名额**：触发器对小组行 `FOR UPDATE` 后计数，6 个并发请求争 1 个名额时恰好 1 个成功（测试验证）。
 - **outbox**：业务事务内写入，`FOR UPDATE SKIP LOCKED` 批量投递；本项目的投递目标是服务端日志，未接入外部消息系统。
 - **本命花互相引用**：planets.natal_plant_id 与 plants 构成环形引用，外键设为 `DEFERRABLE INITIALLY DEFERRED`，并用延迟约束触发器保证本命花属于本星球。
+
+## 8. 权限：行级安全（RLS）与最小权限
+
+应用层过去用 `WHERE user_id = $1` 做隔离，这是“自觉”；本轮把它下沉到数据库，变成“强制”。
+
+### 8.1 两条连接，两种身份
+
+| 连接 | 角色 | 用途 |
+|---|---|---|
+| `DATABASE_URL` | 表所有者（`postgres`） | 迁移、种子、重置、测试造数；所有者为绕过 RLS 的系统身份 |
+| `APP_DATABASE_URL` | `kv_app`（`NOSUPERUSER` / `NOBYPASSRLS` / `NOCREATEDB` / `NOCREATEROLE`） | Next.js 运行时；只授予 `CONNECT` + `public` 的 `SELECT/INSERT/UPDATE/DELETE` 与序列用法，无 DDL 权限 |
+
+角色与授权由 `scripts/security-setup.ts` 幂等创建（与 `sandbox/setup.ts` 同一模式：角色属于集群，授权按库执行），`npm run db:migrate` 会自动调用。
+
+### 8.2 请求级用户上下文
+
+```
+authed()  ──runAsUser(user.id)──▶  AsyncLocalStorage
+                                      │
+q() / withTx()  ──BEGIN; SELECT set_config('app.user_id', $1, true);──▶  RLS 策略判定
+```
+
+- `src/db/index.ts` 的 `q()`（单条查询）与 `withTx()`（事务）都会在开始处注入 `app.user_id`；
+- 策略统一引用 `kv_current_user_id()`：`nullif(current_setting('app.user_id', true), '')::uuid`，未设置时返回 NULL，策略判定为假 → 0 行；
+- 上下文只存在于该请求的异步链上，不会串到别的用户（`AsyncLocalStorage`），连接归还池后由事务级 `set_config` 自动清除。
+
+### 8.3 策略覆盖范围
+
+已启用 RLS（17 张）：
+
+| 分组 | 表 | 策略 |
+|---|---|---|
+| 对话 | conversations、messages、message_concepts、message_citations | `user_id = 当前用户`（子表通过 `EXISTS messages`） |
+| 模型与候选 | model_calls、concept_suggestions | `user_id = 当前用户` |
+| 目标与成长 | learning_goals、notes、attempts、evaluations、hint_events、learning_evidence、growth_events | 有 `user_id` 的直接比对；子表通过作答 `EXISTS` |
+| 资料 | materials、material_versions、material_chunks、material_concepts | `owner_user_id IS NULL`（公共课程资料）或本人；应用角色不能创建“公共资料” |
+
+尚未启用（表中已注明原因）：
+
+| 表 | 原因 | 计划 |
+|---|---|---|
+| users、auth_sessions | 登录发生在会话建立之前，此时还没有 `app.user_id` | 由登录流程按 token 白名单访问；不暴露敏感列 |
+| subjects、concepts、tasks、task_versions、task_hints | 课程公共目录与题库，`owner` 为空即公共 | 保留应用层 `owner IS NULL OR owner = $1` |
+| planets、gardens、plants、learning_states | 班级星系需要跨用户只读（受分享偏好约束） | 见 §9：改由 `fn_class_galaxy` 收口后再启用 |
+| knowledge_cards、classes、class_members、sharing_preferences、learning_intents、study_groups、contributions | 班级共享域，跨租户可见 | 班内读由函数/视图收口，后续补策略 |
+
+### 8.4 为什么这样设计
+
+1. **纵深防御**：应用层仍保留 `user_id` 条件；数据库再兜一层，任何漏写条件的查询都只能看到 0 行。
+2. **最小权限**：运行时角色没有 DDL、没有 `BYPASSRLS`；即使应用被注入，也改不了表结构、绕不过策略。
+3. **与沙箱一致**：SQL 练习沙箱是“另一个库 + 只读角色”，业务库是“同一个库 + 行级策略”，两者都是“用数据库自己的能力限制数据库访问”。
+4. **可验证**：`tests/security.test.ts` 以 `kv_app` 连接测试库，覆盖“无上下文看不到任何个人数据 / 只能看自己的 / 越权写入被拒 42501 / 越权更新 0 行 / 公共资料可见而他人类私有资料不可见 / 所有者连接作为对照”。
+
+演示脚本见 `docs/sql/rls.md`。
+
+## 9. 跨用户读：班级星系为什么要单独收口
+
+班级星系是全项目**唯一**需要读别人数据的场景。处理方式有三条路，本项目选择了第三条：
+
+| 方案 | 问题 |
+|---|---|
+| 给 `kv_app` 直接开放 `planets/learning_states` 的 SELECT | 等于放弃隔离，任何一条查询都能读全班 |
+| 应用层 `WHERE share_planet` 过滤 | 越权只差一个漏写的条件 |
+| **数据库函数收口**（采用） | 调用者只能拿到函数返回的行，规则写在库里 |
+
+`fn_class_galaxy(p_user, p_class)` 的设计：
+
+- `SECURITY DEFINER`，所有者是表所有者（可穿过 RLS），但**函数内部先校验成员资格**（`class_members`），不是成员直接 `RAISE ... ERRCODE 42501`；
+- 只返回「本人」与「`share_planet = true` 的成员」；`share_stages` 决定是否返回花圃细节，未分享者只返回星球名与数量；
+- 固定 `SET search_path = public, pg_temp`，防止调用者篡改 `search_path` 注入同名对象；
+- 返回聚合好的 `jsonb`（成员 + 班级 + 人数），一次往返，前端直接用。
+
+配套：
+
+| 对象 | 作用 | 关键设计 |
+|---|---|---|
+| `v_material_citation` | 消息 → 片段 → 版本 → 资料的引用定位 | `security_invoker = true`，继承查询者的 RLS，只能看到自己消息上的引用 |
+| `mv_class_stats` | 班级成员数/公开数/最近活跃 | 唯一索引 `mv_class_stats_class_id_uq` 支持 `REFRESH ... CONCURRENTLY`（`npx tsx scripts/refresh-stats.ts`） |
+
+验收：`tests/galaxy-view.test.ts` 覆盖「只返回本人与分享者 / 隐藏人数 / 非成员 42501 / 物化视图刷新」；接口契约见 `docs/api/galaxy.md`。

@@ -1,4 +1,4 @@
-# 知屿 KNOWVERSE：星球花园式个人学习智能体
+﻿# 知屿 KNOWVERSE：星球花园式个人学习智能体
 
 > 在自己的星球上，养出属于你的花。
 
@@ -47,7 +47,9 @@ npm run build && npm run start   # 生产模式（课堂展示更流畅）
 
 演示账号：`demo / knowverse`（预置历史在界面上标注“预置”）。首页也可以点“体验新旅人开场”，从零走一遍开场流程。演示前运行 `npm run demo:reset` 恢复演示账号的初始状态。
 
-不用 Docker 时：安装 PostgreSQL 16，按 `.env` 中的 `DATABASE_URL` 创建数据库 `knowverse`；`ADMIN_DATABASE_URL` 需要能创建角色与数据库的账户（用于建立只读 SQL 沙箱 `knowverse_sandbox` 与角色 `kv_sandbox`）。若没有这个权限，迁移会提示，SQL 题会显示“沙箱未配置”，其它功能不受影响；也可以由管理员手动执行 `sandbox/setup.ts` 中的步骤。
+**权限在数据库里**：第 4 步的迁移会创建应用角色 `kv_app` 并授予最小权限，应用通过 `.env` 的 `APP_DATABASE_URL` 以该角色连接；`drizzle/0014_rls.sql` 为 18 张表启用行级安全策略，请求进入时在事务内写入 `app.user_id`，越权读写由 PostgreSQL 直接拦截。演示命令见 `docs/sql/rls.md`，设计说明见 `docs/database-design.md` §8。不配置 `APP_DATABASE_URL` 时应用回退为 `DATABASE_URL`（所有者），功能正常但数据库层隔离不生效。
+
+不用 Docker 时：安装 PostgreSQL 16，按 `.env` 中的 `DATABASE_URL` 创建数据库 `knowverse`；`ADMIN_DATABASE_URL` 需要能创建角色与数据库的账户（用于建立只读 SQL 沙箱 `knowverse_sandbox` 与角色 `kv_sandbox`，以及创建运行角色 `kv_app`）。若没有这个权限，迁移会提示，SQL 题会显示“沙箱未配置”，其它功能不受影响；也可以由管理员手动执行 `sandbox/setup.ts` 与 `scripts/security-setup.ts` 中的步骤。
 
 ## 配置大模型（可选）
 
@@ -83,6 +85,11 @@ LLM_TOOL_CALLING=true                        # 服务商不支持 function calli
 | `npm run bench:search` | 独立库4万条模拟消息、50条历史检索评测 |
 | `npm run explain` | 在独立库 `knowverse_bench` 生成模拟数据并输出 `docs/sql/explain-results.md` |
 | `npm run docs:diagrams` | 重新生成 E-R 图与关系模式图（需要 Python 3 与 Graphviz） |
+| `npm run security:audit` | 6 项安全自查（角色、RLS、沙箱、口令、.env、SQL 拼接） |
+| `npm run demo:integrity` / `demo:grants` | 完整性违约演示 / 授权与视图机制演示 |
+| `npm run maintenance` | 存储过程夜间维护（游标 + 动态 SQL + INOUT 报告） |
+| `npm run bench:batch` / `bench:physical` / `bench:hash` | 批处理、聚簇、HASH 索引对比实验 |
+| `npm run docs:keys` | 候选键清单（生成 `docs/schema/candidate-keys.md`） |
 | `node tests/e2e/demo-flow.mjs` | 浏览器端到端冒烟（需另行安装 Playwright） |
 
 ## 目录
@@ -118,6 +125,10 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 | `docs/visual-redesign.md` | 视觉与交互重构：构图、色板、材质、资产完成度、两种模式、动画、性能、限制 |
 | `docs/demo-scripts.md` | 三分钟版、八分钟版、30 秒宣传流程 |
 | `docs/requirements-matrix.md` | 作业要求—实现位置—验证证据 |
+| `docs/features-explained.md` | **功能说明书**：每个功能的意义、用到的知识、例子与演示命令 |
+| `docs/schema/normalization-analysis.md` | **范式分析**：48 张表逐表定级、函数依赖、8 处受控冗余与补偿机制 |
+| `docs/schema/candidate-keys.md` | 候选键清单（`npm run docs:keys` 自动生成） |
+| `docs/course-mapping.md` | 课堂第 4/5/7/8 章与动态 Web 的逐章对照 |
 | `docs/team-template.md` | 团队分工模板（由团队填写） |
 
 ## 已知限制

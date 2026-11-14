@@ -99,6 +99,118 @@
       "when": 1793510099293,
       "tag": "0013_four_zone_garden",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793600014000,
+      "tag": "0014_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793600015000,
+      "tag": "0015_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793600016000,
+      "tag": "0016_procedures",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793600017000,
+      "tag": "0017_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793600018000,
+      "tag": "0018_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793600019000,
+      "tag": "0019_asof",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793600020000,
+      "tag": "0020_class_stats",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793600021000,
+      "tag": "0021_cdc",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793600022000,
+      "tag": "0022_fix_stats_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793600023000,
+      "tag": "0023_fix_stats_activity",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793600024000,
+      "tag": "0024_plan_path",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793600025000,
+      "tag": "0025_fix_stats_cascade",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793600026000,
+      "tag": "0026_procedure_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793600027000,
+      "tag": "0027_fix_teacher_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793600028000,
+      "tag": "0028_fix_teacher_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793610000000,
+      "tag": "0029_rls_new_tables",
+      "breakpoints": true
     }
   ]
 }

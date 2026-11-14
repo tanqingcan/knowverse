@@ -42,22 +42,25 @@ import { SettingsPanel } from "./panels/SettingsPanel";
 import { CreativePalette } from "./CreativePalette";
 import { LayoutMenu } from "./LayoutMenu";
 import { fromSparse, toSparse } from "@/lib/home/terrain";
+import { PlanPanel } from "./panels/PlanPanel";
+import { ReportPanel } from "./panels/ReportPanel";
 
 const StaticGarden = dynamic(() => import("@/components/world/StaticGarden").then((m) => m.StaticGarden), { ssr: false, loading: () => null });
 const GardenWorld = dynamic(() => import("@/components/world/GardenWorld").then((m) => m.GardenWorld), { ssr: false, loading: () => null });
 
-type SectionKey = "garden" | "learn" | "review" | "materials" | "together";
+type SectionKey = "garden" | "learn" | "grow" | "review" | "materials" | "together";
 const SECTIONS: { key: SectionKey; label: string; panels: (PanelKey | null)[]; subs?: [PanelKey, string][] }[] = [
   { key: "garden", label: "花园", panels: [null, "dossier"] },
   { key: "learn", label: "学习", panels: ["chat", "practice", "cards"], subs: [["chat", "对话"], ["practice", "练习"], ["cards", "学习卡"]] },
+  { key: "grow", label: "成长", panels: ["plan", "report"], subs: [["plan", "学习路线"], ["report", "学习周报"]] },
   { key: "review", label: "回顾", panels: ["history", "timeline", "memory"], subs: [["history", "历史问答"], ["timeline", "成长时间轴"], ["memory", "记忆"]] },
   { key: "materials", label: "资料", panels: ["materials"] },
   { key: "together", label: "共学", panels: ["galaxy"] },
 ];
-const FOCUS_PANELS: PanelKey[] = ["chat", "practice", "cards", "history", "timeline", "materials", "galaxy", "memory"];
+const FOCUS_PANELS: PanelKey[] = ["chat", "practice", "cards", "history", "timeline", "materials", "galaxy", "memory", "plan", "report"];
 const TITLES: Record<PanelKey, string> = {
   chat: "与星灯对话", history: "历史问答", dossier: "植物档案", materials: "资料温室", practice: "练习",
-  timeline: "成长时间轴", cards: "学习卡", galaxy: "共学星系", memory: "记忆", settings: "设置",
+  timeline: "成长时间轴", cards: "学习卡", galaxy: "共学星系", memory: "记忆", plan: "学习路线", report: "学习周报", settings: "设置",
 };
 const sectionOf = (p: PanelKey | null): SectionKey => SECTIONS.find((s) => s.panels.includes(p))?.key ?? "garden";
 
@@ -975,6 +978,8 @@ export function SpaceApp() {
               {panel.panel === "cards" && <CardsPanel />}
               {panel.panel === "galaxy" && <GalaxyPanel />}
               {panel.panel === "memory" && <MemoryPanel />}
+              {panel.panel === "plan" && <PlanPanel />}
+              {panel.panel === "report" && <ReportPanel />}
             </div>
           </main>
         )}
@@ -1189,5 +1194,6 @@ function SectionIcon({ k }: { k: SectionKey }) {
   if (k === "learn") return <svg {...p}><path d="M4 6.5C7 5 9.5 5 12 6.5 14.5 5 17 5 20 6.5V18c-3-1.5-5.5-1.5-8 0-2.5-1.5-5-1.5-8 0z" /><path d="M12 6.5V18" /></svg>;
   if (k === "review") return <svg {...p}><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5M11 8v3l2 1.5" /></svg>;
   if (k === "materials") return <svg {...p}><path d="M4 19V11l8-5 8 5v8z" /><path d="M12 6v13" /></svg>;
+  if (k === "grow") return <svg {...p}><path d="M4 19c3-1 4-4 6-7s4-5 10-6" /><circle cx="4" cy="19" r="1.6" /><path d="M15 5h5v5" /></svg>;
   return <svg {...p}><circle cx="8" cy="12" r="3.5" /><circle cx="17" cy="9" r="2.2" /><circle cx="16" cy="17" r="1.6" /></svg>;
 }

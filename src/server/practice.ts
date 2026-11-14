@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { PoolClient } from "pg";
 import { q, q1, withTx } from "@/db";
 import { AppError, notFound } from "./errors";
-import { addEvidence, type GrowthEvent, STAGE_LABEL, type Stage } from "./growth";
+import { type GrowthEvent, STAGE_LABEL, type Stage } from "./growth";
 import { runSandboxSql, sameResult, type SqlResult } from "./sandbox";
 import { chatCompletion, extractJson, llmConfig } from "./agent/llm";
 import { recordModelCall } from "./agent/trace";
@@ -279,7 +279,7 @@ export async function submitAttempt(userId: string, attemptId: string, answer: s
   // 2) 评价放在短事务之外（可能调用沙箱或模型）
   const evaluation = await evaluateAnswer(userId, tv, answer);
 
-  // 3) 短事务：锁定作答 → 再次检查 → 写评价、证据、状态、成长事件、outbox
+  // 3) 短事务：锁定作答 → 计算题型规则 → 调用 fn_settle_attempt 原子写入
   try {
     return await withTx(async (c: PoolClient) => {
       const lock = await c.query(`SELECT status, submit_key, mode FROM attempts WHERE id = $1 AND user_id = $2 FOR UPDATE`, [attemptId, userId]);
@@ -289,9 +289,6 @@ export async function submitAttempt(userId: string, attemptId: string, answer: s
       }
       const mode = lock.rows[0].mode as "guided" | "independent" | "diagnostic";
       const hintCount = Number((await c.query(`SELECT count(*) FROM hint_events WHERE attempt_id = $1`, [attemptId])).rows[0].count);
-      await c.query(`UPDATE attempts SET answer = $3, status = 'evaluated', submit_key = $4, submitted_at = now() WHERE id = $1 AND user_id = $2`, [attemptId, userId, answer, submitKey]);
-      await c.query(`INSERT INTO evaluations (attempt_id, evaluator, verdict, score, feedback, rubric, uncertainty, model_call_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [attemptId, evaluation.evaluator, evaluation.verdict, evaluation.score, evaluation.feedback, evaluation.rubric ? JSON.stringify(evaluation.rubric) : null, evaluation.uncertainty, evaluation.modelCallId ?? null]);
       // 是否做过同一题版本？熟题重复答对不算新的迁移证据
       const seen = Number((await c.query(`SELECT count(*) FROM attempts WHERE user_id = $1 AND task_version_id = $2 AND status = 'evaluated' AND id <> $3`, [userId, tv.id, attemptId])).rows[0].count);
       const independent = mode !== "guided" && hintCount === 0;
@@ -309,24 +306,45 @@ export async function submitAttempt(userId: string, attemptId: string, answer: s
         detail = `《${tv.title}》独立作答，未使用提示，结果：${verdictLabel}` + (evaluation.verdict === "correct" && seen > 0 ? "（重复题目，不计为新的迁移证据）" : "") + (evaluation.verdict === "correct" && !tv.isVariant ? "（非变式题，开花需要独立变式验证）" : "");
       }
       const concepts = await c.query(`SELECT k.id, k.name FROM task_concepts tc JOIN concepts k ON k.id = tc.concept_id WHERE tc.task_id = $1`, [tv.taskId]);
-      const evidence: SubmitResult["evidence"] = [];
-      const growth: GrowthEvent[] = [];
+      const conceptNames = new Map<string, string>(concepts.rows.map((k: any) => [k.id, k.name]));
+      const items: any[] = [];
       for (const k of concepts.rows) {
         if (kind === "independent_variant_pass") {
           // 变式通过同时也是一次独立作答
-          const a1 = await addEvidence(c, { userId, conceptId: k.id, kind: "independent_attempt", attemptId, detail: detail.replace("结果：正确", "已独立作答"), usedHints: false });
-          growth.push(...a1.events);
+          items.push({ conceptId: k.id, kind: "independent_attempt", detail: detail.replace("结果：正确", "已独立作答"), usedHints: false, aiAssisted: false });
         }
-        const r = await addEvidence(c, { userId, conceptId: k.id, kind, attemptId, detail, usedHints: hintCount > 0, aiAssisted: false });
-        evidence.push({ conceptId: k.id, conceptName: k.name, kind, detail, fromStage: r.fromStage, toStage: r.toStage });
-        growth.push(...r.events);
-        if (opts.faultAfterEvidence) throw new AppError("injected_fault", "测试注入的故障：证据写入后中断", 500);
+        items.push({ conceptId: k.id, kind, detail, usedHints: hintCount > 0, aiAssisted: false });
       }
+
+      const settled = await c.query(
+        `SELECT fn_settle_attempt($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) AS doc`,
+        [
+          userId, attemptId, answer, submitKey,
+          evaluation.evaluator, evaluation.verdict, evaluation.score, evaluation.feedback,
+          evaluation.rubric ? JSON.stringify(evaluation.rubric) : null, evaluation.uncertainty, evaluation.modelCallId ?? null,
+          JSON.stringify(items), !!opts.faultAfterEvidence,
+        ],
+      );
+      const doc = settled.rows[0].doc as any;
+      if (doc.replay) return { __replay: true } as any;
+
+      const evidence: SubmitResult["evidence"] = (doc.evidence as any[])
+        .filter((e) => e.kind === kind)   // 变式通过时额外的“独立作答”证据只进成长事件，不重复展示
+        .map((e) => ({
+          conceptId: e.conceptId, conceptName: conceptNames.get(e.conceptId) ?? "", kind: e.kind,
+          detail: e.detail, fromStage: e.fromStage, toStage: e.toStage,
+        }));
+      const growth: GrowthEvent[] = (doc.events as any[]).map((g) => ({
+        id: g.id, conceptId: g.concept_id, eventType: g.event_type, fromStage: g.from_stage,
+        toStage: g.to_stage, reason: g.reason, evidenceId: g.evidence_id, createdAt: g.created_at,
+      }));
       return { attemptId, idempotentReplay: false, evaluation: { ...evaluation, modelCallId: undefined }, evidence, growth } as SubmitResult;
     });
   } catch (e: any) {
     // 并发重复提交触发唯一约束：返回已存结果
     if (e?.code === "23505" && String(e?.constraint ?? "").includes("submit_key")) return storedResult(userId, attemptId);
+    // 测试注入的故障：函数在写入第一条证据后抛错，事务已整体回滚
+    if (opts.faultAfterEvidence && e?.code === "P0001") throw new AppError("injected_fault", "测试注入的故障：证据写入后中断", 500);
     throw e;
   }
 }

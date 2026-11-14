@@ -14,6 +14,7 @@
     "db:reset": "tsx scripts/reset.ts && tsx scripts/migrate.ts && tsx scripts/seed.ts",
     "test": "vitest run",
     "explain": "tsx scripts/explain.ts",
+    "stats:refresh": "tsx scripts/refresh-stats.ts",
     "demo:reset": "tsx scripts/seed.ts",
     "docs:diagrams": "python3 docs/er/gen_er.py && python3 docs/schema/gen_schema.py",
     "eval:agent": "tsx scripts/eval-agent.ts",
