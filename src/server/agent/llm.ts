@@ -56,8 +56,10 @@ export async function chatCompletion(messages: ChatMsg[], opts: { tools?: ToolSp
   const t0 = Date.now();
   try {
     const body: Record<string, unknown> = { model: c.model, messages, temperature: opts.temperature ?? 0.3 };
+    // DeepSeek 默认思考模式的工具续接要求 reasoning_content；教学答疑使用非思考模式。
+    if (c.provider === "api.deepseek.com") body.thinking = { type: "disabled" };
     if (opts.tools?.length) { body.tools = opts.tools; body.tool_choice = "auto"; }
-    if (opts.json && !opts.tools?.length) body.response_format = { type: "json_object" };
+    if (opts.json) body.response_format = { type: "json_object" };
     const res = await fetch(`${c.baseUrl}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
@@ -66,7 +68,7 @@ export async function chatCompletion(messages: ChatMsg[], opts: { tools?: ToolSp
     });
     const text = await res.text();
     if (!res.ok) {
-      throw new AppError(`llm_http_${res.status}`, `模型接口返回错误 ${res.status}：${text.slice(0, 200)}`, 502);
+      throw new AppError(`llm_http_${res.status}`, `模型接口返回错误 ${res.status}：${text.replaceAll(c.apiKey, "[redacted]").slice(0, 200)}`, 502);
     }
     let data: any;
     try { data = JSON.parse(text); } catch { throw new AppError("llm_bad_response", "模型接口返回的不是 JSON", 502); }
@@ -91,7 +93,9 @@ export async function chatCompletion(messages: ChatMsg[], opts: { tools?: ToolSp
 /** 从模型文本中取出 JSON（兼容 ```json 代码块包裹） */
 export function extractJson(s: string | null): unknown {
   if (!s) throw new AppError("llm_invalid_output", "模型没有返回内容", 502);
-  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  // 先解析完整对象，避免把 answer 字符串内部的 SQL 代码块误当成外层 JSON 包装。
+  try { return JSON.parse(s.trim()); } catch { /* 继续兼容外层代码围栏 */ }
+  const fenced = s.trim().match(/^```(?:json)?\s*([\s\S]*?)```\s*$/);
   const body = (fenced ? fenced[1] : s).trim();
   const start = body.indexOf("{");
   const end = body.lastIndexOf("}");

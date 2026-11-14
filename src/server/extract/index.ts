@@ -5,6 +5,7 @@
  *  - 其它类型只保存元数据，状态为 unsupported。
  */
 import JSZip from "jszip";
+import path from "node:path";
 
 export type FileType = "txt" | "md" | "pdf" | "pptx" | "other";
 export type ExtractedChunk = { pageNo: number | null; paragraphNo: number | null; heading: string | null; content: string };
@@ -20,9 +21,11 @@ export function detectType(fileName: string, buf: Buffer): { type: FileType; pro
   const isPdf = buf.subarray(0, 5).toString("latin1") === "%PDF-";
   if (ext === "pdf") return isPdf ? { type: "pdf" } : { type: "pdf", problem: "扩展名为 .pdf，但文件头不是 PDF" };
   if (ext === "pptx") return isZip ? { type: "pptx" } : { type: "pptx", problem: "扩展名为 .pptx，但不是有效的 Office Open XML 压缩包" };
+  if (["docx", "xlsx"].includes(ext) && !isZip) return { type: "other", problem: "Office 文件扩展名与内容不符，需要有效的 Open XML 压缩包" };
   if (ext === "txt" || ext === "md" || ext === "markdown") {
     try { new TextDecoder("utf-8", { fatal: true }).decode(buf); }
     catch { return { type: ext === "txt" ? "txt" : "md", problem: "文本文件不是 UTF-8 编码，请另存为 UTF-8 后上传" }; }
+    if (isPdf || isZip || buf.includes(0)) return { type: ext === "txt" ? "txt" : "md", problem: "文本扩展名与内容不符，不能上传二进制文件" };
     return { type: ext === "txt" ? "txt" : "md" };
   }
   return { type: "other" };
@@ -44,40 +47,52 @@ export function normalizeCjk(text: string): string {
   return text.replace(/[\u2e80-\u2fdf]/g, (c) => RADICAL_MAP[c] ?? c.normalize("NFKC"));
 }
 
-function splitLong(text: string): string[] {
-  if (text.length <= MAX_CHUNK) return [text];
+/** 硬上限 700 字符，相邻窗口重叠最多 80 字符，不跨页或标题。 */
+export function splitLong(text: string): string[] {
   const out: string[] = [];
-  let cur = "";
-  for (const sent of text.split(/(?<=[。！？；.!?;\n])/)) {
-    if ((cur + sent).length > MAX_CHUNK && cur) { out.push(cur.trim()); cur = ""; }
-    cur += sent;
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + MAX_CHUNK, text.length);
+    if (end < text.length) {
+      const window = text.slice(start, end);
+      const boundary = Math.max(...[...window.matchAll(/[。！？；.!?;\n]/g)].map(m => m.index! + 1), 0);
+      if (boundary >= MAX_CHUNK / 2) end = start + boundary;
+    }
+    const piece = text.slice(start, end).trim();
+    if (piece) out.push(piece);
+    if (end === text.length) break;
+    start = Math.max(start + 1, end - 80);
   }
-  if (cur.trim()) out.push(cur.trim());
   return out;
 }
 
 function extractPlain(text: string, markdown: boolean): ExtractResult {
-  const paras = text.replace(/\r\n/g, "\n").split(/\n\s*\n/);
   const chunks: ExtractedChunk[] = [];
-  let heading: string | null = null;
-  let buf = "", bufStart = 0;
+  const headings: string[] = [];
+  // 段号按非空文本块编号（标题也占段号）；标题边界即使没有空行也能识别。
+  let paragraph = 0, lines: string[] = [], fenced = false;
   const flush = () => {
-    if (buf.trim()) for (const piece of splitLong(buf.trim())) chunks.push({ pageNo: null, paragraphNo: bufStart, heading, content: piece });
-    buf = "";
+    const body = lines.join("\n").trim(); lines = [];
+    if (!body) return;
+    paragraph++;
+    for (const content of splitLong(body)) chunks.push({ pageNo: null, paragraphNo: paragraph, heading: headings.filter(Boolean).join(" > ") || null, content });
   };
-  paras.forEach((p, i) => {
-    const t = p.trim();
-    if (!t) return;
-    const h = markdown ? t.match(/^(#{1,6})\s+(.+)$/m) : null;
-    if (h && t.split("\n").length === 1) { flush(); heading = h[2].trim(); return; }
-    if (!buf) bufStart = i + 1;
-    // 段落级片段，便于引用精确到“第 N 段”；很短的段落与下一段合并
-    if (buf && (buf.length >= 120 || (buf + "\n\n" + t).length > MAX_CHUNK)) { flush(); bufStart = i + 1; }
-    buf += (buf ? "\n\n" : "") + t;
-  });
+  for (const line of text.replace(/\r\n?/g, "\n").split("\n")) {
+    const heading = markdown && !fenced ? line.match(/^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$/) : null;
+    if (heading) {
+      flush(); paragraph++;
+      const depth = heading[1].length;
+      headings.length = depth;
+      headings[depth - 1] = heading[2];
+    } else if (!line.trim() && !fenced) flush();
+    else {
+      lines.push(line);
+      if (markdown && /^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    }
+  }
   flush();
   if (!chunks.length) return { status: "failed", chunks: [], pageCount: null, detail: "文件没有可提取的文字内容" };
-  return { status: "ready", chunks, pageCount: null, detail: `提取 ${paras.filter((p) => p.trim()).length} 个段落，生成 ${chunks.length} 个片段` };
+  return { status: "ready", chunks, pageCount: null, detail: `提取 ${paragraph} 个文本块（标题计入段号），生成 ${chunks.length} 个片段；长片段重叠最多 80 字符` };
 }
 
 async function extractPdf(buf: Buffer): Promise<ExtractResult> {
@@ -123,22 +138,49 @@ async function extractPptx(buf: Buffer): Promise<ExtractResult> {
       .sort((a, b) => Number(a.match(/(\d+)\.xml$/)![1]) - Number(b.match(/(\d+)\.xml$/)![1]));
   }
   const chunks: ExtractedChunk[] = [];
+  let notesCount = 0;
   for (let i = 0; i < order.length; i++) {
     const xml = await zip.file(order[i])?.async("string");
     if (!xml) continue;
     const paras = [...xml.matchAll(/<a:p\b[\s\S]*?<\/a:p>/g)]
       .map((p) => [...p[0].matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((t) => decodeXml(t[1])).join(""))
       .map((s) => s.trim()).filter(Boolean);
-    if (!paras.length) continue;
     const content = paras.join("\n");
-    for (const piece of splitLong(content)) chunks.push({ pageNo: i + 1, paragraphNo: null, heading: paras[0].slice(0, 40), content: piece });
+    if (content) for (const piece of splitLong(content)) chunks.push({ pageNo: i + 1, paragraphNo: null, heading: paras[0].slice(0, 40), content: piece });
+    // 备注必须通过该幻灯片的关系文件定位，不能假设 notesSlideN 与 slideN 对应。
+    const slidePath = order[i];
+    const relPath = path.posix.join(path.posix.dirname(slidePath), "_rels", path.posix.basename(slidePath) + ".rels");
+    const slideRels = await zip.file(relPath)?.async("string") ?? "";
+    for (const rel of slideRels.matchAll(/<Relationship\b[^>]*>/g)) {
+      const tag = rel[0];
+      if (!/Type=["'][^"']*\/notesSlide["']/.test(tag) || /TargetMode=["']External["']/.test(tag)) continue;
+      const target = tag.match(/Target=["']([^"']+)["']/)?.[1];
+      if (!target) continue;
+      const notesPath = target.startsWith("/") ? target.slice(1) : path.posix.normalize(path.posix.join(path.posix.dirname(slidePath), target));
+      const notesXml = await zip.file(notesPath)?.async("string") ?? "";
+      const texts = [...notesXml.matchAll(/<p:sp\b[\s\S]*?<\/p:sp>/g)]
+        .filter(m => !/<p:ph\b[^>]*type=["'](?:sldImg|sldNum|hdr|ftr|dt)["']/.test(m[0]))
+        .flatMap(m => [...m[0].matchAll(/<a:p\b[\s\S]*?<\/a:p>/g)])
+        .map(m => [...m[0].matchAll(/<a:t\b[^>]*>([\s\S]*?)<\/a:t>/g)].map(t => decodeXml(t[1])).join("").trim()).filter(Boolean);
+      if (texts.length) {
+        notesCount++;
+        for (const piece of splitLong(texts.join("\n"))) chunks.push({pageNo: i + 1, paragraphNo: null, heading: `${paras[0]?.slice(0, 40) || "幻灯片"} · 备注`, content: piece});
+      }
+    }
   }
   if (!chunks.length) return { status: "needs_ocr", chunks: [], pageCount: order.length, detail: `共 ${order.length} 页，但没有文本框文字（可能全是图片），需要 OCR` };
-  return { status: "ready", chunks, pageCount: order.length, detail: `共 ${order.length} 页幻灯片，生成 ${chunks.length} 个片段` };
+  return { status: "ready", chunks, pageCount: order.length, detail: `共 ${order.length} 页幻灯片，含 ${notesCount} 页备注，生成 ${chunks.length} 个片段` };
 }
 
-export async function extractContent(type: FileType, buf: Buffer): Promise<ExtractResult> {
+export async function extractContent(type: FileType, buf: Buffer, fileName = ""): Promise<ExtractResult> {
   try {
+    if (buf.length > MAX_UPLOAD_BYTES) return { status: "failed", chunks: [], pageCount: null, detail: "文件超过 10 MB 上限" };
+    if (type === "other" && /\.(docx|xlsx)$/i.test(fileName)) {
+      const zip = await JSZip.loadAsync(buf);
+      const required = /\.docx$/i.test(fileName) ? "word/document.xml" : "xl/workbook.xml";
+      if (!zip.file(required)) return { status: "failed", chunks: [], pageCount: null, detail: "Office 扩展名与压缩包内容不一致" };
+      return { status: "unsupported", chunks: [], pageCount: null, detail: `${required.startsWith("word") ? "Word" : "Excel"} 已保存文件元数据，正文未提取，不参与答疑引用` };
+    }
     switch (type) {
       case "txt": return extractPlain(buf.toString("utf8"), false);
       case "md": return extractPlain(buf.toString("utf8"), true);

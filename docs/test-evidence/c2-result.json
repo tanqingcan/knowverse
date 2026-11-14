@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-11",
+  "scope": "C2资料流水线；函数及服务层验证",
+  "typecheck": "passed",
+  "testFiles": 17,
+  "testsPassed": 146,
+  "c2NewTests": 9,
+  "browserQA": "not_run"
+}

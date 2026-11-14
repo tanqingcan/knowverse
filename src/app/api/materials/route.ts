@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { authed } from "@/server/http";
 import { listMaterials, uploadMaterial } from "@/server/materials";
+import { MAX_UPLOAD_BYTES } from "@/server/extract";
 import { AppError } from "@/server/errors";
 export const GET = authed(async (_req, user) => listMaterials(user.id));
 export const POST = authed(async (req, user) => {
   const form = await req.formData().catch(() => { throw new AppError("bad_form", "需要 multipart/form-data"); });
   const file = form.get("file");
   if (!(file instanceof File)) throw new AppError("no_file", "请选择文件");
+  if (file.size > MAX_UPLOAD_BYTES) throw new AppError("too_large", "文件超过 10 MB 上限");
   const meta = z.object({ title: z.string().max(80).default(""), subjectId: z.string().uuid(), course: z.string().max(60).default(""), kind: z.enum(["slides", "notes", "exercises", "textbook", "other"]).default("notes"), materialId: z.string().uuid().optional() })
     .parse({ title: form.get("title") ?? undefined, subjectId: form.get("subjectId"), course: form.get("course") ?? undefined, kind: form.get("kind") ?? undefined, materialId: form.get("materialId") || undefined });
   const buf = Buffer.from(await file.arrayBuffer());
