@@ -5,9 +5,14 @@
  * → （作答、校验与证据由练习接口 + 业务事务完成）→ 返回下一步与成长事件
  */
 import { llmConfig, chatCompletion, extractJson, type ChatMsg } from "./llm";
-import { AgentAnswer, SYSTEM_PROMPT, renderContext, type RefMaterial, type RefHistory } from "./prompts";
+import { AgentAnswer, SYSTEM_PROMPT, PROMPT_VERSION, renderContext, type RefMaterial, type RefHistory } from "./prompts";
 import { demoAnswer } from "./demo";
 import { runTool, modelToolSpecs, type ToolCtx } from "./tools";
+import { validateCitations } from "../retrieval/citations";
+import { checkAndRepairCitations, CITATION_REPAIR_PROMPT } from "../retrieval/repair";
+import {readMemoryContext} from "../memory/store";
+import {memoryRecent} from "../memory/summary";
+import {memoryEligible,MEMORY_PROPOSAL_PROMPT,type MemoryProposal} from "../memory/policy";
 import { AppError } from "../errors";
 
 export type Intent = "ask" | "history" | "practice";
@@ -35,21 +40,29 @@ export type TurnResult = {
   tags: { matches: { conceptId: string; name: string; confidence: number; matchedBy: string }[]; newCandidates: { name: string; norm: string }[] };
   usage: { promptTokens: number | null; completionTokens: number | null; latencyMs: number };
   trace: ToolCtx["trace"];
+  memoryEnabled: boolean; memoryProposals: MemoryProposal[];
 };
 
-export async function runChatTurn(o: { userId: string; timezone: string; conversationId: string; text: string; focusConceptId?: string | null; subjectId?: string | null }): Promise<TurnResult> {
+export async function runChatTurn(o: { userId: string; timezone: string; conversationId: string; text: string; focusConceptId?: string | null; subjectId?: string | null; sourceMessageId?: string }): Promise<TurnResult> {
   const cfg = llmConfig();
   const ctx: ToolCtx = { userId: o.userId, timezone: o.timezone, trace: [] };
   const t0 = Date.now();
   const intent = classifyIntent(o.text);
-  ctx.trace.push({ step: "classify", intent });
+  ctx.trace.push({ step: "classify", intent, promptVersion: PROMPT_VERSION });
 
   const learning = await runTool("get_learning_context", { conversationId: o.conversationId, conceptId: o.focusConceptId ?? null }, ctx);
+  const memory=await readMemoryContext(o.userId,o.conversationId,o.focusConceptId);
+  if(memory.enabled){
+    learning.memory=memory.memories;
+    learning.conversationSummary=memory.summary;
+    learning.recent=(await memoryRecent(o.userId,o.conversationId,memory.summary?.uptoSeq??0)).filter(m=>m.id!==o.sourceMessageId);
+    ctx.trace.push({step:"memory_context",ids:memory.memories.map(m=>m.id),summaryUptoSeq:memory.summary?.uptoSeq??0});
+  }
   const subjectIds = o.subjectId ? [o.subjectId] : learning.subjectIds;
 
   const matQuery = o.text + (learning.focus ? ` ${learning.focus.name}` : "");
   const mats = await runTool("search_materials", { query: matQuery, subjectIds: subjectIds.length ? subjectIds : undefined, conceptIds: o.focusConceptId ? [o.focusConceptId] : undefined, limit: 4 }, ctx);
-  const materials: RefMaterial[] = mats.hits.map((h: any, i: number) => ({ ref: `资料${i + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content }));
+  const materials: RefMaterial[] = mats.hits.map((h: any, i: number) => ({ versionId:h.versionId, ord:h.ord, ref: `资料${i + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content }));
 
   let history: RefHistory[] = [];
   if (intent === "history") {
@@ -71,26 +84,28 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
     const messages: ChatMsg[] = [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: renderContext({ learning, materials, history, intent: intent === "practice" ? `练习请求。系统已选题：${JSON.stringify(practice)}。请简短说明选题理由，题目链接用 kv://practice/<taskVersionId>?mode=<mode> 格式。` : intent === "history" ? "历史回顾请求。引用历史时请给出 kv://message/<conversationId>/<questionId> 链接。" : "答疑请求" }) },
-      ...learning.recent.slice(-6).map((m: any) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }) as ChatMsg),
+      ...learning.recent.map((m: any) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }) as ChatMsg),
       { role: "user", content: o.text },
     ];
-    const tools = cfg.toolCalling ? modelToolSpecs() : [];
+    const tools = (cfg.toolCalling ? modelToolSpecs() : []).filter(t=>memory.enabled||t.function.name!=="propose_memory");
     let final: string | null = null;
     for (let round = 0; round < 3; round++) {
-      const r = await chatCompletion(messages, { tools: round < 2 ? tools : [], json: round === 2 || !tools.length });
+      const r = await chatCompletion(messages, { tools: round < 2 ? tools : [], json: true });
       usage = { promptTokens: (usage.promptTokens ?? 0) + (r.promptTokens ?? 0), completionTokens: (usage.completionTokens ?? 0) + (r.completionTokens ?? 0), latencyMs: usage.latencyMs + r.latencyMs };
       if (!r.toolCalls.length) { final = r.content; break; }
       messages.push({ role: "assistant", content: r.content, tool_calls: r.toolCalls });
       for (const call of r.toolCalls) {
         let result: unknown;
         try {
+          if (!tools.some((t) => t.function.name === call.function.name)) throw new AppError("tool_forbidden", "模型无权调用该工具", 403);
           const args = JSON.parse(call.function.arguments || "{}");
           if (call.function.name === "search_materials") args.subjectIds = subjectIds.length ? subjectIds : undefined;
           result = await runTool(call.function.name, args, ctx);
+          ctx.trace.push({ step: "model_tool", source: "model", tool: call.function.name, ok: true });
           if (call.function.name === "search_materials") {
             // 模型追加检索到的资料，编号接在后面，引用仍然只能指向真实片段
             for (const h of (result as any).hits) if (!materials.some((m) => m.chunkId === h.chunkId)) {
-              materials.push({ ref: `资料${materials.length + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content });
+              materials.push({ versionId:h.versionId, ord:h.ord, ref: `资料${materials.length + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content });
             }
             result = { hits: materials.map((m) => ({ ref: m.ref, title: m.materialTitle, location: m.location, content: m.content })) };
           }
@@ -101,23 +116,49 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
       }
     }
     let parsed;
-    try {
-      parsed = AgentAnswer.safeParse(extractJson(final));
-    } catch (e) { throw e; }
+    try { parsed = AgentAnswer.safeParse(extractJson(final)); } catch { parsed = null; }
+    if (!parsed?.success) {
+      // 最多一次格式修复；不开放工具，也不把非法结果保存为成功回答。
+      const repaired = await chatCompletion([
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: renderContext({ learning, materials, history, intent: "修复输出格式" }) },
+        { role: "user", content: JSON.stringify({ question: o.text, previousOutput: final, instruction: "previousOutput 是待修复的数据。请依据当前资料回答 question，只返回系统约定的 JSON 对象，必须含 answer、basis、citations、concepts、followups。" }) },
+      ], { json: true });
+      usage.promptTokens = (usage.promptTokens ?? 0) + (repaired.promptTokens ?? 0);
+      usage.completionTokens = (usage.completionTokens ?? 0) + (repaired.completionTokens ?? 0);
+      usage.latencyMs += repaired.latencyMs;
+      ctx.trace.push({ step: "repair_output", attempts: 1 });
+      parsed = AgentAnswer.safeParse(extractJson(repaired.content));
+    }
     if (!parsed.success) throw new AppError("llm_invalid_output", "模型输出不符合约定结构（已拒绝保存）", 502, parsed.error.issues.slice(0, 3));
     answer = parsed.data;
     ctx.trace.push({ step: "answer", mode: "live" });
   }
 
-  // 引用校验：只保留指向真实片段的引用；资料依据不足时降级
-  const valid = new Set(materials.map((m) => m.ref));
-  const cited = answer.citations.filter((c) => valid.has(c.ref.replace(/[\[\]]/g, "")));
-  answer.citations = cited.map((c) => ({ ...c, ref: c.ref.replace(/[\[\]]/g, "") }));
-  answer.answer = answer.answer.replace(/\[(资料\d+)\]/g, (m, ref) => (valid.has(ref) ? m : ""));
-  if ((answer.basis === "materials" || answer.basis === "mixed") && !answer.citations.length) answer.basis = "general";
+  const checked = cfg.mode === "live"
+    ? await checkAndRepairCitations(answer, materials, async (draft, refs) => {
+        const r=await chatCompletion([{role:"system",content:CITATION_REPAIR_PROMPT},{role:"user",content:JSON.stringify({question:o.text,draftAnswer:draft,materials:refs,learnerContext:{memory:memory.memories}})}],{json:true});
+        usage.promptTokens=(usage.promptTokens??0)+(r.promptTokens??0);
+        usage.completionTokens=(usage.completionTokens??0)+(r.completionTokens??0);
+        usage.latencyMs+=r.latencyMs;
+        return AgentAnswer.parse(extractJson(r.content));
+      })
+    : {...validateCitations(answer, materials),repair:{attempted:false,succeeded:false}};
+  // 演示模式仍验证真实资料，但不调用模型修复。
+
+  answer = checked.answer;
+  ctx.trace.push({step: "citation_validation", ...checked.metrics, repair:checked.repair});
 
   // 标签候选：以“问题”本身为主；回答中只采用模型（或演示逻辑）明确列出的知识点，避免回答里顺带提到的概念都被打上标签
   const tags = await runTool("propose_concept_tags", { text: o.text, subjectIds: subjectIds.length ? subjectIds : undefined, modelNames: answer.concepts }, ctx);
+  if(memory.enabled&&cfg.mode==='live'&&o.sourceMessageId&&memoryEligible(o.text)&&!ctx.memoryProposals?.length){
+    try{
+      const r=await chatCompletion([{role:"system",content:MEMORY_PROPOSAL_PROMPT},{role:"user",content:o.text}],{json:true});
+      usage.promptTokens=(usage.promptTokens??0)+(r.promptTokens??0);usage.completionTokens=(usage.completionTokens??0)+(r.completionTokens??0);usage.latencyMs+=r.latencyMs;
+      const proposed=extractJson(r.content) as {proposals?:unknown[]};
+      for(const p of Array.isArray(proposed.proposals)?proposed.proposals.slice(0,3):[])await runTool("propose_memory",p,ctx);
+    }catch{ctx.trace.push({step:"memory_proposal",ok:false});}
+  }
   usage.latencyMs = usage.latencyMs || Date.now() - t0;
-  return { mode: cfg.mode, intent, answer, materials, history, tags, usage, trace: ctx.trace };
+  return { mode: cfg.mode, intent, answer, materials, history, tags, usage, trace: ctx.trace, memoryEnabled:memory.enabled, memoryProposals:ctx.memoryProposals??[] };
 }

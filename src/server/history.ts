@@ -9,7 +9,9 @@
  *  SQL 由固定片段组合，用户输入一律作为 $n 参数传入，不做字符串拼接。
  */
 import { z } from "zod";
-import { q } from "@/db";
+import { q, q1 } from "@/db";
+import { buildHistorySqlBaseline } from "./search/legacy";
+import { searchTerms } from "./search/terms";
 import { escapeLike, highlight, snippet, plainSummary, plainText, type Seg } from "./text";
 
 export const HistoryQuery = z.object({
@@ -31,26 +33,48 @@ export type HistoryHit = {
 };
 
 /** 生成核心检索 SQL（导出以便报告与 EXPLAIN 使用同一份语句） */
-export function buildHistorySql(input: HistoryQuery, userId: string, tz: string) {
+export function buildHistorySql(input: HistoryQuery, userId: string, tz: string, indexed = true) {
+  if (!indexed) return buildHistorySqlBaseline(input,userId,tz);
   const params: unknown[] = [userId, tz];
   const p = (v: unknown) => { params.push(v); return `$${params.length}`; };
   const where: string[] = ["qm.user_id = $1", "qm.role = 'user'", "c.archived_at IS NULL"];
   let candidate = "";
   if (input.keyword) {
     const kw = p(`%${escapeLike(input.keyword)}%`);
-    // 三路候选分别命中各自的 trgm 索引，再 UNION 成问题 id 集合
-    candidate = `cand AS (
-        SELECT m.id AS qid FROM messages m
-         WHERE m.user_id = $1 AND m.role = 'user' AND m.content ILIKE ${kw} ESCAPE '\\'
-      UNION
-        SELECT m.reply_to_id FROM messages m
-         WHERE m.user_id = $1 AND m.role = 'assistant' AND m.content ILIKE ${kw} ESCAPE '\\'
-      UNION
-        SELECT m.id FROM conversations cv JOIN messages m ON m.conversation_id = cv.id AND m.user_id = cv.user_id
-         WHERE cv.user_id = $1 AND m.role = 'user' AND cv.title ILIKE ${kw} ESCAPE '\\'
-    ),`;
+    const allTerms=searchTerms(input.keyword);
+    const chineseTerms=allTerms.filter(t=>/^[一-龥]{2}$/.test(t));
+    const chinese=chineseTerms.length>0;
+    const terms=chinese?chineseTerms:allTerms;
+    const tp=p(terms);
+    // 含连续中文的查询先取中文二元组交集，再用完整ILIKE复核字序/数字/标点。
+    const postings=terms.length ? `SELECT m.id AS mid, mt.weight AS evidence FROM message_terms mt JOIN messages m ON m.id=mt.message_id
+      WHERE mt.term=${terms.length===1 ? `(${tp}::text[])[1]` : `(SELECT wanted.term FROM unnest(${tp}::text[]) wanted(term)
+        ORDER BY (SELECT count(*) FROM message_terms counted WHERE counted.term=wanted.term), wanted.term LIMIT 1)`}
+      AND m.user_id=$1 AND NOT EXISTS (
+        SELECT 1 FROM unnest(${tp}::text[]) wanted(term) WHERE NOT EXISTS (
+          SELECT 1 FROM message_terms other WHERE other.term=wanted.term AND other.message_id=m.id))`
+      : `SELECT id AS mid, 0::real AS evidence FROM messages WHERE false AND cardinality(${tp}::text[])>=0`;
 
+    candidate=`posted AS (${postings}),
+      matching_concepts AS MATERIALIZED (
+        SELECT k.id FROM concepts k WHERE (k.owner_user_id IS NULL OR k.owner_user_id=$1)
+        AND (k.name ILIKE ${kw} ESCAPE '\\' OR EXISTS(SELECT 1 FROM concept_aliases ca WHERE ca.concept_id=k.id AND ca.alias ILIKE ${kw} ESCAPE '\\'))
+      ),
+      matched AS (
+        SELECT CASE WHEN m.role='user' THEN m.id ELSE m.reply_to_id END AS qid, ${chinese ? '3::real+least(posted.evidence,8)::real/100' : '3::real'} AS score
+        FROM ${chinese ? "posted JOIN messages m ON m.id=posted.mid" : "messages m"}
+        JOIN conversations cv ON cv.id=m.conversation_id AND cv.user_id=m.user_id
+        WHERE m.user_id=$1 AND (m.content ILIKE ${kw} ESCAPE '\\' OR cv.title ILIKE ${kw} ESCAPE '\\')
+        ${!chinese&&terms.length ? `UNION ALL SELECT CASE WHEN m.role='user' THEN m.id ELSE m.reply_to_id END, 2::real+least(posted.evidence,8)::real/100
+          FROM posted JOIN messages m ON m.id=posted.mid WHERE m.user_id=$1` : ""}
+        UNION ALL
+        SELECT CASE WHEN m.role='user' THEN m.id ELSE m.reply_to_id END, 1::real
+        FROM message_concepts mc JOIN messages m ON m.id=mc.message_id
+        JOIN matching_concepts k ON k.id=mc.concept_id
+        WHERE m.user_id=$1 AND mc.status<>'rejected'
+      ), cand AS (SELECT qid,max(score)+count(DISTINCT score)::real/4 AS score FROM matched GROUP BY qid),`;
   }
+
   if (input.from) where.push(`qm.created_at >= (${p(input.from)}::date)::timestamp AT TIME ZONE $2`);
   if (input.to) where.push(`qm.created_at < ((${p(input.to)}::date + 1)::timestamp AT TIME ZONE $2)`);
   if (input.conceptIds?.length) {
@@ -67,7 +91,7 @@ export function buildHistorySql(input: HistoryQuery, userId: string, tz: string)
   const offset = p((input.page - 1) * input.pageSize);
   const text = `WITH ${candidate} base AS (
   SELECT qm.id AS question_id, qm.conversation_id, qm.content AS question, qm.created_at,
-         c.title, c.origin, am.id AS answer_id, am.content AS answer, am.status AS answer_status
+         c.title, c.origin, ${input.keyword ? "cand.score" : "0::real"} AS relevance, am.id AS answer_id, am.content AS answer, am.status AS answer_status
   FROM ${input.keyword ? "cand JOIN messages qm ON qm.id = cand.qid" : "messages qm"}
   JOIN conversations c ON c.id = qm.conversation_id AND c.user_id = qm.user_id
   LEFT JOIN LATERAL (
@@ -78,13 +102,14 @@ export function buildHistorySql(input: HistoryQuery, userId: string, tz: string)
 )
 SELECT b.*, to_char(b.created_at AT TIME ZONE $2, 'YYYY-MM-DD HH24:MI') AS local_time, count(*) OVER () AS total
 FROM base b
-ORDER BY b.created_at DESC, b.question_id DESC
+ORDER BY b.relevance DESC, b.created_at DESC, b.question_id DESC
 LIMIT ${limit} OFFSET ${offset}`;
   return { text, params };
 }
 
 export async function searchHistory(userId: string, tz: string, input: HistoryQuery) {
-  const { text, params } = buildHistorySql(input, userId, tz);
+  const installed=!!(await q1(`SELECT to_regclass('public.message_terms') IS NOT NULL AS ready`))?.ready;
+  const { text, params } = buildHistorySql(input, userId, tz, installed);
   const rows = await q(text, params);
   const ids = rows.flatMap((r) => [r.question_id, r.answer_id].filter(Boolean));
   const tagRows = ids.length
@@ -92,7 +117,7 @@ export async function searchHistory(userId: string, tz: string, input: HistoryQu
                JOIN messages m ON m.id = mc.message_id
                WHERE mc.message_id = ANY($1::uuid[]) AND m.user_id = $2 AND mc.status <> 'rejected'`, [ids, userId])
     : [];
-  const kws = input.keyword ? [input.keyword] : [];
+  const kws = input.keyword ? [input.keyword, ...searchTerms(input.keyword)] : [];
   const hits: HistoryHit[] = rows.map((r) => {
     const lower = (s: string | null) => (s ?? "").toLowerCase();
     const kw = (input.keyword ?? "").toLowerCase();
@@ -118,7 +143,7 @@ export async function searchHistory(userId: string, tz: string, input: HistoryQu
     };
   });
   const total = rows.length ? Number(rows[0].total) : 0;
-  return { hits, total, page: input.page, pageSize: input.pageSize, pages: Math.max(1, Math.ceil(total / input.pageSize)), timezone: tz };
+  return { hits, total, searchMode: installed ? "inverted" : "legacy", page: input.page, pageSize: input.pageSize, pages: Math.max(1, Math.ceil(total / input.pageSize)), timezone: tz };
 }
 
 /** 会话列表 */

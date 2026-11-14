@@ -1,0 +1,1158 @@
+{
+  "runId": "def38d41-e7d0-4837-bd29-d9866efdfec1",
+  "model": "deepseek-v4-pro",
+  "method": "同一模型对50对回答的辅助审阅，非人工金标准，存在自评偏差",
+  "reviews": [
+    {
+      "id": 2,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 1,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 7,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 10,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 9,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 11,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 13,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 17,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 21,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 23,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 26,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 27,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 28,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 30,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 32,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 35,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 36,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 37,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 39,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 42,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 41,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 43,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 44,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 45,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 46,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 47,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 48,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 50,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 49,
+      "before": {
+        "citations": [],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 3,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料4",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 4,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料4",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 5,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料4",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料4",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 6,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 8,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 12,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 14,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 16,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 15,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 18,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 19,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 20,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 22,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 24,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 25,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料2",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 29,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料2",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 31,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 33,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          },
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          },
+          {
+            "ref": "资料3",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 34,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 38,
+      "before": {
+        "citations": [
+          {
+            "ref": "资料3",
+            "supported": "yes"
+          }
+        ],
+        "unsupportedClaim": false
+      },
+      "after": {
+        "citations": [
+          {
+            "ref": "资料1",
+            "supported": "uncertain"
+          }
+        ],
+        "unsupportedClaim": false
+      }
+    },
+    {
+      "id": 40,
+      "error": "generation_failed_pair_not_comparable"
+    }
+  ]
+}

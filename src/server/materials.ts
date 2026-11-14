@@ -9,6 +9,7 @@ import { AppError, notFound } from "./errors";
 import { detectType, extractContent, MAX_UPLOAD_BYTES } from "./extract";
 import { matchConcepts, visibleConcepts } from "./concepts";
 import { escapeLike } from "./text";
+import { rankMaterials } from "./retrieval/rank";
 import { addEvidence } from "./growth";
 
 /** 可读资料：课程公共资料（owner 为空）+ 本人资料 */
@@ -85,7 +86,7 @@ export async function uploadMaterial(inp: UploadInput) {
   });
 
   // 提取放在事务外（可能较慢）
-  const res = await extractContent(det.type, inp.buf);
+  const res = await extractContent(det.type, inp.buf, inp.fileName);
 
   // 事务 2：写入片段与状态、候选概念
   const subj = await q1<{ subject_id: string }>(`SELECT subject_id FROM materials WHERE id = $1`, [materialId]);
@@ -155,7 +156,7 @@ export function extractTerms(query: string, conceptGroups: string[][]): { terms:
 
 export type MaterialHit = {
   chunkId: string; versionId: string; versionNo: number; materialId: string; materialTitle: string; fileType: string;
-  pageNo: number | null; paragraphNo: number | null; heading: string | null; content: string; score: number;
+  ord?: number; pageNo: number | null; paragraphNo: number | null; heading: string | null; content: string; score: number;
 };
 
 export function locationLabel(h: { fileType: string; pageNo: number | null; paragraphNo: number | null }) {
@@ -183,16 +184,14 @@ export async function searchMaterials(userId: string, query: string, opts: { sub
         WHERE ${VISIBLE} AND v.status = 'ready' AND ($3::uuid[] IS NULL OR m.subject_id = ANY($3::uuid[]))
         ORDER BY v.material_id, v.version_no DESC)
      SELECT ch.id AS "chunkId", l.id AS "versionId", l.version_no AS "versionNo", l.material_id AS "materialId", m.title AS "materialTitle",
-            l.file_type AS "fileType", ch.page_no AS "pageNo", ch.paragraph_no AS "paragraphNo", ch.heading, ch.content,
+            l.file_type AS "fileType", ch.page_no AS "pageNo", ch.paragraph_no AS "paragraphNo", ch.heading, ch.content, ch.ord,
             (SELECT count(DISTINCT t.g) FROM unnest($2::text[], $5::int[]) AS t(p, g) WHERE ch.content ILIKE t.p ESCAPE '\\')::int AS score,
             (SELECT count(*) FROM unnest($2::text[]) AS p WHERE ch.content ILIKE p ESCAPE '\\')::int AS raw_hits
      FROM material_chunks ch JOIN latest l ON l.id = ch.version_id JOIN materials m ON m.id = l.material_id
-     WHERE ch.content ILIKE ANY($2::text[])
+     WHERE ch.content ILIKE ANY($2::text[]) OR ch.heading ILIKE ANY($2::text[]) OR m.title ILIKE ANY($2::text[])
      ORDER BY score DESC, raw_hits DESC, length(ch.content) ASC
      LIMIT $4`,
-    [userId, patterns, opts.subjectIds?.length ? opts.subjectIds : null, opts.limit ?? 4, groups],
+    [userId, patterns, opts.subjectIds?.length ? opts.subjectIds : null, 40, groups],
   );
-  // 至少命中 2 个检索词或命中知识点名称才算相关，避免“只撞上一个常见词”的弱引用
-  const strong = rows.filter((r) => r.score >= 2 || conceptTerms.some((t) => r.content.toLowerCase().includes(t.toLowerCase())));
-  return { terms, hits: strong };
+  return { terms, hits: rankMaterials(rows, terms, groups, conceptTerms, opts.limit ?? 4) };
 }

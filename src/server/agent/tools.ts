@@ -6,6 +6,7 @@
  *  - write_rules：写入由后端业务规则与数据库事务决定，模型不能直接调用（作答提交、评价）。
  *  模型不能执行任意 SQL，也不能修改学习状态。
  */
+import { MemoryProposal } from "../memory/policy";
 import { z, type ZodType } from "zod";
 import { q, q1 } from "@/db";
 import { AppError } from "../errors";
@@ -18,7 +19,7 @@ import { normName, plainSummary } from "../text";
 import type { TraceEntry } from "./trace";
 import type { ToolSpec } from "./llm";
 
-export type ToolCtx = { userId: string; timezone: string; trace: TraceEntry[] };
+export type ToolCtx = { userId: string; timezone: string; trace: TraceEntry[]; memoryProposals?: MemoryProposal[] };
 type Permission = "read_own" | "propose" | "write_rules";
 
 export type ToolDef<I, O> = {
@@ -128,12 +129,12 @@ export const searchMaterialsTool = tool({
   input: z.object({ query: z.string().min(1).max(500), subjectIds: z.array(z.string().uuid()).optional(), conceptIds: z.array(z.string().uuid()).optional(), limit: z.number().int().min(1).max(6).optional() }),
   output: z.object({
     terms: z.array(z.string()),
-    hits: z.array(z.object({ chunkId: z.string(), versionId: z.string(), versionNo: z.number(), materialTitle: z.string(), location: z.string(), content: z.string(), score: z.number() })),
+    hits: z.array(z.object({ ord: z.number().optional(), chunkId: z.string(), versionId: z.string(), versionNo: z.number(), materialTitle: z.string(), location: z.string(), content: z.string(), score: z.number() })),
   }),
   jsonSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
   run: async (ctx, inp) => {
     const r = await searchMaterials(ctx.userId, inp.query, inp);
-    return { terms: r.terms, hits: r.hits.map((h) => ({ chunkId: h.chunkId, versionId: h.versionId, versionNo: h.versionNo, materialTitle: h.materialTitle, location: locationLabel(h), content: h.content, score: h.score })) };
+    return { terms: r.terms, hits: r.hits.map((h) => ({ ord: h.ord, chunkId: h.chunkId, versionId: h.versionId, versionNo: h.versionNo, materialTitle: h.materialTitle, location: locationLabel(h), content: h.content, score: h.score })) };
   },
 });
 
@@ -267,4 +268,12 @@ export const createCollaborationSession = tool({
   input: z.object({ classId: z.string().uuid(), conceptId: z.string().uuid(), title: z.string().min(1).max(60), capacity: z.number().int().min(2).max(6) }),
   output: z.any(),
   run: async (ctx, inp) => (await import("../classes")).createGroup(ctx.userId, inp),
+});
+
+export const proposeMemoryTool=tool({
+ name:"propose_memory",description:"只提议跨会话记忆，不直接写库。content必须连续原样摘录当前用户自述；不记录资料内容、第三人或敏感凭证。",
+ permission:"propose",timeoutMs:1000,modelCallable:true,input:MemoryProposal,
+ output:z.object({proposed:z.boolean()}),
+ jsonSchema:{type:"object",properties:{kind:{type:"string",enum:["fact","preference","event"]},content:{type:"string",maxLength:240},confidence:{type:"number",minimum:0,maximum:1},importance:{type:"integer",minimum:1,maximum:5}},required:["kind","content"]},
+ run:async(ctx,proposal)=>{ctx.memoryProposals??=[];if(ctx.memoryProposals.length<3)ctx.memoryProposals.push(proposal);return {proposed:true};},
 });

@@ -1,0 +1,180 @@
+{
+  "date": "2026-11-11T14:17:54.893Z",
+  "scope": "两个遗留项走实际聊天服务复测，不替换50条离线统计",
+  "results": [
+    {
+      "id": 7,
+      "question": "请指出资料中关于以下内容的依据：INNER JOIN 只保留匹配元组",
+      "status": "complete",
+      "answer": "资料中关于“INNER JOIN 只保留匹配元组”的依据如下：\n\n- **资料1**（课件第2页）明确写道：“内连接 INNER JOIN 只保留满足连接条件的元组组合”“没有匹配的元组不会出现在结果中”。[资料1]\n- **资料2**（讲义第6段）写道：“内连接（INNER JOIN）只保留满足连接条件的元组组合”“没有任何选课记录的学生不会出现在内连接结果中”。[资料2]\n- **资料3**（课件第7页小结）概括为：“内连接：只要匹配的”。[资料3]\n\n三处表述一致：内连接结果中只包含左右表满足连接条件的元组组合，未匹配的元组被丢弃。",
+      "citations": [
+        {
+          "messageId": "bcdb26b9-ac75-4468-b691-9b24407fdb9e",
+          "ref": "资料1",
+          "quote": "内连接 INNER JOIN 只保留满足连接条件的元组组合",
+          "ord": 1,
+          "chunkId": "032fdbcd-4915-422a-b3f6-38be4672fde4",
+          "pageNo": 2,
+          "paragraphNo": null,
+          "versionId": "3d16de73-8dc2-450b-b57a-6b25e0ddfff8",
+          "versionNo": 1,
+          "fileType": "pptx",
+          "materialId": "7cc47570-f580-4c2e-8092-f1eb875996e7",
+          "materialTitle": "第3章 连接查询（课件）"
+        },
+        {
+          "messageId": "bcdb26b9-ac75-4468-b691-9b24407fdb9e",
+          "ref": "资料2",
+          "quote": "内连接（INNER JOIN）只保留满足连接条件的元组组合",
+          "ord": 2,
+          "chunkId": "11d22319-d8b4-4da4-b9e6-f97a411d7d7f",
+          "pageNo": null,
+          "paragraphNo": 6,
+          "versionId": "3327279f-d4be-4613-9a40-200d86db3ecd",
+          "versionNo": 2,
+          "fileType": "md",
+          "materialId": "4912cb4b-a788-4354-92ed-9201fbc4f9ec",
+          "materialTitle": "第3章 SQL 连接查询（讲义）"
+        },
+        {
+          "messageId": "bcdb26b9-ac75-4468-b691-9b24407fdb9e",
+          "ref": "资料3",
+          "quote": "内连接：只要匹配的",
+          "ord": 3,
+          "chunkId": "4d9fe2f5-728a-4336-9274-e0e0366d2f29",
+          "pageNo": 7,
+          "paragraphNo": null,
+          "versionId": "3d16de73-8dc2-450b-b57a-6b25e0ddfff8",
+          "versionNo": 1,
+          "fileType": "pptx",
+          "materialId": "7cc47570-f580-4c2e-8092-f1eb875996e7",
+          "materialTitle": "第3章 连接查询（课件）"
+        }
+      ],
+      "call": {
+        "status": "ok",
+        "tool_trace": [
+          {
+            "step": "classify",
+            "intent": "ask",
+            "promptVersion": "chat-v1.3"
+          },
+          {
+            "ms": 6,
+            "ok": true,
+            "tool": "get_learning_context"
+          },
+          {
+            "ms": 6,
+            "ok": true,
+            "tool": "search_materials"
+          },
+          {
+            "mode": "live",
+            "step": "answer"
+          },
+          {
+            "step": "citation_validation",
+            "repair": {
+              "attempted": true,
+              "succeeded": true
+            },
+            "accepted": 3,
+            "rejected": 0,
+            "bodyReferences": 3,
+            "verifiedQuotes": 3,
+            "unverifiedQuotes": 0
+          },
+          {
+            "ms": 4,
+            "ok": true,
+            "tool": "propose_concept_tags"
+          }
+        ],
+        "prompt_tokens": 2689,
+        "completion_tokens": 823
+      },
+      "messageId": "bcdb26b9-ac75-4468-b691-9b24407fdb9e"
+    },
+    {
+      "id": 40,
+      "question": "请简短总结并引用来源：贝叶斯公式的先验与后验",
+      "status": "complete",
+      "answer": "**结论**：贝叶斯公式用“结果”反推“原因”——先验概率 P(Bi) 是事件发生前对“原因”的估计，后验概率 P(Bi|A) 是观察到结果 A 后对“原因”的修正估计。\n\n**公式**：P(Bi|A) = P(Bi)·P(A|Bi) / Σ P(Bj)·P(A|Bj)，其中分母就是全概率 P(A)。[资料1][资料3]\n\n**最小例子**：某病患病率（先验）1%，检测灵敏度 95%、误报率 5%。检测为阳性时真正患病的概率（后验）仅约 0.161——先验很小时，即使检测较准，阳性结果里也可能有大量误报。[资料1]",
+      "citations": [
+        {
+          "messageId": "0fcd795d-9540-422d-b924-204a21ca824d",
+          "ref": "资料1",
+          "quote": "P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公式，它由“结果”反推“原因”的概率。",
+          "ord": 1,
+          "chunkId": "ec13c389-5f96-4ff8-92e1-1ae72496463c",
+          "pageNo": 3,
+          "paragraphNo": null,
+          "versionId": "9b3bdfab-96c5-4dfb-9e41-1718d45eb6b1",
+          "versionNo": 1,
+          "fileType": "pdf",
+          "materialId": "a12448f7-c96f-4b67-a4fc-df6721dea374",
+          "materialTitle": "条件概率与贝叶斯公式（讲义）"
+        },
+        {
+          "messageId": "0fcd795d-9540-422d-b924-204a21ca824d",
+          "ref": "资料3",
+          "quote": "贝叶斯公式题通常给出先验概率 P(Bi) 与条件概率 P(A|Bi)，要求计算后验概率 P(Bi|A)。注意分母是全概率 P(A)。",
+          "ord": 2,
+          "chunkId": "6043ed8a-5be9-4d9f-87a8-c4d8c6815509",
+          "pageNo": null,
+          "paragraphNo": 4,
+          "versionId": "ce0cab43-1287-4aa9-b7ab-8460e41d7de3",
+          "versionNo": 1,
+          "fileType": "txt",
+          "materialId": "82562c0a-3498-4cbf-b32f-68c82b7aa412",
+          "materialTitle": "第一章习题说明"
+        }
+      ],
+      "call": {
+        "status": "ok",
+        "tool_trace": [
+          {
+            "step": "classify",
+            "intent": "ask",
+            "promptVersion": "chat-v1.3"
+          },
+          {
+            "ms": 8,
+            "ok": true,
+            "tool": "get_learning_context"
+          },
+          {
+            "ms": 7,
+            "ok": true,
+            "tool": "search_materials"
+          },
+          {
+            "mode": "live",
+            "step": "answer"
+          },
+          {
+            "step": "citation_validation",
+            "repair": {
+              "attempted": true,
+              "succeeded": false
+            },
+            "accepted": 2,
+            "rejected": 1,
+            "bodyReferences": 2,
+            "verifiedQuotes": 2,
+            "unverifiedQuotes": 0
+          },
+          {
+            "ms": 3,
+            "ok": true,
+            "tool": "propose_concept_tags"
+          }
+        ],
+        "prompt_tokens": 3074,
+        "completion_tokens": 963
+      },
+      "messageId": "0fcd795d-9540-422d-b924-204a21ca824d"
+    }
+  ]
+}

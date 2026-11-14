@@ -14,7 +14,7 @@
 | | 个性化答疑（上下文、资料引用、知识点候选标签、失败重试） | 已实现 |
 | | 会话列表；历史问答组合检索（关键词 + 日期 + 知识点 + 学科、分页、高亮）；定位原消息并继续提问 | 已实现 |
 | | 数据持久化、权限隔离、基础异常处理 | 已实现 |
-| P1 优先增强 | 资料温室（TXT / MD / 文本 PDF / PPTX 提取，版本，分块，候选概念，引用定位） | 已实现 |
+| P1 优先增强 | 资料温室（TXT / MD / 文本 PDF / PPTX 正文及备注提取，版本，分块，候选概念，引用定位） | 已实现 |
 | | 薄弱点练习（诊断、选题理由、提示记录、SQL 只读沙箱判题、选择 / 数值 / 开放题） | 已实现 |
 | | 花朵成长与依据、证据修正、成长时间轴与回放 | 已实现 |
 | P2 | 班级星系、分享偏好、互补伙伴匹配、共学小组（并发名额）、贡献、学习卡版本与发布、outbox | 已实现（基础版） |
@@ -60,11 +60,12 @@ LLM_MODE=live
 LLM_BASE_URL=https://api.openai.com/v1      # 或其它兼容服务的地址
 LLM_API_KEY=sk-...                           # 只在服务端读取
 LLM_MODEL=gpt-4o-mini
+# DeepSeek 可使用 LLM_BASE_URL=https://api.deepseek.com/v1 和 LLM_MODEL=deepseek-v4-pro
 LLM_TIMEOUT_MS=45000
 LLM_TOOL_CALLING=true                        # 服务商不支持 function calling 时改为 false
 ```
 
-修改后重启服务。真实模式下调用失败会显示错误与“重试”，不会退回演示内容。说明：真实模式只用本地模拟服务测试过错误处理路径，**尚未连接真实模型做端到端验证**，第一次使用请先问一两个问题确认。
+修改后重启服务。真实模式下调用失败会显示错误与“重试”，不会退回演示内容。说明：真实模式已接入 DeepSeek V4 Pro 做服务层问答验证，评测范围与结果见 `docs/agent-eval.md`；浏览器交互仍需单独验收。
 
 ## 常用命令
 
@@ -76,6 +77,10 @@ LLM_TOOL_CALLING=true                        # 服务商不支持 function calli
 | `npm run db:reset` | 清空本地业务库并重新 migrate + seed（只允许 localhost） |
 | `npm run db:generate` | 修改 `src/db/schema.ts` 后生成新的 migration |
 | `npm test` | 集成测试（自动使用独立的 `knowverse_test` 库） |
+| `npm run memory:install` | 安装本机C5记忆扩展草案；正式迁移待A集成 |
+| `npm run eval:memory` | 独立账号的真实模型跨会话记忆验收 |
+| `npm run search:install` | 安装本机C3倒排SQL草案并回填；正式迁移待A集成 |
+| `npm run bench:search` | 独立库4万条模拟消息、50条历史检索评测 |
 | `npm run explain` | 在独立库 `knowverse_bench` 生成模拟数据并输出 `docs/sql/explain-results.md` |
 | `npm run docs:diagrams` | 重新生成 E-R 图与关系模式图（需要 Python 3 与 Graphviz） |
 | `node tests/e2e/demo-flow.mjs` | 浏览器端到端冒烟（需另行安装 Playwright） |
@@ -105,6 +110,8 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 | `docs/schema/` | 关系模式图（由数据库目录生成） |
 | `docs/database-design.md` | 实体边界、关系模式、函数依赖与范式、索引、删除策略、事务 |
 | `docs/llm-assisted-design.md` | 大模型辅助数据库设计记录（待团队审阅） |
+| `docs/retrieval.md` | 资料提取、分块、状态与C2验收说明 |
+| `docs/memory.md` | C5记忆提议、去重、过期、会话摘要与验收 |
 | `docs/agent.md` | 智能体结构、工具定义、提示词、成长规则 |
 | `docs/sql/core_queries.sql` · `explain-results.md` | 核心 SQL 与 EXPLAIN ANALYZE |
 | `docs/test-report.md` · `docs/test-evidence/` · `docs/screenshots/` | 测试用例、实际结果、截图 |
@@ -115,7 +122,7 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 
 ## 已知限制
 
-- 资料检索是词法检索（ILIKE + pg_trgm）；没有向量检索。两个字的中文关键词无法使用 trigram 索引（结果仍正确）。
+- 资料检索仍是词法检索，没有向量检索。历史检索可运行 `npm run search:install` 安装 C3 中文倒排草案，两字关键词走词项 B-tree；未安装时回退原 ILIKE 检索。A 的正式迁移集成尚待完成，见 `docs/sql/search-handoff.md`。
 - 演示模式的回答只覆盖少数主题（LEFT JOIN、内连接、条件概率、贝叶斯、范式、分组聚合），其它问题会如实说明并列出检索到的资料片段。
 - 开放题在演示模式下按关键词规则评价，会误判；界面已注明。
 - 扫描件只提示需要 OCR，没有内置 OCR；Word、Excel 等类型只保存元数据。

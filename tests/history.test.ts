@@ -46,7 +46,8 @@ describe("历史问答检索", () => {
     expect(r.total).toBe(1);
     expect(r.hits[0].questionSegs.map((s) => s.text).join("")).toContain("条件概率");
     const r2 = await searchHistory(A.id, "Asia/Taipei", { keyword: "左外连接", page: 1, pageSize: 10 });
-    expect(r2.total).toBe(1);
+    // 倒排版还召回已标为左外连接的英文问题；旧版只匹配中文子串。
+    expect(r2.total).toBe(r2.searchMode === 'inverted' ? 2 : 1);
   });
 
   it("关键词中的 % 与 _ 被当作普通字符，不会变成通配符", async () => {

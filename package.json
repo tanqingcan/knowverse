@@ -15,7 +15,14 @@
     "test": "vitest run",
     "explain": "tsx scripts/explain.ts",
     "demo:reset": "tsx scripts/seed.ts",
-    "docs:diagrams": "python3 docs/er/gen_er.py && python3 docs/schema/gen_schema.py"
+    "docs:diagrams": "python3 docs/er/gen_er.py && python3 docs/schema/gen_schema.py",
+    "eval:agent": "tsx scripts/eval-agent.ts",
+    "eval:rag": "tsx scripts/eval-rag.ts",
+    "eval:rag:review": "tsx scripts/eval-rag-review.ts",
+    "search:install": "tsx scripts/install-search.ts",
+    "bench:search": "tsx scripts/bench-search.ts",
+    "memory:install": "tsx scripts/install-memory.ts",
+    "eval:memory": "tsx scripts/eval-memory.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.3.0",

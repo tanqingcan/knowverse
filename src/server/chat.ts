@@ -9,9 +9,11 @@ import { recordModelCall } from "./agent/trace";
 import { llmConfig } from "./agent/llm";
 import { addEvidence, type GrowthEvent } from "./growth";
 import { createUserConcept } from "./concepts";
+import {saveProposals} from "./memory/store";
+import {refreshSummary} from "./memory/summary";
 import { normName } from "./text";
 
-const STALE_PENDING_MS = () => Number(process.env.LLM_TIMEOUT_MS ?? 45000) + 30_000;
+const STALE_PENDING_MS = () => Number(process.env.LLM_TIMEOUT_MS ?? 45000) * 6 + 30_000;
 
 export async function sendMessage(user: CurrentUser, inp: { conversationId?: string | null; text: string; focusConceptId?: string | null; subjectId?: string | null }) {
   const text = inp.text.trim();
@@ -71,7 +73,7 @@ export async function generateReply(user: CurrentUser, assistantMessageId: strin
   const focusRow = await q1(`SELECT concept_id FROM message_concepts WHERE message_id = $1 AND source = 'context' LIMIT 1`, [a.reply_to_id]);
   let turn;
   try {
-    turn = await runChatTurn({ userId: user.id, timezone: user.timezone, conversationId: a.conversation_id, text: a.question, focusConceptId: focusRow?.concept_id ?? a.focus_concept_id, subjectId: a.subject_id });
+    turn = await runChatTurn({ userId: user.id, timezone: user.timezone, conversationId: a.conversation_id, text: a.question, sourceMessageId:a.reply_to_id, focusConceptId: focusRow?.concept_id ?? a.focus_concept_id, subjectId: a.subject_id });
   } catch (e: any) {
     const code = e?.code ?? "agent_failed";
     const mc = await recordModelCall({ userId: user.id, purpose: "chat", mode: llmConfig().mode, status: code === "llm_timeout" ? "timeout" : code === "llm_invalid_output" ? "invalid_output" : "error", errorCode: code, errorMessage: String(e?.message ?? e) });
@@ -87,13 +89,20 @@ export async function generateReply(user: CurrentUser, assistantMessageId: strin
                                WHERE id = $1 AND user_id = $2 AND status = 'pending' RETURNING id`,
       [assistantMessageId, user.id, turn.answer.answer, turn.answer.basis, turn.mode, mc]);
     if (!upd.rowCount) return [] as GrowthEvent[];
+    if(turn.memoryEnabled&&turn.memoryProposals.length){
+      await c.query('SAVEPOINT memory_write');
+      try{const result=await saveProposals(c,user.id,a.reply_to_id,turn.memoryProposals);turn.trace.push({step:"memory_write",...result});}
+      catch{await c.query('ROLLBACK TO SAVEPOINT memory_write');turn.trace.push({step:"memory_write",ok:false});}
+      await c.query('RELEASE SAVEPOINT memory_write');
+      await c.query(`UPDATE model_calls SET tool_trace=$2 WHERE id=$1`,[mc,JSON.stringify(turn.trace)]);
+    }
     let ord = 0;
     for (const cit of turn.answer.citations) {
       const m = turn.materials.find((x) => x.ref === cit.ref);
       if (!m) continue;
       ord += 1;
       await c.query(`INSERT INTO message_citations (message_id, chunk_id, ref_label, quote, ord) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
-        [assistantMessageId, m.chunkId, m.ref, m.content.slice(0, 400), ord]);
+        [assistantMessageId, m.chunkId, m.ref, cit.quote ?? m.content.slice(0, 400), ord]);
     }
     for (const t of turn.tags.matches) {
       await c.query(`INSERT INTO message_concepts (message_id, concept_id, source, status, confidence) VALUES ($1,$2,'ai','candidate',$3) ON CONFLICT DO NOTHING`,
@@ -114,6 +123,7 @@ export async function generateReply(user: CurrentUser, assistantMessageId: strin
     }
     return events;
   });
+  if(turn.memoryEnabled)await refreshSummary(user.id,a.conversation_id,mc).catch(()=>false);
   return loadTurn(user.id, assistantMessageId, growth);
 }
 
