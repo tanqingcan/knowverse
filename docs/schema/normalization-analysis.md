@@ -1,7 +1,7 @@
 ﻿# 关系数据理论：函数依赖、范式与我们的取舍
 
-> 依据课程第 6 章“关系数据理论”。候选键由 `npm run docs:keys` 从 `pg_index` 自动导出（见 `docs/schema/candidate-keys.md`，48 张表、19 张有额外唯一键）；本文件在其上做函数依赖与范式判定。
-> 一句话结论：**40 张 BCNF、4 张 2NF、4 张 1NF**；所有“降级”都只为同一件事——把 `user_id`（归属用户）冗余进子表，让权限过滤与查询不必多层 JOIN，代价用约束和补偿性不变量兜住。
+> 依据课程第 6 章“关系数据理论”。候选键由 `npm run docs:keys` 从 `pg_index` 自动导出（见 `docs/schema/candidate-keys.md`，55 个关系、20 张有额外唯一键）；本文件在其上做函数依赖与范式判定。
+> 一句话结论：**46 张 BCNF、5 张 2NF、4 张 1NF**；所有“降级”都只为同一件事——把 `user_id`（归属用户）冗余进子表，让权限过滤与查询不必多层 JOIN，代价用约束和补偿性不变量兜住。
 
 ---
 
@@ -23,8 +23,8 @@
 
 | 最高范式 | 数量 | 表 |
 |---|---|---|
-| **BCNF** | 40 | users、auth_sessions、classes、class_members、sharing_preferences、cdc_consumed、cdc_offsets、audit_log、subjects、concepts、concept_aliases、concept_prerequisites、planets、gardens、plants、learning_goals、goal_concepts、conversations、message_concepts、model_calls、materials、material_versions、material_chunks、material_concepts、tasks、task_versions、task_concepts、task_hints、hint_events、evaluations、knowledge_cards、card_versions、card_sources、card_publications、learning_intents、study_groups、study_group_members、contributions、outbox_events、class_stats |
-| **2NF** | 4 | learning_states、notes、attempts、growth_events |
+| **BCNF** | 46 | users、auth_sessions、classes、class_members、sharing_preferences、cdc_consumed、cdc_offsets、audit_log、subjects、concepts、concept_aliases、concept_prerequisites、planets、gardens、plants、learning_goals、goal_concepts、conversations、message_concepts、message_terms、model_calls、materials、material_versions、material_chunks、material_concepts、tasks、task_versions、task_concepts、task_hints、hint_events、evaluations、knowledge_cards、card_versions、card_sources、card_publications、learning_intents、study_groups、study_group_members、contributions、outbox_events、class_stats、garden_knowledge_places、planet_layouts、planet_layout_items、memory_controls、conversation_summaries |
+| **2NF** | 5 | learning_states、notes、attempts、growth_events、memories |
 | **1NF** | 4 | messages、concept_suggestions、message_citations、learning_evidence |
 
 > `mv_class_stats` 是物化视图、`*_2026_10` 等是分区，二者不是独立关系模式，不参与范式统计。
@@ -64,6 +64,9 @@
 | plants | id、(garden_id, concept_id) | — | BCNF | 一花圃一知识点一株 |
 | learning_goals | id | — | BCNF | — |
 | goal_concepts | (goal_id, concept_id) | — | BCNF | 若业务上约定 `(goal_id, route_order)` 唯一，它也会是候选键（未强制，见 §7） |
+| garden_knowledge_places | (user_id, concept_id, place) | — | BCNF | 全键关系：用户 × 知识点 × 地点 |
+| planet_layouts | id | — | BCNF | 每星球的布局草稿/发布快照（jsonb 为快照） |
+| planet_layout_items | id | — | BCNF | 布局实例坐标，随布局级联删除 |
 
 ### 3.3 对话
 
@@ -72,6 +75,7 @@
 | conversations | id | — | BCNF | `(id,user_id)` 唯一索引是**冗余超键**，只为被复合外键引用 |
 | **messages** | id、(conversation_id, seq) | **conversation_id → user_id** | **1NF** | 相对 `(conversation_id,seq)` 是部分依赖；相对 `id` 是传递依赖。`user_id` 是受控冗余 |
 | message_concepts | (message_id, concept_id) | — | BCNF | 全键关系 |
+| message_terms | (term, message_id) | — | BCNF | 全键关系；触发器同步，RLS 按所属消息判定 |
 | **concept_suggestions** | id、(message_id, name_norm) | **message_id → user_id** | **1NF** | 同上，建议必须属于同一用户 |
 | model_calls | id | — | BCNF | 轨迹字段是 jsonb 日志 |
 
@@ -100,6 +104,9 @@
 | **learning_evidence** | id；(attempt_id, concept_id, kind)\* | attempt_id/message_id/note_id → user_id | **1NF** | 相对条件键是部分依赖；`user_id` 供 RLS 与档案查询 |
 | **learning_states** | (user_id, concept_id) | **stage → stage_reason** | **2NF** | 理由文案是阶段的固定模板；此外 stage 本身可由证据推导（跨关系） |
 | **growth_events** | id | **evidence_id → user_id** | **2NF** | 时间轴按用户查，冗余 user_id |
+| **memories** | id | **source_message_id → user_id；corrects_id → user_id** | **2NF** | 记忆归属与来源消息/被修正记忆冗余；用于 RLS 与来源校验 |
+| memory_controls | user_id | — | BCNF | 每用户一行记忆版本号 |
+| conversation_summaries | conversation_id | — | BCNF | `user_id` 由会话决定（键 → 属性，不构成降级） |
 
 ### 3.6 派生与运维
 
@@ -147,6 +154,7 @@
 | `learning_evidence.user_id` | 2NF | 档案页按用户+知识点查证据，走 `(user_id,concept_id,created_at)` 索引 | 不变量 **E4**（证据与作答同属一人） | 每次查证据都要 JOIN 到 attempt/message/note |
 | `message_citations.quote` | 2NF | 引用可离线渲染、审计可复现；即使片段被删除也能显示原文 | 片段不可变（版本化） | 每次渲染引用都要 JOIN 片段 |
 | `notes.user_id` | 3NF | 笔记列表按用户过滤 | 不变量 **E12**（笔记与来源消息同一用户） | JOIN messages |
+| `memories.user_id` | 3NF | 记忆按用户读取并注入上下文，RLS 直接判本行 | 写入路径校验来源消息属于当前用户；**改进项**：补 `(source_message_id,user_id)` 复合外键 | JOIN messages，或 RLS 改成子查询 |
 | `attempts.user_id` | 3NF | 幂等键 `(user_id, submit_key)` 与权限过滤 | 条件唯一索引 + 会话外键 | 幂等键要改成 `(attempt→user)` 子查询 |
 | `growth_events.user_id` | 3NF | 时间轴按用户倒序，走 `(user_id, created_at)` 索引 | 不变量 **E13** | JOIN 证据表 |
 | `learning_states.stage_reason` | 3NF | 档案页直接显示“为什么是这个阶段”，不用前端映射 | 阶段规则收敛在 `computeStage` 与 `fn_settle_attempt`，文案与阶段一一对应 | 删掉该列，前端按 stage 映射文案 |
@@ -211,7 +219,7 @@ A：仍然会保留 `messages.user_id` 与 `learning_evidence.user_id`（收益�
 ## 10. 怎么复现这份分析
 
 ```bash
-npm run docs:keys          # 候选键清单（48 张表）
+npm run docs:keys          # 候选键清单（55 个关系）
 npm run docs:dictionary    # 列、约束、索引
 npm run verify:invariants  # 15 项一致性检查
 npm test                   # 180 个测试（94 集成 + 86 单元）

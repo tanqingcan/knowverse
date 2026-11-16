@@ -1,16 +1,16 @@
 # C3 数据库与基准数据交接
 
-C3已在本机通过独立安装脚本运行，但尚未合并到A负责的Drizzle迁移和schema定义。没有宣称A1/A6或D2已完成。
+C3已在本机通过独立安装脚本运行。**2026-11-16：A 已把草稿正式并入 Drizzle 迁移 `0030_rag_tables.sql`，并在 `src/db/schema.ts` 登记；新克隆执行 `npm run db:migrate` 即自动建表/回填，无需再运行 `search:install`。**
 
-## A：待集成
+## A：集成结果（已完成，0030）
 
-- 草案：`docs/sql/drafts/message-terms.sql`，新增`message_terms(term,message_id,weight)`、分词函数、消息/标题同步触发器和历史数据回填。SQL在事务内执行，可重复运行。
-- 词项主键`(term,message_id)`本身是B-tree；另有`message_id`索引用于编辑/删除维护，`term`的pg_trgm GIN用于后续相似词实验（当前精确词项查询主要使用B-tree）。
-- 在`src/db/schema.ts`登记同样的表与约束，并按当时最新的迁移编号纳入`drizzle/`和journal；不要复制一个已存在的编号。
-- 与A1的RLS、应用角色权限一起审查。草案为普通invoker函数，不使用SECURITY DEFINER；新增表目前没有宣称已受RLS保护。应用候选查询始终关联messages并限制user_id，但不能替代数据库权限策略。
-- A6的历史覆盖索引/部分索引尚未加入本次改动，性能数据不能归因于它们。
-- 本机命令`npm run search:install`应用草案并回填。服务检测新表存在时启用倒排，否则自动回退原检索；新克隆在A集成前仍可运行原检索。
-- 大规模回填会持有锁并产生写入开销，应在维护窗口执行。本轮在4万条模拟消息验证，不承诺大规模无停顿迁移。
+- 已并入迁移：`message_terms(term,message_id,weight)`、分词函数、消息/标题同步触发器、历史数据回填。
+- 已登记 schema：`src/db/schema.ts` 的 `messageTerms`；主键 `(term,message_id)`、`message_id` 索引、`term` 的 pg_trgm GIN 与迁移一致。
+- **RLS 已补**：`message_terms` 启用行级安全，策略按所属 `messages.user_id = kv_current_user_id()` 判定；`kv_app` 只能看到自己消息的词项，无用户上下文时 0 行。
+- 历史回填仍在迁移内执行（持有写锁），新克隆/重置时一次性完成；已有库重复执行安全。
+- `npm run search:install` 保留作旧库补救/本地试验，不再是必需步骤。
+- A6 的历史覆盖索引/部分索引仍未加入本次改动，性能数据不能归因于它们。
+
 
 ## D：共享基准数据
 

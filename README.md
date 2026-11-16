@@ -79,9 +79,9 @@ LLM_TOOL_CALLING=true                        # 服务商不支持 function calli
 | `npm run db:reset` | 清空本地业务库并重新 migrate + seed（只允许 localhost） |
 | `npm run db:generate` | 修改 `src/db/schema.ts` 后生成新的 migration |
 | `npm test` | 集成测试（自动使用独立的 `knowverse_test` 库） |
-| `npm run memory:install` | 安装本机C5记忆扩展草案；正式迁移待A集成 |
+| `npm run memory:install` | 旧库补救：手动安装 C5 记忆扩展（新库由迁移 0030 自动完成） |
 | `npm run eval:memory` | 独立账号的真实模型跨会话记忆验收 |
-| `npm run search:install` | 安装本机C3倒排SQL草案并回填；正式迁移待A集成 |
+| `npm run search:install` | 旧库补救：手动安装 C3 倒排索引（新库由迁移 0030 自动完成） |
 | `npm run bench:search` | 独立库4万条模拟消息、50条历史检索评测 |
 | `npm run explain` | 在独立库 `knowverse_bench` 生成模拟数据并输出 `docs/sql/explain-results.md` |
 | `npm run docs:diagrams` | 重新生成 E-R 图与关系模式图（需要 Python 3 与 Graphviz） |
@@ -126,14 +126,14 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 | `docs/demo-scripts.md` | 三分钟版、八分钟版、30 秒宣传流程 |
 | `docs/requirements-matrix.md` | 作业要求—实现位置—验证证据 |
 | `docs/features-explained.md` | **功能说明书**：每个功能的意义、用到的知识、例子与演示命令 |
-| `docs/schema/normalization-analysis.md` | **范式分析**：48 张表逐表定级、函数依赖、8 处受控冗余与补偿机制 |
+| `docs/schema/normalization-analysis.md` | **范式分析**：55 个关系逐表定级、函数依赖、9 处受控冗余与补偿机制 |
 | `docs/schema/candidate-keys.md` | 候选键清单（`npm run docs:keys` 自动生成） |
 | `docs/course-mapping.md` | 课堂第 4/5/7/8 章与动态 Web 的逐章对照 |
 | `docs/team-template.md` | 团队分工模板（由团队填写） |
 
 ## 已知限制
 
-- 资料检索仍是词法检索，没有向量检索。历史检索可运行 `npm run search:install` 安装 C3 中文倒排草案，两字关键词走词项 B-tree；未安装时回退原 ILIKE 检索。A 的正式迁移集成尚待完成，见 `docs/sql/search-handoff.md`。
+- 资料检索仍是词法检索，没有向量检索。历史检索使用 C3 中文倒排索引（迁移 `0030` 自动建表/回填，两字关键词走词项 B-tree）；旧库可运行 `npm run search:install` 补救。未安装时自动回退原 ILIKE 检索，见 `docs/sql/search-handoff.md`。
 - 演示模式的回答只覆盖少数主题（LEFT JOIN、内连接、条件概率、贝叶斯、范式、分组聚合），其它问题会如实说明并列出检索到的资料片段。
 - 开放题在演示模式下按关键词规则评价，会误判；界面已注明。
 - 扫描件只提示需要 OCR，没有内置 OCR；Word、Excel 等类型只保存元数据。

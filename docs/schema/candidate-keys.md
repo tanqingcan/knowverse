@@ -3,7 +3,7 @@
 > 由 `npm run docs:keys` 从 `pg_index` 生成。`*` 表示部分唯一索引（条件键），只在谓词成立时唯一。
 > 函数依赖与范式判断见 `docs/schema/normalization-analysis.md`。
 
-表数：48；带额外唯一键的表：19。
+表数：55；带额外唯一键的表：20。
 
 | 表 | 主键 | 其他唯一键（完整） | 条件唯一键 |
 |---|---|---|---|
@@ -23,8 +23,10 @@
 | concept_suggestions | (id) | (message_id, name_norm) | — |
 | concepts | (id) | — | (subject_id, owner_user_id, name_norm) *；(subject_id, name_norm) * |
 | contributions | (id) | — | — |
+| conversation_summaries | (conversation_id) | — | — |
 | conversations | (id) | (id, user_id) | — |
 | evaluations | (id) | (attempt_id) | — |
+| garden_knowledge_places | (user_id, concept_id, place) | — | — |
 | gardens | (id) | (planet_id, subject_id) | — |
 | goal_concepts | (goal_id, concept_id) | — | — |
 | growth_events | (id) | — | — |
@@ -38,12 +40,17 @@
 | material_concepts | (version_id, concept_id) | — | — |
 | material_versions | (id) | (material_id, version_no) | — |
 | materials | (id) | — | — |
+| memories | (id) | — | (user_id, kind, content_norm) * |
+| memory_controls | (user_id) | — | — |
 | message_citations | (id) | (message_id, chunk_id) | — |
 | message_concepts | (message_id, concept_id) | — | — |
+| message_terms | (term, message_id) | — | — |
 | messages | (id) | (conversation_id, seq) | — |
 | model_calls | (id) | — | — |
 | notes | (id) | — | — |
 | outbox_events | (id) | — | — |
+| planet_layout_items | (id) | — | — |
+| planet_layouts | (id) | (planet_id) | — |
 | planets | (id) | (user_id) | — |
 | plants | (id) | (garden_id, concept_id) | — |
 | sharing_preferences | (class_id, user_id) | — | — |
