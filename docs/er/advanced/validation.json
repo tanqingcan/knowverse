@@ -5,13 +5,18 @@
   "business_triggers": 11,
   "groups_exact_cover": true,
   "field_level_diagrams": 8,
-  "briefing_model_entities": 15,
-  "briefing_model_actual_fks": 15,
+  "briefing_model_entities": 13,
   "embedded_figures": 5,
   "briefing_figure_hash_matches": true,
   "source_remaining_prose_preserved": true,
   "rendered_pages": 9,
   "all_pages_visually_reviewed": true,
   "renderer_cleanup_warning": true,
-  "typecheck": "passed"
+  "typecheck": "passed",
+  "briefing_model_notation": "Chen + ISA",
+  "briefing_model_relationships": 12,
+  "briefing_model_attributes": 21,
+  "conceptual_to_relational_mapping_checked": true,
+  "max_cardinality_and_total_participation_checked": true,
+  "isa_disjoint_and_total_checked": true
 }
