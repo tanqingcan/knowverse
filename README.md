@@ -124,6 +124,7 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 | `docs/agent.md` | 智能体结构、工具定义、提示词、成长规则 |
 | `docs/sql/core_queries.sql` · `explain-results.md` | 核心 SQL 与 EXPLAIN ANALYZE |
 | `docs/test-report.md` · `docs/test-evidence/` · `docs/screenshots/` | 测试用例、实际结果、截图 |
+| `docs/briefings/KNOWVERSE数据库阶段汇报.docx` | 带截图、关系图、流程图、性能图与讲解的阶段汇报文档 |
 | `docs/database-progress-briefing.md` · `docs/sql/history-optimization.md` | 下周数据库阶段汇报提纲与同数据性能对照 |
 | `docs/qa-checklist.md` · `docs/release.md` | 12 条验收、CI 与发布/回滚步骤 |
 | `docs/sql/sandbox.md` · `docs/sql/bench-results.md` | 沙箱边界、安全/等价用例、五类查询实测 |

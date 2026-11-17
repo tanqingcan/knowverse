@@ -3,7 +3,7 @@
 > 2026-11-17T03:38:33.197Z；命令：`npm run bench`。独立本机 knowverse_bench，c3-v1-40000 合成数据。每类预热 3 次、采样 30 次；P50/P95 是应用往返耗时，非性能承诺。所有者连接，不包含 RLS 开销；时间轴与班级统计复用业务表，采用精简投影，完整业务查询仍需单独测量。
 
 - PostgreSQL：PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit
-- Node：v22.18.0；CPU：AMD Ryzen 7 7840H with Radeon 780M Graphics    
+- Node：v22.18.0；CPU：AMD Ryzen 7 7840H with Radeon 780M Graphics
 - 消息 40000 条（两人各半）；时间轴事件 2000 条；班级仅 2 人，不能代表大班负载。
 
 | 查询 | 返回行 | P50 (ms) | P95 (ms) | 执行计划摘要 |

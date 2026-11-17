@@ -1,6 +1,6 @@
 # 收尾交付与意见
 
-2026-11-17。起点为本机 `feat/a-final-integration` / `ae53fe6`，原工作区干净。本轮修改已落盘，未提交/推送；正式报告和 PPT 不在范围内。用户已确认保留 2D 星系。
+2026-11-17。起点为本机 `feat/a-final-integration` / `ae53fe6`，原工作区干净。工程改动已提交并推送，PR为 https://github.com/tanqingcan/knowverse/pull/5 ；正式报告和 PPT 不在范围内。用户已确认保留 2D 星系。
 
 ## 后续数据库专项更新
 

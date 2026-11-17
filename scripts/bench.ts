@@ -79,7 +79,7 @@ async function main() {
     }
     const counts=(await pool.query(`SELECT (SELECT count(*)::int FROM messages WHERE user_id=ANY($1::uuid[])) messages,(SELECT count(*)::int FROM growth_events WHERE user_id=$2) events`,[fixture.user,user])).rows[0];
     if(counts.messages!==40000) throw Error('fixture 消息数不是 40000');
-    const report={at:new Date().toISOString(),dataset:SEARCH_BENCH_VERSION,database:'knowverse_bench',postgres:(await pool.query('SELECT version() AS v')).rows[0].v,node:process.version,cpu:os.cpus()[0]?.model,counts,warmup:3,repeats:30,connection:'owner（不包含 RLS 开销）',rows};
+    const report={at:new Date().toISOString(),dataset:SEARCH_BENCH_VERSION,database:'knowverse_bench',postgres:(await pool.query('SELECT version() AS v')).rows[0].v,node:process.version,cpu:os.cpus()[0]?.model.trim(),counts,warmup:3,repeats:30,connection:'owner（不包含 RLS 开销）',rows};
     await fs.mkdir('docs/sql',{recursive:true});
     await fs.writeFile('docs/sql/bench-results.json',JSON.stringify(report,null,2)+'\n');
     const md=`# 五类查询基准\n\n> ${report.at}；命令：\`npm run bench\`。独立本机 knowverse_bench，${SEARCH_BENCH_VERSION} 合成数据。每类预热 3 次、采样 30 次；P50/P95 是应用往返耗时，非性能承诺。所有者连接，不包含 RLS 开销；时间轴与班级统计复用业务表，采用精简投影，完整业务查询仍需单独测量。\n\n- PostgreSQL：${report.postgres}\n- Node：${report.node}；CPU：${report.cpu}\n- 消息 ${counts.messages} 条（两人各半）；时间轴事件 ${counts.events} 条；班级仅 2 人，不能代表大班负载。\n\n| 查询 | 返回行 | P50 (ms) | P95 (ms) | 执行计划摘要 |\n|---|---:|---:|---:|---|\n${rows.map(r=>`| ${r.name} | ${r.rowCount} | ${r.p50.toFixed(3)} | ${r.p95.toFixed(3)} | ${r.planSummary.join(' / ')} |`).join('\n')}\n\n原始采样、SQL、参数和 EXPLAIN ANALYZE BUFFERS JSON 见 [bench-results.json](bench-results.json)。重复运行只替换本 fixture 的模拟用户及关联数据，保留其它数据。更多检索对照见 \`npm run bench:search\`（50 条词表/别名查询）。\n`;
