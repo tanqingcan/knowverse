@@ -28,7 +28,7 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   passwordHash: text("password_hash").notNull(),          // scrypt$salt$hash
   isDemo: boolean("is_demo").notNull().default(false),    // 预置演示账号（界面明确标注）
-  timezone: text("timezone").notNull().default("Asia/Taipei"),
+  timezone: text("timezone").notNull().default("Asia/Shanghai"),
   reducedMotion: boolean("reduced_motion").notNull().default(false),
   renderMode: text("render_mode").notNull().default("auto"),
   onboardedAt: ts("onboarded_at"),

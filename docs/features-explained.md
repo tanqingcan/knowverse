@@ -26,7 +26,7 @@
 | 班级星系要读别人的数据 | SECURITY DEFINER 函数 | 跨用户读只有一个入口，非成员直接 42501 | 第 4/8 章 |
 | 学生不知道该学什么 | 学习路线规划 | 递归 CTE + 拓扑排序，给出“下一步 + 理由” | 第 8 章（递归查询） |
 | 学生想知道这周学得怎样 | 学习周报 | 一条条 SQL 算出连续天数、漏斗、排名 | 第 8 章（窗口函数） |
-| 关系模式该到第几范式 | 范式分析 | 55 个关系逐表定级：46 BCNF、9 处受控冗余 | 第 6 章（关系数据理论） |
+> 2026-11-17复核：撤回原全库范式数量，按 `docs/schema/normalization-analysis.md` 的已确认FD与条件依赖分开讲解。
 
 ---
 
@@ -173,11 +173,11 @@
 - **意义**：老师一定会问“你的表是第几范式、为什么冗余”。我们需要能逐表回答，而不是笼统说“我们符合 3NF”。
 - **用了什么知识**：第 6 章函数依赖、候选键、1NF/2NF/3NF/BCNF/4NF、无损连接与依赖保持。
 - **例子**：
-  - 55 个关系里 **46 张 BCNF**；5 张 2NF（`learning_states`、`notes`、`attempts`、`growth_events`、`memories`）；4 张 1NF（`messages`、`concept_suggestions`、`message_citations`、`learning_evidence`）。
+> 2026-11-17复核：撤回原全库范式数量，按 `docs/schema/normalization-analysis.md` 的已确认FD与条件依赖分开讲解。
   - `messages` 为什么只有 1NF：候选键是 `(conversation_id, seq)`，而 `conversation_id → user_id`，`user_id` 只依赖键的一部分。我们保留它，是为了历史检索和 RLS 少一次 JOIN；一致性由**复合外键** `(conversation_id, user_id) → conversations(id, user_id)` 保证。
-  - `learning_states` 为什么是 2NF：`stage → stage_reason`（理由文案是阶段的固定模板）构成传递依赖；保留是为了档案页直接显示理由。
-  - `message_citations.quote` 为什么是 1NF：`chunk_id → quote`（片段不可变，引用是快照），保留是为了离线渲染与审计。
-- **怎么演示**：`npm run docs:keys`（55 个关系候选键）→ 打开 `docs/schema/normalization-analysis.md`（逐表定级、9 处冗余的收益/代价/补偿、4NF/5NF、答辩问答）。
+  - learning_states 是跨表派生汇总；暂不假定 stage 永远决定同一 stage_reason，不能据此机械定级。
+  - 同一chunk可被不同回答摘录不同quote，chunk_id→quote不成立；原1NF论证撤回。
+- **怎么演示**：导出候选键目录，说明可空唯一性和最小键，再讲 messages 的复合外键和引用摘录的反例。
 - **在哪**：`docs/schema/normalization-analysis.md`、`docs/schema/candidate-keys.md`、`scripts/keys-report.ts`。
 
 

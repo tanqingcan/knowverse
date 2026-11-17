@@ -41,14 +41,14 @@
 
 | 课堂知识点 | 我们的实现 | 现场演示 | 比课堂多走的一步 |
 |---|---|---|---|
-| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出（55 个关系、20 张有额外唯一键），再人工列非平凡 FD | `npm run docs:keys` | 键是自动生成的，不会和文档漂移 |
-| 1NF / 2NF / 3NF / BCNF | 55 个关系逐表定级：46 BCNF、5 2NF、4 1NF | `docs/schema/normalization-analysis.md` | 不是“都 BCNF”，而是每张非 BCNF 都给出 FD 与理由 |
-| 无损连接、依赖保持 | `plants` / `concepts` / `learning_states` 的分解与 Chase 论证 | `docs/schema/wide-table-vs-decomposed.md` | 配了宽表反例与三类异常 |
-| 4NF（多值依赖） | 别名与先修拆成两张表，避免两个独立 MVD | 同上 | 说明“为什么拆开就满足 4NF” |
-| 反规范化 | 9 处受控冗余（`user_id`、`quote`、`stage_reason`），每处配外键或不变量 | `npm run verify:invariants`（15 项） | 冗余不是“懒得拆”，而是有补偿机制 |
+| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出（55 个逻辑表），并区分可空/条件唯一性，再人工核对业务FD | `npm run docs:keys` | 键目录可再生成，业务FD仍需人工复核 |
+| 1NF / 2NF / 3NF / BCNF | 复核核心FD，撤回全库范式数量 | `docs/schema/normalization-analysis.md` | 区分全局与条件依赖 |
+| 无损连接、依赖保持 | `plants` / `concepts` / `learning_states` 的局部二元无损分解条件 | `docs/schema/wide-table-vs-decomposed.md` | 配了宽表反例与三类异常 |
+| 4NF（多值依赖） | 别名与先修拆成两张表，避免两个独立 MVD | 同上 | 只说明局部拆分理由，不宣称全库4NF |
+| 反规范化 | 区分用户归属冗余、引用事实与派生状态，注明约束/检查边界 | `npm run verify:invariants`（15 项） | 冗余不是“懒得拆”，而是有补偿机制 |
 | 范式与性能的取舍 | 同一查询走 `(user_id, concept_id, created_at)` 索引 vs 多一次 JOIN | `docs/features-explained.md` 第 18 条 | 用高频路径说明“为什么保留 1NF 的 messages” |
 
-**30 秒讲法**：“我们 55 个关系里 46 张是 BCNF；剩下 9 张不是做不到，而是把 `user_id` 或展示文案冗余进子表，换高频查询少一次 JOIN。每一处冗余都有复合外键或可执行不变量兜底，`verify:invariants` 15 项全过。”
+> 2026-11-17复核：撤回原全库范式数量，按 `docs/schema/normalization-analysis.md` 的已确认FD与条件依赖分开讲解。
 
 ## 第 7 章 数据库设计
 

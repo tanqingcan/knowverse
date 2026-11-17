@@ -38,6 +38,8 @@
     "eval:rag:review": "tsx scripts/eval-rag-review.ts",
     "search:install": "tsx scripts/install-search.ts",
     "bench:search": "tsx scripts/bench-search.ts",
+    "bench": "tsx scripts/bench.ts",
+    "bench:history": "tsx scripts/bench-history.ts",
     "memory:install": "tsx scripts/install-memory.ts",
     "eval:memory": "tsx scripts/eval-memory.ts"
   },

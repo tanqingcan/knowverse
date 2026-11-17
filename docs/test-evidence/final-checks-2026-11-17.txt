@@ -1,0 +1,83 @@
+KNOWVERSE 2026-11-17 本轮实际命令输出摘录
+本地 Windows / Node v22.18.0 / PostgreSQL 16.14 / Vitest 3.2.4
+起点：feat/a-final-integration / ae53fe6；工作区修改未提交/推送
+
+[独立 knowverse_test]
+$ npm test -- --reporter=default --reporter=json --outputFile=docs/test-evidence/vitest-2026-11-17.json
+Test Files  36 passed (36)
+     Tests  248 passed (248)
+  Duration  46.82s
+exit 0
+
+$ npm run db:reset
+✓ 已重置本地业务库
+✓ 业务库 migration 完成
+✓ 应用角色就绪：kv_app（NOSUPERUSER / NOBYPASSRLS，目标库 knowverse_test）
+✓ SQL 沙箱就绪：数据库 knowverse_sandbox，只读角色 kv_sandbox，数据集 school_v1
+✓ seed 完成
+exit 0（显式环境 DATABASE_URL 指向 knowverse_test；不是业务库）
+
+$ npm run verify:invariants（干净种子库）
+15 项检查：0 项错误，0 项警告
+exit 0
+
+$ npm run security:audit（干净种子库）
+6 项安全检查：0 项失败
+exit 0（S6 插值位置仍需人工审阅；已检查固定 SQL 片段与参数化值）
+
+[最终代码]
+$ npm run typecheck
+> tsc --noEmit
+exit 0
+
+$ npm run build
+✓ Compiled successfully in 5.7s
+✓ Generating static pages (45/45)
+exit 0
+
+[当前 knowverse 业务库，无 reset/seed]
+$ npm run db:migrate
+✓ 业务库 migration 完成
+✓ 应用角色就绪：kv_app（NOSUPERUSER / NOBYPASSRLS，目标库 knowverse）
+✓ SQL 沙箱就绪：数据库 knowverse_sandbox，只读角色 kv_sandbox，数据集 school_v1
+exit 0
+
+$ npm run verify:invariants
+! W1 outbox 未投递事件未堆积
+  {"topic":"growth.stage_changed","oldest":"2026-11-16T11:55:37.976Z"}
+15 项检查：0 项错误，1 项警告
+exit 0（警告保留，未清空队列）
+
+$ npm run security:audit
+6 项安全检查：0 项失败
+exit 0
+
+[基准]
+$ npm run bench
+两次成功，均 40000 条消息、2000 条模拟时间轴事件、5 类查询各预热 3 次/采样 30 次。
+第二次结果见 docs/sql/bench-results.json / .md。
+exit 0
+另验证：BENCH_DATABASE_URL 指向业务库或非本地地址时均退出 1。
+旧 knowverse_bench 迁移 journal 不兼容，TEMPLATE 备份后才重建；备份库 knowverse_bench_backup_1794886549104。
+
+$ npm run bench:search（SEARCH_BENCH_OUTPUT 指向独立新输出）
+{"before":{"p50":84.67149999999674,"p95":103.16929999999775,"hitQueries":40,"exactCount":40},"after":{"p50":35.749400000000605,"p95":49.03399999999965,"hitQueries":50,"exactCount":50}}
+exit 0，C 原有历史结果未覆盖。
+
+[HTTP / 浏览器]
+$ node tests/e2e/qa-api.mjs
+7 组检查通过，exit 0；完整结果 qa-api-2026-11-17.json。
+$ node tests/e2e/demo-flow.mjs test-results/e2e-2026-11-17（E2E_STATIC=1）
+15/15 检查点通过，exit 0；完整结果 e2e-2026-11-17.json。
+
+[静态检查]
+git diff --check：exit 0（journal 仅有 Windows 换行提示）
+CI YAML：PyYAML 解析通过。
+原有 package.json scripts：逐项与 HEAD 比对，全部保留。
+新交付文档相对链接：逐项解析，全部存在。
+无 .env 的临时工作目录：setup-env 保留 CI 的 kv_app 至 TEST_APP_DATABASE_URL，并将 owner 定向 knowverse_test。
+
+[未执行]
+远程 GitHub CI、main 保护、tag/Release、生产备份恢复演练。
+真实模型调用、真实 GPU/手机/Safari/屏幕阅读器、本轮 3D 完整业务流程。
+正式课程报告/PPT 不在范围内。
