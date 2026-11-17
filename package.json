@@ -18,6 +18,7 @@
     "demo:reset": "tsx scripts/seed.ts",
     "docs:diagrams": "python3 docs/er/gen_er.py && python3 docs/schema/gen_schema.py",
     "docs:dictionary": "tsx scripts/docs-dictionary.ts",
+    "docs:er:export": "tsx scripts/export-er-metadata.ts",
     "docs:keys": "tsx scripts/keys-report.ts",
     "audit:partitions": "tsx scripts/audit-partitions.ts",
     "verify:invariants": "tsx scripts/invariants.ts",

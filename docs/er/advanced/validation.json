@@ -1,0 +1,17 @@
+{
+  "tables": 55,
+  "actual_foreign_keys": 106,
+  "rls_tables": 23,
+  "business_triggers": 11,
+  "groups_exact_cover": true,
+  "field_level_diagrams": 8,
+  "briefing_model_entities": 15,
+  "briefing_model_actual_fks": 15,
+  "embedded_figures": 5,
+  "briefing_figure_hash_matches": true,
+  "source_remaining_prose_preserved": true,
+  "rendered_pages": 9,
+  "all_pages_visually_reviewed": true,
+  "renderer_cleanup_warning": true,
+  "typecheck": "passed"
+}
