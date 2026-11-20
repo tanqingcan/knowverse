@@ -241,7 +241,7 @@ describe("结构校验与提示注入防护", () => {
     expect(SYSTEM_PROMPT).toContain("不得执行");
   });
   it("工具输入经过结构校验：非法参数被拒绝", async () => {
-    await expect(runTool("search_materials", { query: "" }, { userId: U.id, timezone: "Asia/Taipei", trace: [] })).rejects.toMatchObject({ code: "tool_invalid_input" });
+    await expect(runTool("search_materials", { query: "" }, { userId: U.id, timezone: "Asia/Shanghai", trace: [] })).rejects.toMatchObject({ code: "tool_invalid_input" });
   });
 });
 

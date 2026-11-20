@@ -14,7 +14,7 @@ export default function Page() {
   useEffect(() => { const q = new URLSearchParams(location.search); setBloom(q.has("bloom")); setOne(q.get("sp")); }, []);
   if (one) return (
     <div style={{ width: "100vw", height: "100vh", background: "linear-gradient(#9CAFC5,#F2C9B6)" }}>
-      <Canvas shadows camera={{ position: [0, 0.48, 0.32], fov: 30 }} onCreated={({ camera }) => camera.lookAt(0, 0.27, 0)}>
+      <Canvas shadows camera={{ position: [0, 0.65, 1.4], fov: 30 }} onCreated={({ camera }) => camera.lookAt(0, 0.27, 0)}>
         <hemisphereLight args={["#e9e2ff", "#8c7a6a", 0.9]} />
         <directionalLight position={[-1.5, 2.5, 2]} intensity={2.2} color="#ffe6c8" castShadow />
         {["bud", "bloom"].map((st, i) => <group key={st} position={[(i - 0.5) * 0.16, 0, 0]}><Flower3D species={one} color={one === "sunflower" ? "gold" : one === "iris" ? "mist" : one === "lily" ? "cream" : "rose"} stage={st as any} seed={5} reduced /></group>)}

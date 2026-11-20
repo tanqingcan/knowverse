@@ -211,6 +211,20 @@
       "when": 1793610000000,
       "tag": "0029_rls_new_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793620000000,
+      "tag": "0030_rag_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793630000000,
+      "tag": "0031_default_timezone",
+      "breakpoints": true
     }
   ]
 }
