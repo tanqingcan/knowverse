@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>知屿 KNOWVERSE · 数据库阶段汇报动画版</title>
+<style>
+:root{--paper:#fcfaf5;--card:#fff;--ink:#192e28;--muted:#4d625a;--line:#d4e0d7;--green:#185c4b;--soft:#e7f2ea;--gold:#945122;--warm:#fbefdd;--shadow:0 12px 35px #233e2610}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.75 system-ui,"Microsoft YaHei",sans-serif}a{color:var(--green)}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #b26a32;outline-offset:3px}
+.wrap{max-width:1200px;margin:auto;padding:0 30px}.hero{padding:60px 0 47px;background:#eaf1e5;border-bottom:1px solid var(--line)}.hero-grid{display:grid;grid-template-columns:1.9fr 1fr;gap:32px;align-items:end}.kicker{font-weight:700;color:var(--green);letter-spacing:.04em}.hero h1{font-size:clamp(34px,5vw,62px);line-height:1.16;margin:.22em 0 .25em;letter-spacing:-.04em}.hero p{margin:0;max-width:690px}.intro{font-size:20px;line-height:1.65}.hero aside{border-left:2px solid #aac5af;padding-left:25px}.hero aside strong{display:block;margin-bottom:6px}.hero aside p{color:var(--muted)}
+nav{border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;z-index:2}.nav-row{display:flex;gap:20px;align-items:center;overflow:auto;white-space:nowrap;padding-top:11px;padding-bottom:11px}.nav-row a{text-decoration:none;font-size:15px;font-weight:650}.nav-row a:hover{text-decoration:underline}.nav-row .print{margin-left:auto}
+section{margin:54px 0;scroll-margin-top:76px}section h2{font-size:clamp(26px,3.4vw,36px);line-height:1.25;margin:0 0 14px;letter-spacing:-.025em}h3{font-size:21px;line-height:1.35;margin:21px 0 8px}p{margin:0 0 15px}.subtle,figcaption,.small,caption{color:var(--muted);font-size:14px}.small{line-height:1.65}.lead{max-width:890px;font-size:19px}.panel,details{background:var(--card);border:1px solid var(--line);border-radius:14px}.panel{padding:20px;margin:16px 0}.source{background:var(--soft);border-left:4px solid #72a991;padding:13px 16px;margin:16px 0}.source p:last-child{margin:0}.warm{background:var(--warm);border-color:#d09b60}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.tile{padding:14px 17px;background:#fff;border:1px solid var(--line);border-radius:13px}.tile strong{display:block}.tile p{margin:3px 0 0;color:var(--muted);font-size:15px}
+figure{margin:12px 0}figure img{width:100%;height:auto;display:block}.preview{padding:0;border:0;border-radius:8px;background:#f7f8f4;width:100%;display:block;overflow:hidden}.preview:hover{box-shadow:0 0 0 2px #8db4a2}.preview img{aspect-ratio:auto}.preview.feature{background:#fcfcfd}.shot .preview img{aspect-ratio:1.6;object-fit:contain}.shot figcaption{padding:8px 0}.figure-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}.figure-head strong{font-size:17px}.btn,.print{border:1px solid #a1b6aa;border-radius:8px;padding:5px 11px;color:var(--green);background:white;white-space:nowrap;font-weight:650;font-size:14px}.btn:hover,.print:hover{background:var(--soft)}
+details{margin:12px 0;padding:0 16px}summary{cursor:pointer;font-weight:700;color:var(--green);padding:11px 0}details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:12px}.details-body{padding-bottom:10px}.details-body>p:last-child{margin-bottom:2px}
+.scroll{overflow-x:auto;margin-top:8px}table{width:100%;border-collapse:collapse;text-align:left;font-size:15px;background:white}caption{text-align:left;padding:0 0 8px}th,td{padding:8px 11px;border-bottom:1px solid #e2ebe4;vertical-align:top}th{background:#edf4ec;color:#274c40;white-space:nowrap}tr:last-child td{border-bottom:0}.schema td:first-child code{font-weight:700}.schema th:nth-child(2){width:54%}.code-tags{display:flex;flex-wrap:wrap;gap:4px 7px}code{font-family:Consolas,"Cascadia Mono",monospace;font-size:.91em;color:#23544a;overflow-wrap:anywhere}code.key{padding:1px 4px;background:#e8f0e7;border-radius:4px;white-space:nowrap}.keymark{font:700 10px system-ui,sans-serif;margin-left:3px;color:#6c451b}.chain{border:1px solid var(--line);border-radius:9px;background:#f7faf7;padding:12px 14px;margin:10px 0;font-size:16px;overflow-wrap:anywhere}pre{padding:14px;border-radius:8px;background:#1d352c;color:#e6f2e9;font:14px/1.6 Consolas,monospace;overflow:auto}pre code{color:inherit;overflow-wrap:normal}
+.flat-list{padding-left:25px;margin:8px 0 13px}.flat-list li{padding:4px 0}.decision-list{display:grid;gap:10px}.decision-list article{padding:14px;border:1px solid var(--line);border-radius:10px;background:#f8faf6}.decision-list h4{margin:0 0 5px;font-size:17px}.decision-list p{margin-bottom:4px}.sample-head{margin-top:20px}
+#operation-demo{padding:19px;margin:18px 0}.demo-steps,.demo-controls{display:flex;flex-wrap:wrap;gap:7px}.demo-steps{margin-bottom:12px}.demo-steps button[aria-current=step],#demo-play[data-playing=true]{background:var(--green);color:#fff;border-color:var(--green)}.demo-controls{align-items:center;margin-top:12px}.demo-controls .btn:disabled{opacity:.5;cursor:default}.demo-position{font-size:14px;color:var(--muted);margin-left:auto}.demo-pane{display:grid;grid-template-columns:.85fr 1.15fr;gap:13px;padding:13px 0 7px;border-top:1px solid var(--line);align-items:start}.demo-pane[hidden],.demo-tools[hidden]{display:none}.demo-pane h4{font-size:17px;margin:0 0 7px}.demo-interface,.demo-db{background:#f5f8f3;border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}.demo-interface p:last-child{margin-bottom:0}.demo-bubble{background:#e0eee4;border-left:3px solid #5d9279;border-radius:6px;padding:10px 12px;margin-bottom:8px}.demo-db .scroll{margin-top:3px}.demo-db td,.demo-db th{padding:6px 8px;font-size:14px}.demo-db td:first-child{white-space:nowrap}.demo-db td:last-child{min-width:115px}.demo-db tr[data-op=insert] td{background:#e6f2e6}.demo-db tr[data-op=read] td{background:#f8efd9}.demo-pane.is-animated .demo-bubble,.demo-pane.is-animated .demo-db tr[data-op]{animation:entry .48s ease both}.demo-pane.is-animated .demo-db tr[data-op]:nth-child(2){animation-delay:.12s}.demo-pane.is-animated .demo-db tr[data-op]:nth-child(3){animation-delay:.24s}@keyframes entry{from{opacity:.1;transform:translateY(9px)}to{opacity:1;transform:none}}.demo-progress{height:4px;background:#e1e9e1;border-radius:5px;margin:8px 0}.demo-progress span{width:20%;height:100%;display:block;background:#528b70;border-radius:5px;transition:width .25s ease}.demo-row-explain{margin:8px 0 0;color:var(--muted);font-size:14px}
+.switcher{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px}.switcher button{padding:7px 13px;border:1px solid #abc3b4;border-radius:8px;background:white;color:var(--green);font-weight:640}.switcher button[aria-pressed=true]{background:var(--green);color:white;border-color:var(--green)}.walk{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;list-style:none;padding:0;margin:12px 0}.walk li{background:#f5f8f3;border:1px solid var(--line);border-radius:9px;padding:11px 12px;animation:appear .22s ease both}.walk li:nth-child(2){animation-delay:.06s}.walk li:nth-child(3){animation-delay:.12s}.walk strong{display:block;color:var(--green)}.walk p{font-size:15px;margin:3px 0 0}.walk-title{font-weight:700;margin:0}.walk-result{padding:9px 12px;background:#e8f2e9;border-radius:8px;margin:12px 0 2px;font-weight:650}.counter{font-variant-numeric:tabular-nums;white-space:nowrap}@keyframes appear{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+.chart{margin:12px 0}.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;margin:4px 0 11px}.swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px}.old{background:#aa642d}.new{background:#21705b}.chart-group{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:6px 14px;margin:9px 0}.bars{min-width:0}.track{position:relative;background:#eef1ec;border-radius:4px;height:15px;margin:5px 0;width:100%}.bar{display:block;border-radius:4px;height:100%}.bar-label{font-size:13px;line-height:1.25;font-variant-numeric:tabular-nums;display:block;margin-top:2px}.axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);border-top:1px solid #dce4db;margin:10px 0 0 164px}.comparison{border-left:4px solid #aa642d;background:#fbf1e1;padding:12px 15px}.comparison strong{display:block}
+footer{border-top:1px solid var(--line);padding:22px 0 39px;color:var(--muted);font-size:14px}dialog{width:min(96vw,1500px);max-width:none;max-height:92vh;border:1px solid var(--line);border-radius:12px;padding:0;background:var(--paper);box-shadow:var(--shadow);overflow:hidden}dialog::backdrop{background:#10251fc9}.dialog-head{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--line)}.dialog-tools{display:flex;align-items:center;gap:6px}.dialog-view{overflow:auto;max-height:calc(92vh - 95px);background:#fcfcfd;padding:8px}.dialog-view img{display:block;width:100%;max-width:none;height:auto;margin:auto}.dialog-view:focus-visible{outline-offset:-3px}.skip{position:absolute;left:-10000px}.skip:focus{left:12px;top:12px;background:#fff;padding:6px;z-index:4}
+@media(max-width:800px){.hero-grid,.cols,.demo-pane{grid-template-columns:1fr}.hero{padding:34px 0 26px}.hero aside{padding-left:13px}.wrap{padding:0 17px}section{margin:35px 0}.walk,.tiles{grid-template-columns:1fr}.nav-row{gap:14px}.chart-group{grid-template-columns:95px 1fr}.axis{margin-left:109px}.panel,#operation-demo{padding:13px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}@media print{body{background:white;font-size:11pt}.wrap{max-width:none;padding:0}.hero{padding:12px 0;background:white}nav,.dialog-head,.switcher,.figure-head .btn,.demo-tools,dialog,.skip{display:none}section{margin:20px 0}.panel,figure,.tile,.demo-pane{break-inside:avoid}details:not([open]){display:none}*{print-color-adjust:exact}h2,h3{break-after:avoid}}
+</style>
+</head>
+<body>
+<a class="skip" href="#report">跳到正文</a>
+<header class="hero"><div class="wrap hero-grid">
+  <div><div class="kicker">数据库系统概论 · 阶段汇报</div><h1>知屿 KNOWVERSE</h1><p class="intro">学习问答和作答记录怎样存进数据库，又怎样准确取出来？</p></div>
+  <aside><strong>本次展示三件事</strong><p>看 ER 图如何落成关系表，说明记录如何保持一致，用一组可核对的数据演示查询优化。</p></aside>
+</div></header>
+<nav aria-label="报告目录"><div class="wrap nav-row"><a href="#overview">系统概览</a><a href="#model">ER 图与关系表</a><a href="#lookup">查询怎么改</a><a href="#measure">实测结果</a><a href="#integrity">事务和权限</a><button class="print" type="button">打印</button></div></nav>
+<main class="wrap" id="report">
+
+<section id="overview" aria-labelledby="h-overview">
+<h2 id="h-overview">我们实现了什么</h2>
+<p class="lead">知屿是一个个人学习助手。它保存课程和知识点、历史问答、资料版本、练习及评价，让学生能找回问过的问题，也能回查掌握阶段依据了哪些记录。</p>
+<p><strong>PostgreSQL 16</strong> 是我们使用的关系数据库管理系统，16 是版本号。它负责保存数据、执行 SQL、检查表约束和处理事务。我们定义业务表、表之间的关系、访问权限和查询方式。</p>
+<div id="operation-demo" class="panel" aria-labelledby="demo-title">
+<h3 id="demo-title" style="margin-top:0">操作动画 · 跟着一条问答看数据库</h3>
+<p class="small">左边是用户操作示意，右边是对应关系表中的行。编号与 SQL 结果为教学示例，可对照下方运行截图。</p>
+<div class="demo-tools" hidden>
+  <div class="demo-steps" role="group" aria-label="选择演示步骤">
+    <button class="btn" type="button" data-scene="0">1 提问</button><button class="btn" type="button" data-scene="1">2 看引用</button><button class="btn" type="button" data-scene="2">3 确认标签</button><button class="btn" type="button" data-scene="3">4 评价作答</button><button class="btn" type="button" data-scene="4">5 找回问答</button>
+  </div>
+  <div class="demo-progress" aria-hidden="true"><span></span></div>
+</div>
+<div id="demo-scenes" aria-live="polite" aria-atomic="true">
+<article class="demo-pane" data-title="保存提问和临时回答">
+  <div class="demo-interface"><h4>发送一条提问</h4><p class="demo-bubble">LEFT JOIN 后，把右表条件写进 WHERE，为什么没选课的学生消失了？</p><p>会话「连接查询」中出现一条新问题。助手回答显示为生成中。</p></div>
+  <div class="demo-db"><h4>写入两条消息</h4><div class="scroll"><table><thead><tr><th scope="col">表</th><th scope="col">行</th><th scope="col">关键列值</th></tr></thead><tbody>
+  <tr data-op="insert"><td><code>messages</code></td><td>Q1</td><td><code>role=user</code>，<code>conversation_id=C1</code></td></tr>
+  <tr data-op="insert"><td><code>messages</code></td><td>A11</td><td><code>role=assistant</code>，<code>reply_to_id=Q1</code>，<code>status=pending</code></td></tr>
+  </tbody></table></div><p class="demo-row-explain">两行共享会话编号。回答通过 <code>reply_to_id</code> 找回原问题。</p></div>
+</article>
+<article class="demo-pane" data-title="记录并读取资料引用">
+  <div class="demo-interface"><h4>点开回答里的「资料1」</h4><p class="demo-bubble">WHERE 会过滤右表为 NULL 的行。<strong>[资料1]</strong></p><p>系统打开《第3章 连接查询（课件）》v1 的第 4 页，并标出处于这一页的片段。</p></div>
+  <div class="demo-db"><h4>写引用，再沿外键读原文</h4><div class="scroll"><table><thead><tr><th scope="col">表</th><th scope="col">操作</th><th scope="col">关键列值</th></tr></thead><tbody>
+  <tr data-op="insert"><td><code>messages</code></td><td>更新</td><td>A11 写入正文，<code>status=complete</code></td></tr>
+  <tr data-op="insert"><td><code>message_citations</code></td><td>写入</td><td><code>message_id=A11</code>，<code>chunk_id=P81</code>，保存本次摘录</td></tr>
+  <tr data-op="read"><td><code>material_chunks</code></td><td>读取</td><td>找到 P81 的原文、版本编号和位置</td></tr>
+  </tbody></table></div><p class="demo-row-explain">「资料1」是本轮展示编号。<code>chunk_id</code> 才是回查时使用的外键。</p></div>
+</article>
+<article class="demo-pane" data-title="确认问题的知识点标签">
+  <div class="demo-interface"><h4>确认候选知识点</h4><p class="demo-bubble">「左外连接」从候选变为已确认。</p><p>这是普通对话中确认系统候选标签的示例。直接从知识点入口提问时，当前知识点可随问题直接确认。</p></div>
+  <div class="demo-db"><h4>更新同一条标签并记录学习证据</h4><div class="scroll"><table><thead><tr><th scope="col">表</th><th scope="col">操作</th><th scope="col">关键列值</th></tr></thead><tbody>
+  <tr data-op="insert"><td><code>message_concepts</code></td><td>更新</td><td><code>(Q1, K1)</code> 的 <code>status</code> 从 <code>candidate</code> 改为 <code>confirmed</code></td></tr>
+  <tr data-op="insert"><td><code>learning_evidence</code></td><td>写入</td><td>E1，<code>message_id=Q1</code>，<code>kind=asked</code></td></tr>
+  </tbody></table></div><p class="demo-row-explain">K1 对应「左外连接」。标签用于检索，证据用于重算学习状态。</p></div>
+</article>
+<article class="demo-pane" data-title="运行 SQL 练习并结算">
+  <div class="demo-interface"><h4>提交独立 SQL 变式题</h4><p class="demo-bubble">学生的查询结果与参考结果一致，判定正确。</p><p>本题由程序在独立沙箱中执行两条查询并比较结果。题目版本决定使用哪套参考 SQL。</p></div>
+  <div class="demo-db"><h4>结算事务保存答案、评价和证据</h4><div class="scroll"><table><thead><tr><th scope="col">表</th><th scope="col">操作</th><th scope="col">关键列值</th></tr></thead><tbody>
+  <tr data-op="insert"><td><code>attempts</code></td><td>更新</td><td>S1，<code>task_version_id=V1</code>，保存提交的 SQL</td></tr>
+  <tr data-op="insert"><td><code>evaluations</code></td><td>写入</td><td><code>attempt_id=S1</code>，<code>evaluator=rule_sql</code>，<code>verdict=correct</code></td></tr>
+  <tr data-op="insert"><td><code>learning_evidence</code></td><td>写入</td><td>证据引用 S1。图中节选这次通过的证据。</td></tr>
+  </tbody></table></div><p class="demo-row-explain">作答与评价各存一次，状态和成长事件也由结算事务维护。</p></div>
+</article>
+<article class="demo-pane" data-title="从标签找回原问答">
+  <div class="demo-interface"><h4>在「回顾」筛选左外连接</h4><p class="demo-bubble">结果出现 Q1。点击它后，回到会话 C1 并高亮该问题。</p><p>本步只演示读取，原问答和它已有的资料引用仍在原来的表里。</p></div>
+  <div class="demo-db"><h4>先读标签，再取原消息</h4><div class="scroll"><table><thead><tr><th scope="col">表</th><th scope="col">操作</th><th scope="col">关键列值</th></tr></thead><tbody>
+  <tr data-op="read"><td><code>message_concepts</code></td><td>读取</td><td>筛选 <code>concept_id=K1</code>，命中 Q1</td></tr>
+  <tr data-op="read"><td><code>messages</code></td><td>读取</td><td>这组显示 Q1 + A11，定位用 C1 和 Q1</td></tr>
+  </tbody></table></div><p class="demo-row-explain">下面的查询章节再演示一个问题有多次回答时，怎么避免旧回复误命中、同一组问答重复出现。</p></div>
+</article>
+</div>
+<div class="demo-tools demo-controls" hidden role="group" aria-label="动画播放控制">
+  <button class="btn" type="button" id="demo-prev">上一步</button><button class="btn" type="button" id="demo-play">播放动画</button><button class="btn" type="button" id="demo-next">下一步</button><button class="btn" type="button" id="demo-reset">回到开头</button><span class="demo-position" id="demo-position"></span>
+</div>
+</div>
+<details id="acceptance-screenshots">
+<summary>展开实际运行截图 · 问答、判题、历史筛选与定位</summary>
+<div class="tiles details-body">
+@@SHOTS@@
+</div>
+</details>
+</section>
+
+<section id="model" aria-labelledby="h-model">
+<h2 id="h-model">从 ER 图到实际关系表</h2>
+<p class="lead">一份资料可以有多个版本，每个版本包含多个片段。消息可以引用多个片段，同一片段也能被多条消息引用。练习作答与题目版本绑定，练习证据和当前的掌握阶段分开保存。</p>
+<figure class="panel">
+<div class="figure-head"><strong>学习事实的可追溯概念模型</strong><button class="btn zoom-trigger" data-target="er-image" type="button">全屏放大 ER 图</button></div>
+<button class="preview feature zoom-trigger" data-target="er-image" type="button" aria-label="放大查看完整 ER 图"><img id="er-image" src="@@ER@@" alt="Chen ER 图。左侧资料、版本和片段，中间会话、消息、引用、知识点和当前状态，右侧题目、作答、评价与证据。"></button>
+<figcaption>概念图精选 13 个实体和 12 个联系。全库目录记录 55 张逻辑表、106 条外键。统计范围排除分区子表和视图。</figcaption>
+</figure>
+<div class="source"><p><strong>椭圆画的是属性。</strong> 图里一共有 21 个属性椭圆。许多实体只画了一个带下划线的键属性，是为了先看清关系。也画了标题、角色、置信度等代表属性。“摘录”和“引用顺序”接在引用菱形上，因为它们属于这一次引用。下方把常用属性展开成实际列。</p></div>
+<div class="tiles">
+<div class="tile"><strong>矩形与椭圆</strong><p>矩形是业务实体，椭圆是属性。下划线标明用于识别实体的键属性。</p></div>
+<div class="tile"><strong>菱形与基数</strong><p>菱形描述实体之间的联系。1:N 是一对多，M:N 是多对多，双线表示全部参与。</p></div>
+<div class="tile"><strong>消息的 ISA 小图</strong><p>消息按角色细分为用户消息和助手消息。两类共用 messages 表，由 role 列区分。</p></div>
+</div>
+<h3>点击一次资料引用，数据库读了哪些记录</h3>
+<p>举个例子，学生问「为什么把右表条件写在 WHERE 里，左外连接的结果会少几行？」回答正文里出现「资料1」。点击这个编号，系统需要打开<em>这一次回答所用的那个片段</em>，并显示当时的版本和位置。</p>
+<ol class="flat-list">
+<li><strong>后端先找材料。</strong> 用提问文字、当前学科或知识点等条件，从用户有权看的课程资料中找出一小组片段。后端给它们编成本轮的「资料1、资料2……」，同时记住每个编号对应的片段 ID。</li>
+<li><strong>生成端选要引用的编号。</strong> 真实模型模式由模型选择要引用编号和摘录，演示模式由现有规则生成。后端检查编号是否属于本轮候选且在正文出现，有摘录时还检查它能否在片段原文中找到。这个检查能确认出处，回答的推理是否充分还需要单独核对。</li>
+<li><strong>保存引用联系。</strong> 后端把「资料1」翻译成真正的片段 ID，在 <code>message_citations</code> 写一行。比如「回答 A12 引用了片段 P81，摘录是……」。点击引用时用 <code>chunk_id</code> 找到 P81，再沿 <code>version_id</code> 找到那版资料。</li>
+</ol>
+<div class="chain"><strong>实测时的两条引用</strong><br>资料1 · 《第3章 连接查询（课件）》v1 · 第 4 页幻灯片<br>资料2 · 《第3章 SQL 连接查询（讲义）》v2 · 第 10 段</div>
+<div class="source"><p><strong>存几个编号，比抄几遍原文更合适。</strong> 完整片段只保存在 <code>material_chunks.content</code>。每条引用保存回答 ID、片段 ID 和本次选的摘录。同一片段可以被很多回答引用，每次摘录可以不同。上传新版本时，旧引用仍指向原来的片段记录。</p></div>
+<h3>标注、引用、评价为什么分开存</h3>
+<div class="decision-list">
+<article><h4>① 引用回答「这句话用了哪段资料」</h4><p>一行把一条回答连到一个资料片段，附上引用编号、顺序和摘录。回答可能引多段原文，一段原文也可能被多条回答引用。</p></article>
+<article><h4>② 标注回答「这条消息讲哪个知识点」</h4><p>系统用问题和知识点目录匹配，真实模型模式也会参考模型提出的知识点名称。自动匹配先存为候选标签。学生从某个知识点入口提问时，系统会为该问题直接记录当前知识点。用户也可以手动确认、移除或补标签。</p><p class="small">状态是具体关联的一列。同一条消息可以从「候选」改为「确认」或「拒绝」。当前历史筛选纳入候选和已确认，排除已拒绝。确认用户提问上的标签可以产生一条「提问」证据。</p></article>
+<article><h4>③ 评价回答「这一次作答结果怎么样」</h4><p>每次练习先确定题目版本。选择题比较选项，数值题按允许误差判断，SQL 题在独立沙箱中对照提交 SQL 和参考 SQL 的查询结果。开放解释题在真实模型模式按公开评分维度给出评价，演示模式按关键词规则。</p><p class="small">作答表存提交的答案，评价表存判题方式、结论、分数和反馈。作答刚开始时可以没有评价，结算时一条作答最多对应一条评价。证据表记录这次活动对学习阶段有什么意义，例如是否使用提示。</p></article>
+</div>
+<p class="sample-head"><strong>究竟要存多少？</strong> 以一问一答、两个引用、一个已确认标签和一个候选标签为例。这个例子会有两条消息、两条引用和两条标签。一份讲义以及它的片段可以供后续回答反复引用。只聊天时没有作答与评价记录，开始一次练习才有一条作答，判题完成后才写评价。</p>
+<p>分成多张表是为了让不同事实可以独立变化。改一个标签只更新对应关联。展示时用编号把需要的行连起来，已有正文和资料片段可以重复使用。</p>
+<h3>看一条问答怎么存</h3>
+<p>表中的一行是一个记录，列名说明记录有什么信息。主键唯一标识一行，外键把这行接到被引用的记录。这里用 <code>C1</code>、<code>Q1</code> 等简写实际的 UUID，列出报告里用得到的部分。</p>
+<div class="cols">
+<div class="panel"><strong>会话和消息</strong><div class="chain"><code>conversations.id = C1</code><br>标题「连接查询」，归属用户 U1</div><div class="chain"><code>messages.id = Q1</code><br>属于 C1，角色是 user，<code>seq = 1</code>，正文是「为什么没选课的学生消失了？」</div><div class="chain"><code>messages.id = A12</code><br>属于 C1，是对 Q1 的第二次回答，<code>reply_to_id = Q1</code>，<code>seq = 3</code></div></div>
+<div class="panel"><strong>知识点和标签</strong><div class="chain"><code>concepts.id = K1</code><br>名称「左外连接」</div><div class="chain"><code>message_concepts</code><br><code>(Q1, K1, confirmed)</code><br><code>(A12, K1, confirmed)</code></div><p class="small">这两行分别说「问题 Q1 涉及左外连接」和「回答 A12 涉及左外连接」。<code>(message_id, concept_id)</code> 是联合主键，确保同一条消息与同一个知识点只关联一次。</p></div>
+</div>
+<details open><summary>实际列 · 会话、消息、知识点与标签</summary><div class="details-body">@@SCHEMA_CHAT@@</div></details>
+<details><summary>展开实际列 · 资料、版本、片段与引用</summary><div class="details-body"><p>例子中，回答 A12 的一条引用通过 <code>chunk_id</code> 找到片段，通过 <code>version_id</code> 找到版本号，再通过 <code>material_id</code> 找到资料标题。<code>quote</code> 保存这次引用实际摘录的文字。</p>@@SCHEMA_SOURCE@@<figure class="shot">@@SOURCE_SHOT@@</figure></div></details>
+<details><summary>展开实际列 · 题目版本、作答、评价与学习状态</summary><div class="details-body"><p>作答记录引用一个确定的题目版本。评价表的 <code>attempt_id</code> 唯一，因此一次作答最多有一条评价。每位用户的每个知识点有一条当前状态，来源与撤销时间保留在证据表。</p>@@SCHEMA_PRACTICE@@</div></details>
+</section>
+
+<section id="lookup" aria-labelledby="h-lookup">
+<h2 id="h-lookup">历史问答为什么要换一种查法</h2>
+<p class="lead">动画最后一步在「回顾」面板选了「左外连接」知识点。下面把同一个问题放到四组数据里，只按知识点筛选。我们要从 U1 的历史中找出相关问题，每个问题显示一行，旁边配它最近的一次回答。</p>
+<p><strong>第一步先读懂一组问答。</strong> Q1 是动画里学生的提问，A11 是第一次回答。这里假设它后来又得到一条新回答 A12。两条回答的 <code>reply_to_id</code> 都等于 Q1。A11 的 <code>seq</code> 是 2，A12 的是 3，因此现在显示 Q1 + A12。知识点名称「左外连接」对应 ID <code>K1</code>，用这个号码去关联表找标签。</p>
+<p><strong>然后判断要不要显示这组。</strong> 找到 Q1 或 A12 其中一条的有效 K1 标签就够了。即使两条都带同一标签，页面仍然只有一组。旧回答 A11 只用于回顾历史，标签筛选看问题和当前最新回答。</p>
+
+<div class="panel">
+<h3 style="margin-top:0">跟着四组小数据走一遍</h3>
+<p class="small">教学示意。Q 表示问题，A 表示回答。A21 是 Q2 的第 1 次回答，A22 是第 2 次。四个问题都属于同一用户，Q4 最新。</p>
+<details><summary>展开两张原始样例表 · 先看数据库手里有什么</summary><div class="details-body">
+<div class="cols"><div class="scroll"><table><caption>消息表 <code>messages</code> 节选。空表示该消息本身是问题</caption><thead><tr><th scope="col">消息 ID</th><th scope="col">指向问题</th><th scope="col">序号</th><th scope="col">内容简述</th></tr></thead><tbody>
+<tr><td>Q1</td><td>空</td><td>1</td><td>没选课的学生为什么消失？</td></tr><tr><td>A11</td><td>Q1</td><td>2</td><td>检查 WHERE 条件。</td></tr><tr><td>A12</td><td>Q1</td><td>3</td><td>详细解释 LEFT JOIN 中的 NULL 行。</td></tr>
+<tr><td>Q2</td><td>空</td><td>4</td><td>WHERE 和 ON 在哪一步起作用？</td></tr><tr><td>A21</td><td>Q2</td><td>5</td><td>第一次回答举了左外连接例子。</td></tr><tr><td>A22</td><td>Q2</td><td>6</td><td>第二次回答只解释语法。</td></tr>
+<tr><td>Q3</td><td>空</td><td>7</td><td>内连接怎么写？</td></tr><tr><td>A31</td><td>Q3</td><td>8</td><td>用 INNER JOIN 连接两张表。</td></tr><tr><td>Q4</td><td>空</td><td>9</td><td>怎么保留所有学生？</td></tr><tr><td>A41</td><td>Q4</td><td>10</td><td>用 LEFT JOIN 保留左表学生。</td></tr>
+</tbody></table></div><div class="scroll"><table><caption>标签表 <code>message_concepts</code> 里与 K1 有关的 5 行</caption><thead><tr><th scope="col">消息 ID</th><th scope="col">知识点 ID</th><th scope="col">标签状态</th></tr></thead><tbody><tr><td>Q1</td><td>K1</td><td>已确认</td></tr><tr><td>A12</td><td>K1</td><td>已确认</td></tr><tr><td>A21</td><td>K1</td><td>已确认</td></tr><tr><td>Q3</td><td>K1</td><td>已拒绝</td></tr><tr><td>A41</td><td>K1</td><td>已确认</td></tr></tbody></table></div></div>
+</div></details>
+<div class="scroll">
+<table>
+<caption>从 <code>messages</code> 连接 <code>message_concepts</code> 后得到的对照</caption>
+<thead><tr><th scope="col">问题</th><th scope="col">回答记录</th><th scope="col">「左外连接」标签挂在哪条消息</th><th scope="col">该组该不该出现</th></tr></thead>
+<tbody>
+<tr><td><code>Q1</code></td><td>A11 旧，A12 最新</td><td>Q1 和 A12 都已确认</td><td><strong>出现一次</strong>，显示 A12</td></tr>
+<tr><td><code>Q2</code></td><td>A21 旧，A22 最新</td><td>只有 A21 已确认</td><td>不出现，A21 已被更新的回答取代</td></tr>
+<tr><td><code>Q3</code></td><td>A31 最新</td><td>Q3 上的标签已拒绝</td><td>不出现，该标签不生效</td></tr>
+<tr><td><code>Q4</code></td><td>A41 最新</td><td>A41 上的标签已确认</td><td><strong>出现一次</strong>，显示 A41</td></tr>
+</tbody>
+</table>
+</div>
+<div class="switcher" role="group" aria-label="选一种查询方法">
+  <button type="button" data-method="before" aria-pressed="true">原查询 · 从问题出发</button>
+  <button type="button" data-method="after" aria-pressed="false">改写后 · 从标签出发</button>
+</div>
+<div id="walkthrough" aria-live="polite">
+<p class="walk-title">先把四组问答配齐，再检查哪组有标签</p>
+<ol class="walk">
+<li><strong>1 找到问题</strong><p>当前用户有 Q1、Q2、Q3、Q4 四个问题。</p></li>
+<li><strong>2 逐组取最新回答</strong><p>分别取 A12、A22、A31、A41，共取四次。</p></li>
+<li><strong>3 检查有无对应标签</strong><p>只核对每个问题和它的最新回答，留下 Q1、Q4。</p></li>
+</ol>
+<p class="walk-result">相同输出（由新到旧） Q4 + A41，Q1 + A12。总数 2。</p>
+</div>
+<noscript><p>改写后先筛标签，得到 Q1、A12、A21、A41。排除旧回答 A21 后，把 A12 和 A41 映射回原问题，得到 Q1、Q1、Q4。去重后只为 Q1、Q4 取最新回答，最终结果相同。</p></noscript>
+</div>
+
+<div class="source"><p><strong>优化只改找候选的顺序。</strong> 原查询在这组数据里给四个问题都找了一次最新回答，随后排掉 Q2 和 Q3。新查法先拿到标了 K1 的消息。A21 指向 Q2，但还能找到序号更大的 A22，所以丢掉 A21 这条命中。Q1 和 A12 都指向 Q1，只留下一个 Q1。A41 指向 Q4，因此最后只取 Q1 和 Q4 的最新回答。</p><p>新查法仍要检查命中标签的回答是不是最新，但可以跳过根本没有目标标签的大多数问题。目标知识点只有少数问答时，省下的工作更多。日期、学科、关键词、用户范围、排序和分页继续按原规则处理。</p></div>
+
+<details><summary>展开 SQL · 和课上学的关键字对应</summary><div class="details-body">
+<p>下面给出简化后的查询片段。<code>qm</code> 代表问题，<code>am</code> 代表它的最新回答，参数 <code>$1</code> 是当前用户，<code>$2</code> 是目标知识点。实际代码还处理多标签、其他筛选条件、排序和分页。</p>
+<div class="cols">
+<div><strong>原查询的知识点条件</strong><pre><code>-- 已为每个问题找到最新回答
+-- EXISTS 判断是否至少存在一条标签
+EXISTS (
+  SELECT 1
+  FROM message_concepts mc
+  WHERE mc.message_id IN (qm.id, am.id)
+    AND mc.concept_id = $2
+    AND mc.status &lt;&gt; 'rejected'
+)</code></pre></div>
+<div><strong>改写后的候选问题集合</strong><pre><code>SELECT DISTINCT
+  CASE WHEN t.role = 'user' THEN t.id
+       ELSE t.reply_to_id END AS question_id
+FROM message_concepts mc
+JOIN messages t ON t.id = mc.message_id
+WHERE mc.concept_id = $2
+  AND mc.status &lt;&gt; 'rejected'
+  AND t.user_id = $1
+  AND (t.role = 'user' OR (
+    t.reply_to_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM messages newer
+      WHERE newer.reply_to_id = t.reply_to_id
+        AND newer.user_id = $1
+        AND newer.seq &gt; t.seq
+    )
+  ));
+-- 把筛出的 ID 连回消息表，补齐问答</code></pre></div>
+</div>
+<p class="small"><code>DISTINCT</code> 去掉重复问题 ID。实际 SQL 用一段名为 <code>concept_candidates</code> 的公共表表达式组织这组 ID，并用 <code>NOT EXISTS</code> 判断同一问题是否存在序号更大的回答。上面的顺序解释查询逻辑，每一次实际执行以数据库生成的计划为准。</p>
+</div></details>
+</section>
+
+<section id="measure" aria-labelledby="h-measure">
+<h2 id="h-measure">怎么验证它查得对、查得快</h2>
+<p class="lead">在相同的 4 万条合成消息上，用前后两种 SQL 跑相同条件，同时比较结果行、结果顺序和总数。测量使用本机数据库和应用角色 <code>kv_app</code>，包含数据库事务和权限上下文。</p>
+<div class="cols">
+<div class="panel"><strong>冷门知识点 · 每名用户命中 5 组</strong><div class="chain">执行计划中「取最新回答」的循环次数<br><strong class="counter">@@BEFORE_LOOPS@@ → @@AFTER_LOOPS@@</strong></div><p>两种查询都返回 5 组。改写后的查询只对筛出的 5 个问题运行这一步。</p></div>
+<div class="panel"><strong>正确性怎么查</strong><p>自动测试覆盖问题标签、最新回答标签、旧回答、被拒绝标签和同组重复命中，也比较了组合筛选与分页。两名测试用户各自看不到对方的消息。</p><p class="small">从零应用当前迁移后，6 个相关测试文件共 40 个用例通过，覆盖历史查询、引用、结算、成长和权限。</p></div>
+</div>
+<div class="panel">
+<h3 style="margin-top:0">数据库请求的 P95 延迟</h3>
+<p class="small">P95 可以读作「大约 95% 的请求在这个时间内完成」。每组预热 2 次、测 20 次，并发指同时发出的请求数。坐标统一为毫秒。</p>
+<div class="legend"><span><i class="swatch old" aria-hidden="true"></i>原查询</span><span><i class="swatch new" aria-hidden="true"></i>改写后</span></div>
+@@CHART@@
+<p class="comparison"><strong>冷门和热门的收益不同</strong>冷门每名用户只命中 5 组，单并发从 78.74 ms 降到 4.66 ms。热门每名用户命中 3,000 组，单并发从 144.00 ms 到 134.32 ms。这是同库同数据、改写 SQL 的本机小样本结果，计时到数据库请求为止。HTTP 和浏览器延迟在此测量之外。</p>
+</div>
+</section>
+
+<section id="integrity" aria-labelledby="h-integrity">
+<h2 id="h-integrity">数据库怎样保护这些记录</h2>
+<div class="cols">
+<div class="panel">
+<h3 style="margin-top:0">写入时检查用户归属</h3>
+<p>知道会话 ID 就能找到它的用户。我们仍在消息表保留 <code>user_id</code>，便于按用户过滤和检索。为了约束这份冗余数据，消息上的 <code>(conversation_id, user_id)</code> 必须同时匹配会话表里的 <code>(id, user_id)</code>。例如 C1 属于 U1，如果写入 C1、U2 这对编号，数据库会拒绝。</p>
+<p>读取时，行级安全策略根据当前用户限制应用角色可见的行。复合外键检查写入是否合法，行级策略检查这次读取能看到哪些记录。</p>
+</div>
+<div class="panel">
+<h3 style="margin-top:0">作答结算一起写入</h3>
+<p>一次结算会更新作答、评价、证据和当前阶段。数据库把这些写入放进一个事务，中间失败会一起回滚。相同作答并发重复提交，测试确认只产生一条评价和一组证据。</p>
+<p>撤销证据时，系统记录撤销时间，按剩余有效证据重算阶段。回查过去时，它只使用当时有效的证据，因此撤销前的记录仍可解释。</p>
+</div>
+</div>
+</section>
+
+</main>
+<footer><div class="wrap">
+<strong>证据来源</strong><p>表与约束来自项目的 PostgreSQL 系统目录快照及迁移。运行截图来自项目验收记录。性能数字和循环次数来自保存的 <code>EXPLAIN (ANALYZE, BUFFERS)</code> 与基准结果。Q1 等行仅用于教学演示。</p>
+<p>仓库位置 <code>docs/er/advanced/schema-metadata.json</code> · <code>src/server/history.ts</code> · <code>docs/sql/history-optimization.json</code> · <code>tests/history.test.ts</code></p>
+</div></footer>
+
+<dialog id="image-dialog" aria-labelledby="image-caption">
+<div class="dialog-head"><strong id="image-caption">查看图片</strong><div class="dialog-tools"><button type="button" class="btn" data-scale="1">适应窗口</button><button type="button" class="btn" data-scale="1.65" aria-label="放大图像">放大</button><button type="button" class="btn" data-close autofocus>关闭</button></div></div>
+<div class="dialog-view" tabindex="0" aria-label="图像区域，放大后可滚动"><img id="large-image" alt=""></div>
+</dialog>
+<script>
+(() => {
+  const viewer = document.querySelector('#image-dialog');
+  const enlarged = document.querySelector('#large-image');
+  const dialogTitle = document.querySelector('#image-caption');
+  const viewport = viewer.querySelector('.dialog-view');
+  let opener;
+  function scale(factor) {
+    enlarged.style.width = (100 * factor) + '%';
+    viewport.scrollLeft = 0;
+    viewport.scrollTop = 0;
+  }
+  for (const button of document.querySelectorAll('.zoom-trigger')) {
+    button.addEventListener('click', () => {
+      const original = document.getElementById(button.dataset.target);
+      opener = button;
+      dialogTitle.textContent = original.alt;
+      enlarged.src = original.src;
+      enlarged.alt = original.alt;
+      scale(1);
+      viewer.showModal();
+    });
+  }
+  for (const button of viewer.querySelectorAll('[data-scale]')) button.addEventListener('click', () => scale(Number(button.dataset.scale)));
+  viewer.querySelector('[data-close]').addEventListener('click', () => viewer.close());
+  viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+  viewer.addEventListener('close', () => { enlarged.removeAttribute('src'); opener?.focus(); });
+  document.querySelector('.print').addEventListener('click', () => window.print());
+  const demo = document.querySelector('#operation-demo');
+  const scenes = [...demo.querySelectorAll('.demo-pane')];
+  const sceneButtons = [...demo.querySelectorAll('[data-scene]')];
+  const prev = demo.querySelector('#demo-prev');
+  const next = demo.querySelector('#demo-next');
+  const play = demo.querySelector('#demo-play');
+  const position = demo.querySelector('#demo-position');
+  const progress = demo.querySelector('.demo-progress span');
+  const last = scenes.length - 1;
+  let sceneIndex = 0;
+  let scheduledStep = null;
+
+  function showScene(index, animate = true) {
+    sceneIndex = index;
+    scenes.forEach((scene, i) => {
+      scene.hidden = i !== sceneIndex;
+      scene.classList.toggle('is-animated', animate && i === sceneIndex);
+      if (i === sceneIndex) sceneButtons[i].setAttribute('aria-current', 'step');
+      else sceneButtons[i].removeAttribute('aria-current');
+    });
+    prev.disabled = sceneIndex === 0;
+    next.disabled = sceneIndex === last;
+    position.textContent = (sceneIndex + 1) + ' / ' + scenes.length + ' · ' + scenes[sceneIndex].dataset.title;
+    progress.style.width = ((sceneIndex + 1) / scenes.length * 100) + '%';
+  }
+
+  function stopPlayback() {
+    clearTimeout(scheduledStep);
+    scheduledStep = null;
+    play.dataset.playing = 'false';
+    play.textContent = '播放动画';
+  }
+
+  function scheduleAdvance() {
+    scheduledStep = setTimeout(() => {
+      showScene(sceneIndex + 1);
+      if (sceneIndex === last) stopPlayback();
+      else scheduleAdvance();
+    }, 4200);
+  }
+
+  function goTo(index) {
+    stopPlayback();
+    showScene(index);
+  }
+
+  for (const button of sceneButtons) button.addEventListener('click', () => goTo(Number(button.dataset.scene)));
+  prev.addEventListener('click', () => goTo(sceneIndex - 1));
+  next.addEventListener('click', () => goTo(sceneIndex + 1));
+  demo.querySelector('#demo-reset').addEventListener('click', () => goTo(0));
+  play.addEventListener('click', () => {
+    if (scheduledStep !== null) {
+      stopPlayback();
+      return;
+    }
+    if (sceneIndex === last) showScene(0);
+    play.dataset.playing = 'true';
+    play.textContent = '暂停';
+    scheduleAdvance();
+  });
+  for (const tools of demo.querySelectorAll('.demo-tools')) tools.hidden = false;
+  showScene(0, false);
+
+  const steps = {
+    before: {title:'先把四组问答配齐，再检查哪组有标签', items:[
+      ['1 找到问题','当前用户有 Q1、Q2、Q3、Q4 四个问题。'],
+      ['2 逐组取最新回答','分别取 A12、A22、A31、A41，共取四次。'],
+      ['3 检查有无对应标签','只核对每个问题和它的最新回答，留下 Q1、Q4。']
+    ]},
+    after: {title:'先从标签找到两条候选问题，再补最新回答', items:[
+      ['1 先查标签表','目标标签命中 Q1、A12、A21、A41。Q3 的标签已拒绝。'],
+      ['2 映射回问题并去重','A21 是旧回答，排除。Q1、A12 都对应 Q1，A41 对应 Q4，去重后只剩 Q1、Q4。'],
+      ['3 仅为候选组取最新回答','只取 A12 和 A41，共取两次。其余筛选、排序和分页照常。']
+    ]}
+  };
+  const walk = document.querySelector('#walkthrough');
+  const buttons = document.querySelectorAll('[data-method]');
+  for (const button of buttons) button.addEventListener('click', () => {
+    for (const item of buttons) item.setAttribute('aria-pressed', String(item === button));
+    const selected = steps[button.dataset.method];
+    walk.querySelector('.walk-title').textContent = selected.title;
+    const items = selected.items.map(([title, description]) => {
+      const item = document.createElement('li');
+      const strong = document.createElement('strong');
+      const paragraph = document.createElement('p');
+      strong.textContent = title;
+      paragraph.textContent = description;
+      item.append(strong, paragraph);
+      return item;
+    });
+    walk.querySelector('.walk').replaceChildren(...items);
+  });
+})();
+</script>
+</body>
+</html>

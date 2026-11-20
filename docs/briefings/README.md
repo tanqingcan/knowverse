@@ -1,5 +1,7 @@
 # 数据库阶段汇报材料
 
+- 课堂展示用的[单文件 HTML 动画版](KNOWVERSE数据库阶段汇报.html)可直接用浏览器打开，内嵌 ER 图、验收截图、实际关系列和逐步演示。构建命令为 `python scripts/briefing/build.py`，需要 Pillow。生成器读取 `scripts/briefing/report.html.in`，并在写入成品前检查全部占位符已替换。
+
 - 最新关系建模增强版：[Word文档](KNOWVERSE数据库阶段汇报-关系建模增强版.docx)，保留修订版内容，采用错位分域的Chen概念ER（13实体、12菱形联系、21椭圆属性及ISA，A3横向整页），另附设计理由与全库索引。现有修订版未覆盖。
 - 现场讲解主图：[学习事实的可追溯关系模型](../er/advanced/03-learning-model.svg)，三组实体围绕版本、引用与证据连接，避免全字段堆叠。
 - 完整真实ER：[55表106外键全库SVG](../er/advanced/01-full-schema.svg)；[八个业务域字段级图与读图说明](../er/advanced/README.md)。
