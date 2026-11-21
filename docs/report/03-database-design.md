@@ -1,6 +1,8 @@
 ﻿# 3 数据库设计
 
-> 负责人：A。数字口径：2026-10-27 在本机 PostgreSQL 16.14 上实测（`npm run docs:dictionary`、`docs/sql/explain-results.md`）。
+> **历史初稿，不能直接提交。** 最终结构见 [report-plan.md](report-plan.md)，正式入口为 `latex/chapters/03-database-design.tex`。下文保留旧判断供追溯；全库“46 BCNF / 5 张 2NF / 4 张 1NF”已撤回，`stage→stage_reason` 未获全局证明，旧约束/RLS 计数和版本弱实体画法须复核。采用 [最新范式复核](../schema/normalization-analysis.md) 与带日期系统目录。
+
+> 负责人：A。历史数字口径：2026-10-27 在本机 PostgreSQL 16.14 上实测（`npm run docs:dictionary`、`docs/sql/explain-results.md`）。
 > 图：`docs/er/er-overview.png` + 4 张局部图；数据字典：`docs/schema/data-dictionary.md`；模式图：`docs/schema/schema-core.svg`。
 
 ## 3.1 概念模型

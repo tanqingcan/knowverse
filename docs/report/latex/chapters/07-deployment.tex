@@ -1,0 +1,13 @@
+\section{部署与运行维护}
+\ChapterOwner{D}{A}
+\subsection{运行环境与配置}
+\Writing{D}{说明 Node/PG、依赖锁、环境变量职责、owner/应用/沙箱连接，报告不含真实密钥。}
+\subsection{从零建立与迁移}
+\Writing{D，A 核对}{独立可丢弃库中建库、迁移、sandbox、seed、启动。已有数据只向前迁移；reset 不针对业务数据。记录实际 journal 范围。}
+\subsection{测试环境、基准与 CI}
+\Writing{D}{\code{knowverse_test} 与 \code{knowverse_bench} 隔离，CI 步骤与实际运行分开。YAML 存在不等于远程通过。}
+\subsection{维护、备份与故障恢复}
+\Writing{D}{分区、统计对账、pending、outbox/积压；备份与恢复标明步骤示例或真实演练、恢复点与数据损失边界。}
+\subsection{最终版本与交付包}
+\Writing{D}{核对最终 commit/tag、运行说明、演示账号、PDF/TeX/资源、已知限制。保护规则、Release 和外部部署按实际记录。}
+\Evidence{README.md; docs/release.md; .github/workflows/ci.yml; tests/global-setup.ts}
