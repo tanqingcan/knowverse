@@ -216,9 +216,9 @@ export const sphereGeo = (r = 1, w = 16, h = 12) => memo(`sph:${r}:${w}:${h}`, (
 export const cylGeo = (rt: number, rb: number, h: number, seg = 16) => memo(`cyl:${rt}:${rb}:${h}:${seg}`, () => new THREE.CylinderGeometry(rt, rb, h, seg));
 export const coneGeo = (r: number, h: number, seg = 18) => memo(`cone:${r}:${h}:${seg}`, () => new THREE.ConeGeometry(r, h, seg));
 /** 圆润草叶：细锥 + 顶部外弯，可配径向细分与弯度，替代低分段圆锥 */
-export function bladeGeo(h: number, r = 0.006, seg = 6, bendK = 0.42) {
-  return memo(`blade:${h}:${r}:${seg}:${bendK}`, () => {
-    const g = new THREE.CylinderGeometry(r * 0.3, r, h, seg, 1, false);
+export function bladeGeo(h: number, r = 0.006, seg = 6, bendK = 0.42, openEnded = false) {
+  return memo(`blade:${h}:${r}:${seg}:${bendK}:${openEnded}`, () => {
+    const g = new THREE.CylinderGeometry(r * 0.3, r, h, seg, 1, openEnded);
     const pos = g.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
       const t = (pos.getY(i) + h / 2) / h; // 0 底部 → 1 顶部
@@ -232,14 +232,18 @@ export function bladeGeo(h: number, r = 0.006, seg = 6, bendK = 0.42) {
     return g;
   });
 }
-/** 一丛圆润的草：N 片宽而短的叶片绕中心错开、顶端外弯，合并成单一几何（实例化用） */
-export function grassTuftGeo(blades = 8, seg = 8, bendK = 0.55) {
+/**
+ * 一丛圆润的草：N 片宽而短的叶片绕中心错开、顶端外弯，合并成单一几何（实例化用）。
+ * 性能：草丛有约 2300 个实例，每片叶在屏幕上只有几像素高。原来 8 片 × 8 棱柱 + 封顶 ≈ 256 面/丛（全场约 60 万面）；
+ * 现为 6 片 × 4 棱、不封顶 = 48 面/丛（约 11 万面），外观几乎无差别。
+ */
+export function grassTuftGeo(blades = 6, seg = 4, bendK = 0.55) {
   return memo(`tuft:${blades}:${seg}:${bendK}`, () => {
     const parts: number[] = [];
     for (let i = 0; i < blades; i++) {
       const h = 0.026 + (i % 4) * 0.005;
       const a = (i / blades) * Math.PI * 2 + (i % 2 ? 0.14 : -0.1);
-      const b = bladeGeo(h, 0.0075, seg, bendK).clone()
+      const b = bladeGeo(h, 0.0075, seg, bendK, true).clone()
         .rotateZ(i % 2 ? 0.1 : -0.08) // 轻微左右交错，避免完全同心
         .rotateY(a)
         .translate(Math.cos(a) * 0.006, 0, -Math.sin(a) * 0.006)

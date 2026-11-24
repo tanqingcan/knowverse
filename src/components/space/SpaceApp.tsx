@@ -57,6 +57,15 @@ const SECTIONS: { key: SectionKey; label: string; panels: (PanelKey | null)[]; s
   { key: "materials", label: "资料", panels: ["materials"] },
   { key: "together", label: "共学", panels: ["galaxy"] },
 ];
+/** 绘本风：学习窗顶部的书名与题词（按导航分区） */
+const BOOK_TITLES: Record<SectionKey, [string, string]> = {
+  garden: ["我的知识花园", "每一次好奇，都在悄悄生长。"],
+  learn: ["星光书屋", "让每一个问题，都有回响。"],
+  grow: ["成长手记", "走过的每一步，都算数。"],
+  review: ["回忆小径", "你问过的问题，都留在这条小径上。"],
+  materials: ["资料温室", "把读过的每一页，种成知识。"],
+  together: ["共学星系", "在别人的星球上，看见新的光。"],
+};
 const FOCUS_PANELS: PanelKey[] = ["chat", "practice", "cards", "history", "timeline", "materials", "galaxy", "memory", "plan", "report"];
 const TITLES: Record<PanelKey, string> = {
   chat: "与星灯对话", history: "历史问答", dossier: "植物档案", materials: "资料温室", practice: "练习",
@@ -667,6 +676,7 @@ export function SpaceApp() {
     <Ctx.Provider value={ctx}>
       <div className={`app ${focus ? "is-focus" : "is-garden"} ${reduced ? "reduced-motion" : ""} ${showIntro ? "is-intro" : ""} ${creativeOpen ? "is-creating" : ""}`}>
         <Sky tint={env.sky} />
+        {/* 绘本风：星球两侧的手绘云海（取自开场插画，左右各一份，星球挡住中间） */}
         {!!bedMoves.__fourzones && !creativeOpen && !focus && <ZonePanel onClose={()=>setZonePanelKey(0)} openKey={zonePanelKey} zone={zoneView} onZone={setZoneView} plants={space.plants} onSelect={id=>open({panel:"dossier",plantId:id})} onEntries={setZoneEntries} />}
 
         {/* 花园场景：同一个画布在两种模式间改变大小，不重新加载 */}
@@ -792,6 +802,9 @@ export function SpaceApp() {
               signText={natal ? (natal.nickname ?? natal.conceptName) : (space.planet?.name ?? "我的星球")} />
           )}
         </section>
+
+        {/* 绘本风：左下、右下角的手绘云海，从前面轻轻托住星球（取自开场插画，右侧为镜像；不拦截点击） */}
+        <div className="sea-clouds" aria-hidden="true" />
 
         {showIntro && <div className="intro-skip" aria-hidden="true">点击任意处跳过</div>}
 
@@ -954,6 +967,10 @@ export function SpaceApp() {
         )}
         {focus && panel.panel && (
           <main className={`focus paper${focusLarge ? " is-large" : ""}`} aria-label={TITLES[panel.panel]} role="dialog" aria-modal="true" ref={focusWinRef} tabIndex={-1}>
+            <div className="book-title" aria-hidden="true">
+              <span className="bt-name"><i>✦</i>{BOOK_TITLES[sec.key][0]}<i>✦</i></span>
+              <span className="bt-sub">{BOOK_TITLES[sec.key][1]}</span>
+            </div>
             <div className="focus-head">
               <button className="btn btn-soft btn-sm back" onClick={() => open({ panel: null })} aria-label="回到花园">← 花园</button>
               {sec.subs ? (

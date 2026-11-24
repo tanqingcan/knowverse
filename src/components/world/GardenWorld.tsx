@@ -313,7 +313,7 @@ function Grass({ items, tint }: { items: ReturnType<typeof scatter>; tint?: stri
   useEffect(() => {
     const m = ref.current; if (!m) return;
     const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-    const tones = ["#9DB983", "#AFC791", "#8FAD78", "#BCD09B"];
+    const tones = ["#8DBA5C", "#A6C96E", "#7DA851", "#B9D57E"]; // 绘本风：更鲜的草色
     items.forEach((it, i) => {
       const f = capFrame(it.x, it.z, (it.yaw * 180) / Math.PI);
       q.copy(f.quat);
@@ -413,7 +413,8 @@ function FloraField({ items }: { items: FloraItem[] }) {
 /** 草地上的小野花（两组实例化网格：花冠 + 花心），只是装饰，不代表任何学习记录 */
 function Wildflowers({ items, tint }: { items: ReturnType<typeof scatter>; tint?: string }) {
   const a = useRef<THREE.InstancedMesh>(null), b = useRef<THREE.InstancedMesh>(null), st = useRef<THREE.InstancedMesh>(null);
-  const petal = useMemo(() => new THREE.SphereGeometry(1, 10, 6), []);
+  // 性能：每朵野花只有一两毫米大，6×4 分段足够（原 10×6；471 朵 × 花冠 + 花心约 9.4 万面 → 约 3.8 万），且不再投射阴影
+  const petal = useMemo(() => new THREE.SphereGeometry(1, 6, 4), []);
   const stem = useMemo(() => new THREE.CylinderGeometry(0.0025, 0.003, 1, 4).translate(0, 0.5, 0), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.9, color: "#ffffff" }), []);
   useEffect(() => {
@@ -434,7 +435,7 @@ function Wildflowers({ items, tint }: { items: ReturnType<typeof scatter>; tint?
   return (
     <>
       <instancedMesh ref={st} args={[stem, matte(C.stem), items.length]} frustumCulled={false} />
-      <instancedMesh ref={a} args={[petal, mat, items.length]} frustumCulled={false} castShadow />
+      <instancedMesh ref={a} args={[petal, mat, items.length]} frustumCulled={false} />
       <instancedMesh ref={b} args={[petal, matte(C.honey), items.length]} frustumCulled={false} />
     </>
   );
@@ -603,6 +604,34 @@ function Rig({ mode, reduced, paused, focusPoint, drag, zoom, intro, onIntroDone
   return null;
 }
 
+/**
+ * 场景名牌（书屋 / 温室 / 小径）：常驻显示，跟随锚点投影。
+ * 锚点转到星球背面（法线背向相机）时淡出，避免名牌“透过”星球显示。直接写 DOM，不触发 React 渲染。
+ */
+function PlateTracker({ anchors, keys, el }: { anchors: React.MutableRefObject<Map<string, THREE.Object3D>>; keys: string[]; el: React.RefObject<HTMLDivElement | null> }) {
+  const { camera, size } = useThree();
+  const v = useMemo(() => new THREE.Vector3(), []);
+  const best = useMemo(() => new THREE.Vector3(), []);
+  const toCam = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    const d = el.current; if (!d) return;
+    // 同类建筑可能有多栋：在屏幕可见范围内，取最朝向镜头的那一栋
+    let bestF = -2;
+    for (const k of keys) {
+      const o = anchors.current.get(k); if (!o) continue;
+      o.getWorldPosition(v);
+      const f = v.clone().normalize().dot(toCam.copy(camera.position).sub(v).normalize());
+      const p = v.clone().project(camera);
+      if (Math.abs(p.x) > 0.88 || p.y < -0.75 || p.y > 0.7) continue; // 屏幕外，或被顶栏 / 底部工具栏遮住
+      if (f > bestF) { bestF = f; best.copy(p); }
+    }
+    if (bestF < -1) { d.style.opacity = "0"; return; }
+    d.style.opacity = Math.max(0, Math.min(1, (bestF - 0.05) / 0.25)).toFixed(2);
+    d.style.transform = `translate(${((best.x * 0.5 + 0.5) * size.width).toFixed(1)}px, ${((-best.y * 0.5 + 0.5) * size.height).toFixed(1)}px) translate(-50%, -100%)`;
+  });
+  return null;
+}
+
 /** 悬停 / 选中标签：每帧把锚点投影到屏幕，直接写 DOM，不触发 React 渲染 */
 function LabelTracker({ anchors, labelKey, el, minX = 0 }: { anchors: React.MutableRefObject<Map<string, THREE.Object3D>>; labelKey: string | null; el: React.RefObject<HTMLDivElement | null>; minX?: number }) {
   const { camera, size } = useThree();
@@ -617,6 +646,32 @@ function LabelTracker({ anchors, labelKey, el, minX = 0 }: { anchors: React.Muta
     const x = Math.max(minX, (v.x * 0.5 + 0.5) * size.width);
     d.style.transform = `translate(${x.toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * size.height).toFixed(1)}px) translate(-50%, -100%)`;
   });
+  return null;
+}
+
+/**
+ * 帧率限制（配合 Canvas frameloop="demand"）：
+ * 原来是每帧都渲染，高刷新率屏幕上 GPU 一直满载（实测约 80 fps、空闲也不停），电脑发热。
+ * 现在：最近 4 秒有交互（指针 / 滚轮 / 键盘）按 60 fps；空闲时只剩慢转，按 30 fps；标签页在后台时不渲染。
+ * 所有动画都按时间增量计算，降帧只影响流畅度，不影响动画快慢。
+ */
+const ACTIVE_FPS = 60, IDLE_FPS = 30, IDLE_AFTER_MS = 4000;
+function FrameLimiter() {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    let raf = 0, last = 0, lastAct = performance.now();
+    const act = () => { lastAct = performance.now(); };
+    const evs = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"] as const;
+    evs.forEach((e) => window.addEventListener(e, act, { passive: true }));
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      if (document.hidden) return;
+      const fps = t - lastAct < IDLE_AFTER_MS ? ACTIVE_FPS : IDLE_FPS;
+      if (t - last >= 1000 / fps - 2) { last = t; invalidate(); }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); evs.forEach((e) => window.removeEventListener(e, act)); };
+  }, [invalidate]);
   return null;
 }
 
@@ -643,7 +698,7 @@ function PerfProbe() {
   return null;
 }
 
-function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; nudge: React.MutableRefObject<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null> }) {
+function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | null>; hover: string | null; setHover: (k: string | null) => void; drag: React.MutableRefObject<{ yaw: number; tilt: number }>; zoom: React.MutableRefObject<number>; decorDrag: React.MutableRefObject<string | null>; lastDecorMove: React.MutableRefObject<number>; pointerToCap: React.MutableRefObject<((cx: number, cy: number) => { x: number; z: number } | null) | null>; nudge: React.MutableRefObject<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>; selEl: React.RefObject<HTMLDivElement | null>; plateEls: { cottage: React.RefObject<HTMLDivElement | null>; greenhouse: React.RefObject<HTMLDivElement | null>; path: React.RefObject<HTMLDivElement | null> } }) {
   const { plants, gardens, selectedId, reduced, celebrate, hover, setHover } = props;
   const world = useRef<THREE.Group>(null);
   const worldPointToCap = (p: THREE.Vector3) => surfaceCapFromWorld(p, world.current, PLANET_R);
@@ -927,7 +982,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const L = lights;
   return (
     <>
-      <hemisphereLight args={["#EDE4F7", "#8C7E86", 0.95]} />
+      <hemisphereLight args={["#FFF1DA", "#6E7C60", 0.95]} /> {/* 绘本风：暖色天光、偏绿的地面反光（原为淡紫 / 灰紫） */}
       <ambientLight intensity={0.12} />
       <KeyLight />
       <directionalLight color="#A9BBD2" intensity={0.55} position={[6, 3, -3]} />
@@ -936,6 +991,15 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
       <LabelTracker anchors={anchors} labelKey={hover ?? (selectedId ? `plant:${selectedId}` : null)} el={props.labelEl} />
       {/* H05：选中对象的紧凑操作条跟随对象投影（与悬停标签同一套投影，不触发 React 渲染） */}
       <LabelTracker anchors={anchors} labelKey={props.selectedDecorId ? `decor:${props.selectedDecorId}` : null} el={props.selEl} minX={292} />
+      {/* 绘本风：常驻场景名牌（书屋 / 温室在同类建筑里取最朝向镜头的一栋，小径用固定锚点） */}
+      {(() => {
+        const ids = (k: string) => (props.decor ?? []).filter((x) => x.kind === k && !(x as { hidden?: boolean }).hidden).map((x) => `decor:${x.id}`);
+        return (<>
+          <PlateTracker anchors={anchors} keys={ids("cottage")} el={props.plateEls.cottage} />
+          <PlateTracker anchors={anchors} keys={ids("greenhouse")} el={props.plateEls.greenhouse} />
+          <PlateTracker anchors={anchors} keys={["path"]} el={props.plateEls.path} />
+        </>);
+      })()}
 
       {/* 天空中的远处星球（共学入口） */}
       <group position={[4.6, -2.6, -13]}>
@@ -1125,7 +1189,7 @@ function KeyLight() {
   return (
     <>
       <primitive object={tgt} />
-      <directionalLight ref={ref} color="#FFE2C2" intensity={2.5} position={[-4.5, PLANET_R + 7, 4.5]} castShadow
+      <directionalLight ref={ref} color="#FFDCA8" intensity={2.6} position={[-4.5, PLANET_R + 7, 4.5]} castShadow
         shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02}
         shadow-camera-left={-3} shadow-camera-right={3} shadow-camera-top={3} shadow-camera-bottom={-3} shadow-camera-near={2} shadow-camera-far={18} />
     </>
@@ -1156,6 +1220,9 @@ export function GardenWorld(props: WorldProps) {
   const nudgeRef = useRef<((item: { x: number; z: number }, dx: number, dy: number, step: number) => { x: number; z: number } | null) | null>(null);
   // H05：选中对象的紧凑操作条（DOM，位置由 Scene 的投影每帧写入）
   const selEl = useRef<HTMLDivElement>(null);
+  // 绘本风：常驻场景名牌（DOM，位置由 Scene 的 PlateTracker 每帧写入）
+  const plateCottage = useRef<HTMLDivElement>(null), plateGreenhouse = useRef<HTMLDivElement>(null), platePath = useRef<HTMLDivElement>(null);
+  const plateEls = useMemo(() => ({ cottage: plateCottage, greenhouse: plateGreenhouse, path: platePath }), []);
   const selItem = props.selectedDecorId ? (props.decor ?? []).find((d) => d.id === props.selectedDecorId) : undefined;
   const selLabel = selItem ? (DECOR_CATALOG.find((c) => c.kind === selItem.kind)?.label ?? selItem.kind) : "";
   // H22：移动/旋转/缩放 打开紧凑属性浮层（不再回到左侧大侧栏）
@@ -1362,13 +1429,14 @@ export function GardenWorld(props: WorldProps) {
       onPointerUp={(e) => endPointer(e.pointerId)} onPointerCancel={(e) => endPointer(e.pointerId)}
       onPointerLeave={(e) => endPointer(e.pointerId)}>
       <GLBoundary onFail={props.onFail}>
-        <Canvas shadows dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.75]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
+        <Canvas shadows frameloop="demand" dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
           onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
           onPointerMissed={() => { setHover(null); props.onPlaceMiss?.(); }}>
+          <FrameLimiter />
           <Suspense fallback={null}>
             <PerfProbe />
-            <Scene {...props} labelEl={labelEl} selEl={selEl} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} nudge={nudgeRef} />
+            <Scene {...props} labelEl={labelEl} selEl={selEl} plateEls={plateEls} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} nudge={nudgeRef} />
           </Suspense>
         </Canvas>
       </GLBoundary>
@@ -1384,6 +1452,13 @@ export function GardenWorld(props: WorldProps) {
       )}
       {props.perf && <div id="perf-hud" className="perf-hud" aria-hidden="true" />}
       <div ref={labelEl} className="world-label" aria-hidden="true" style={{ opacity: 0 }}>{label}</div>
+      {props.mode === "garden" && !props.editing && (
+        <div className="world-plates" aria-hidden="true">
+          <div ref={plateCottage} className="world-plate" style={{ opacity: 0 }}>星灯书屋</div>
+          <div ref={plateGreenhouse} className="world-plate" style={{ opacity: 0 }}>资料温室</div>
+          <div ref={platePath} className="world-plate" style={{ opacity: 0 }}>回忆小径</div>
+        </div>
+      )}
       {props.editing && props.selectedBedIndex != null && <div className="bed-controls" role="group" aria-label="花圃编辑">
         <strong>{props.gardens[props.selectedBedIndex]?.name ?? "花圃"}</strong>
         <button aria-pressed={!!props.bedMoving} onClick={()=>props.onBedMoveStart?.(props.selectedBedIndex!)}>{props.bedMoving ? "点击地面确定位置" : "移动整圃"}</button>

@@ -29,13 +29,14 @@ export function paintTerrain(beds: BedLayout[], poses?: Record<string, { x: numb
 
   // 底色：中心偏亮的草绿，边缘稍深
   const grd = g.createRadialGradient(S / 2, S / 2 - 30, 20, S / 2, S / 2, S * 0.52);
-  grd.addColorStop(0, "#C2D2A2"); grd.addColorStop(0.35, "#AFC390"); grd.addColorStop(0.7, "#97AE7E"); grd.addColorStop(1, "#7E9670");
+  // 绘本风调色：更饱满的黄绿草坡（原 #C2D2A2 → #7E9670 偏灰）
+  grd.addColorStop(0, "#CFE08E"); grd.addColorStop(0.35, "#A8C86C"); grd.addColorStop(0.7, "#86AD5C"); grd.addColorStop(1, "#678F4E");
   g.fillStyle = grd; g.fillRect(0, 0, S, S);
 
   // 水彩斑块
   for (let i = 0; i < 70; i++) {
     const x = r() * S, y = r() * S, rad = 30 + r() * 90;
-    const c = ["#C9D8A8", "#8FA978", "#B5C592", "#A2B98A", "#D5CFA2"][i % 5];
+    const c = ["#D3E596", "#7EAA56", "#B3D078", "#96BE66", "#E0DB93"][i % 5];
     const rg = g.createRadialGradient(x, y, 0, x, y, rad);
     rg.addColorStop(0, c); rg.addColorStop(1, "rgba(0,0,0,0)");
     g.globalAlpha = 0.22 + r() * 0.18; g.fillStyle = rg; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
