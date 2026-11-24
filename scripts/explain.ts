@@ -66,7 +66,7 @@ async function main() {
   const ver = (await pool.query(`SELECT version()`)).rows[0].version;
   md += `- 环境：${ver}\n- 机器：${os.cpus()[0]?.model ?? "unknown"} × ${os.cpus().length}，内存 ${(os.totalmem() / 2 ** 30).toFixed(1)} GB（开发容器）\n- 数据量：conversations ${counts.c}，messages ${counts.m}，message_concepts ${counts.mc}（两名用户各约一半）\n- 查询语句与应用代码相同：由 \`src/server/history.ts\` 的 \`buildHistorySql\` 生成，参数化执行。\n\n`;
   for (const [title, input] of cases) {
-    const { text, params } = buildHistorySql(input, user, "Asia/Taipei");
+    const { text, params } = buildHistorySql(input, user, "Asia/Shanghai");
     const run = async (label: string, pre: string[]) => {
       const c = await pool.connect();
       try {

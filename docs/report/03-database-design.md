@@ -1,6 +1,8 @@
-# 3 数据库设计
+﻿# 3 数据库设计
 
-> 负责人：A。数字口径：2026-10-27 在本机 PostgreSQL 16.14 上实测（`npm run docs:dictionary`、`docs/sql/explain-results.md`）。
+> **历史初稿，不能直接提交。** 最终结构见 [report-plan.md](report-plan.md)，正式入口为 `latex/chapters/03-database-design.tex`。下文保留旧判断供追溯；全库“46 BCNF / 5 张 2NF / 4 张 1NF”已撤回，`stage→stage_reason` 未获全局证明，旧约束/RLS 计数和版本弱实体画法须复核。采用 [最新范式复核](../schema/normalization-analysis.md) 与带日期系统目录。
+
+> 负责人：A。历史数字口径：2026-10-27 在本机 PostgreSQL 16.14 上实测（`npm run docs:dictionary`、`docs/sql/explain-results.md`）。
 > 图：`docs/er/er-overview.png` + 4 张局部图；数据字典：`docs/schema/data-dictionary.md`；模式图：`docs/schema/schema-core.svg`。
 
 ## 3.1 概念模型
@@ -31,7 +33,7 @@
 
 ## 3.2 关系模式
 
-  **47 张普通表 + 1 张分区表**（`audit_log`，按月分区），420 个列（含分区子表）、92 个外键、44 个 CHECK。按域分组：
+  **54 张普通表 + 1 张分区表**（`audit_log`，按月分区），409 个列（不含分区子表副本）、106 个外键、54 个 CHECK。按域分组：
 
 | 域 | 表 |
 |---|---|
@@ -92,19 +94,19 @@
 
 ### 3.3.4 全库范式分布
 
-48 个关系模式逐表定级（44 张业务表 + 分区审计表 + 班级统计表 + 两张 CDC 表）：
+55 个关系模式逐表定级（54 张普通表 + 分区审计表）：
 
 | 最高范式 | 数量 | 表 |
 |---|---|---|
-| **BCNF** | 40 | users、auth_sessions、classes、class_members、sharing_preferences、cdc_consumed、cdc_offsets、audit_log、subjects、concepts、concept_aliases、concept_prerequisites、planets、gardens、plants、learning_goals、goal_concepts、conversations、message_concepts、model_calls、materials、material_versions、material_chunks、material_concepts、tasks、task_versions、task_concepts、task_hints、hint_events、evaluations、knowledge_cards、card_versions、card_sources、card_publications、learning_intents、study_groups、study_group_members、contributions、outbox_events、class_stats |
-| **2NF** | 4 | learning_states、notes、attempts、growth_events |
+| **BCNF** | 46 | users、auth_sessions、classes、class_members、sharing_preferences、cdc_consumed、cdc_offsets、audit_log、subjects、concepts、concept_aliases、concept_prerequisites、planets、gardens、plants、learning_goals、goal_concepts、conversations、message_concepts、model_calls、materials、material_versions、material_chunks、material_concepts、tasks、task_versions、task_concepts、task_hints、hint_events、evaluations、knowledge_cards、card_versions、card_sources、card_publications、learning_intents、study_groups、study_group_members、contributions、outbox_events、class_stats、garden_knowledge_places、planet_layouts、planet_layout_items、message_terms、memory_controls、conversation_summaries |
+| **2NF** | 5 | learning_states、notes、attempts、growth_events、memories |
 | **1NF** | 4 | messages、concept_suggestions、message_citations、learning_evidence |
 
 `class_stats` 形式上是 BCNF，但属性是其他表的派生聚合（触发器增量维护 + 对账函数修复），属于“派生汇总”；`mv_class_stats` 是物化视图，不参与范式统计。
 
 **4NF / 5NF**：别名与先修是两组独立多值事实，已拆成 `concept_aliases` 与 `concept_prerequisites`，不存在非平凡多值依赖；没有必须三元分解才无损的关系，不涉及 5NF。
 
-候选键由 `npm run docs:keys` 从 `pg_index` 自动导出（48 张表、19 张有额外唯一键）；函数依赖、逐表论证、补偿机制与改进清单见 `docs/schema/normalization-analysis.md`。
+候选键由 `npm run docs:keys` 从 `pg_index` 自动导出（55 个关系、20 张有额外唯一键）；函数依赖、逐表论证、补偿机制与改进清单见 `docs/schema/normalization-analysis.md`。
 
 ## 3.4 完整性约束
 

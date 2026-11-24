@@ -28,7 +28,7 @@ export function SettingsPanel() {
         </label>
         <label className="field"><span>时区（用于历史检索的日期范围）</span>
           <select className="select" value={space.user.timezone} onChange={(e) => set({ timezone: e.target.value })}>
-            {["Asia/Taipei", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"].map((z) => <option key={z} value={z}>{z}</option>)}
+            {["Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"].map((z) => <option key={z} value={z}>{z}</option>)}
           </select>
         </label>
       </div>

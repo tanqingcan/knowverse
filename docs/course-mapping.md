@@ -1,4 +1,4 @@
-# 课程对照：每一章讲了什么，我们怎么做、又往前走了哪一步
+﻿# 课程对照：每一章讲了什么，我们怎么做、又往前走了哪一步
 
 > 依据：课堂 PPT 第 1、5、7、8 章与《动态 Web 编程简介》。
 > 用法：答辩时按章节挑 2–3 条讲；每条都有「实现位置 / 现场命令 / 比课堂多走的一步」。
@@ -27,7 +27,7 @@
 | 课堂知识点 | 我们的实现 | 现场演示 | 比课堂多走的一步 |
 |---|---|---|---|
 | 实体完整性 | 全部表有主键；关联表用复合主键 | `npm run demo:integrity`（`23505`） | 违约时能报出具体约束名 |
-| 参照完整性 | 92 个外键；CASCADE / RESTRICT / SET NULL / NO ACTION 四种策略按语义选 | `npm run demo:integrity`（`23503`） | 复合外键保证冗余列与会话一致 |
+| 参照完整性 | 106 个外键；CASCADE / RESTRICT / SET NULL / NO ACTION 四种策略按语义选 | `npm run demo:integrity`（`23503`） | 复合外键保证冗余列与会话一致 |
 | 用户定义完整性 | 11 个具名 CHECK、NOT NULL、UNIQUE | `npm run demo:integrity`（`23511`/`23502`） | 约束名统一 `<table>_<column>_ck`，报错可读 |
 | 完整性约束命名 | 迁移里显式命名，数据字典可查 | `npm run docs:dictionary` | 约束目录由数据库反向生成，不会与文档漂移 |
 | 触发器 | 9 个：先修防环、共学名额、本命花归属、3 个审计、3 个增量统计 | `npm run demo:integrity` | 行级 + 约束触发器 + 延迟检查都用上了 |
@@ -41,14 +41,14 @@
 
 | 课堂知识点 | 我们的实现 | 现场演示 | 比课堂多走的一步 |
 |---|---|---|---|
-| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出（48 张表、19 张有额外唯一键），再人工列非平凡 FD | `npm run docs:keys` | 键是自动生成的，不会和文档漂移 |
-| 1NF / 2NF / 3NF / BCNF | 48 张表逐表定级：40 BCNF、4 2NF、4 1NF | `docs/schema/normalization-analysis.md` | 不是“都 BCNF”，而是每张非 BCNF 都给出 FD 与理由 |
-| 无损连接、依赖保持 | `plants` / `concepts` / `learning_states` 的分解与 Chase 论证 | `docs/schema/wide-table-vs-decomposed.md` | 配了宽表反例与三类异常 |
-| 4NF（多值依赖） | 别名与先修拆成两张表，避免两个独立 MVD | 同上 | 说明“为什么拆开就满足 4NF” |
-| 反规范化 | 8 处受控冗余（`user_id`、`quote`、`stage_reason`），每处配外键或不变量 | `npm run verify:invariants`（15 项） | 冗余不是“懒得拆”，而是有补偿机制 |
+| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出（55 个逻辑表），并区分可空/条件唯一性，再人工核对业务FD | `npm run docs:keys` | 键目录可再生成，业务FD仍需人工复核 |
+| 1NF / 2NF / 3NF / BCNF | 复核核心FD，撤回全库范式数量 | `docs/schema/normalization-analysis.md` | 区分全局与条件依赖 |
+| 无损连接、依赖保持 | `plants` / `concepts` / `learning_states` 的局部二元无损分解条件 | `docs/schema/wide-table-vs-decomposed.md` | 配了宽表反例与三类异常 |
+| 4NF（多值依赖） | 别名与先修拆成两张表，避免两个独立 MVD | 同上 | 只说明局部拆分理由，不宣称全库4NF |
+| 反规范化 | 区分用户归属冗余、引用事实与派生状态，注明约束/检查边界 | `npm run verify:invariants`（15 项） | 冗余不是“懒得拆”，而是有补偿机制 |
 | 范式与性能的取舍 | 同一查询走 `(user_id, concept_id, created_at)` 索引 vs 多一次 JOIN | `docs/features-explained.md` 第 18 条 | 用高频路径说明“为什么保留 1NF 的 messages” |
 
-**30 秒讲法**：“我们 48 张表里 40 张是 BCNF；剩下 8 张不是做不到，而是把 `user_id` 或展示文案冗余进子表，换高频查询少一次 JOIN。每一处冗余都有复合外键或可执行不变量兜底，`verify:invariants` 15 项全过。”
+> 2026-11-17复核：撤回原全库范式数量，按 `docs/schema/normalization-analysis.md` 的已确认FD与条件依赖分开讲解。
 
 ## 第 7 章 数据库设计
 

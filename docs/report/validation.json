@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-21",
+  "scope": "Report architecture and LaTeX scaffold; no application tests rerun",
+  "engine": "XeLaTeX + BibTeX, TeX Live 2025",
+  "template_branch": "Fallback ctexart; RUCReport.sty not supplied or tested",
+  "pages": 25,
+  "tex_files": 21,
+  "markdown_links_checked": 27,
+  "missing_inputs_images_or_links": 0,
+  "undefined_or_duplicate_references": 0,
+  "compiler_warnings_or_box_warnings": 0,
+  "pdf_pages_rendered": 25,
+  "assignment_source": "Previously saved seven-slide extraction; original temporary PPTX path absent",
+  "assignment_extract_sha256": "88844e16b056c6c46432c9aefb93936111cc7136720ad5be483eccbed44679fa",
+  "template_original_sha256": "613a08164009a8ee9fe9ea98e36e82b272398a66be3a77bdd3ad09bb80363a9a",
+  "preview_sha256": "b06a23d3cdccc1202cf1e6e3a1b771babc8a41796cb6898ccd295125434fc800",
+  "visual_review": "All 25 rendered pages reviewed; ER, field table and screenshot inspected at full size"
+}
