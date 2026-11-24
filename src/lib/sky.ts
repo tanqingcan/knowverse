@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 export type SkyTheme = "dusk" | "night" | "mist" | "aurora";
 
 export const SKY_THEMES: { key: SkyTheme; label: string; hint: string }[] = [
-  { key: "dusk", label: "暮色", hint: "深空 → 浅桃，默认" },
-  { key: "night", label: "星夜", hint: "靛蓝 + 星点" },
+  { key: "night", label: "星夜", hint: "靛蓝 + 星点，默认（与绘本界面配套）" },
+  { key: "dusk", label: "暮色", hint: "深空 → 浅桃" },
   { key: "mist", label: "晨雾", hint: "低饱和灰蓝" },
   { key: "aurora", label: "极光", hint: "青绿极光带" },
 ];
@@ -15,12 +15,12 @@ const KEY = "kv-sky-theme";
 const EVENT = "kv-sky-theme";
 
 export function getSkyTheme(): SkyTheme {
-  if (typeof window === "undefined") return "dusk";
+  if (typeof window === "undefined") return "night";
   try {
     const v = window.localStorage.getItem(KEY);
     if (v === "night" || v === "mist" || v === "aurora" || v === "dusk") return v;
   } catch { /* 隐私模式 */ }
-  return "dusk";
+  return "night";
 }
 
 export function setSkyTheme(t: SkyTheme) {
@@ -30,7 +30,7 @@ export function setSkyTheme(t: SkyTheme) {
 
 /** 订阅天空主题：本地存储 + 自定义事件（跨组件同步） */
 export function useSkyTheme(): SkyTheme {
-  const [theme, setTheme] = useState<SkyTheme>("dusk");
+  const [theme, setTheme] = useState<SkyTheme>("night");
   useEffect(() => {
     setTheme(getSkyTheme());
     const on = (e: Event) => {

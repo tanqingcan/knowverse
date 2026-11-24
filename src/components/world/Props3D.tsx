@@ -308,7 +308,8 @@ export function CloudRing({ R }: { R: number }) {
     });
     m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }, [puffs]);
-  return <instancedMesh ref={ref} args={[sphereGeo(1, 16, 12), matte("#ffffff", { rough: 1 }), puffs.length]} />;
+  // 性能：云团是柔和的大球，12×8 分段已足够圆（原 16×12，157 个实例共约 5.5 万面 → 约 2.8 万）
+  return <instancedMesh ref={ref} args={[sphereGeo(1, 12, 8), matte("#ffffff", { rough: 1 }), puffs.length]} />;
 }
 
 /** 观星台：石台 + 低圆顶 + 望远镜 + 门口暖灯，放在星球背面，环绕时有可去的地方 */
