@@ -1,5 +1,5 @@
 \subsection{个性化答疑与上下文组织}
-\Writing{C}{交答疑时序图与一条真实实例：取学习上下文、查有权限资料、规则路由/工具白名单、模型返回校验、pending/complete/failed、重试、保存回答/引用/标签/调用轨迹。分清 demo/live，不把模型请求放入长数据库事务。}
+\Writing{C}{用一条真实问答讲上下文、检索、生成、校验和保存。时序图放在本节，用浏览器、服务、模型和数据库几条泳道画清请求先后，标出事务和失败重试。}
 \subsection{历史检索、定位与继续提问}
 \Writing{C}{组合关键词、时间、知识点、学科，解释用户时区、最新回答、分页、高亮、定位窗口和续问。用一组问题 ID 展示结果缩小；查询设计引用\ref{sec:query-design}节，不重写性能表。}
 \Evidence{src/server/chat.ts; src/server/history.ts; src/server/agent/; tests/history.test.ts}

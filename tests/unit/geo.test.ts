@@ -30,9 +30,9 @@ describe("草叶 bladeGeo", () => {
 });
 
 describe("草丛 grassTuftGeo", () => {
-  it("由 8 片草叶合并而成（8 × 32 三角）", () => {
+  it("默认 6 片四段草叶，无端盖，共 48 个三角", () => {
     const g = grassTuftGeo();
-    expect(g.attributes.position.count).toBe(8 * TRIS_PER_BLADE * 3);
+    expect(g.attributes.position.count).toBe(6 * 4 * 2 * 3);
   });
 
   it("包围盒贴合地面且高度在合理范围（0.03–0.06）", () => {

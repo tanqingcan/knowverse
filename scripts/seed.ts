@@ -507,10 +507,13 @@ async function seedDemo(ids: Record<string, string>, subj: Record<string, string
 
 async function main() {
   console.log("→ 课程目录"); const { ids, subj } = await seedCatalog();
-  console.log("→ 公共资料"); await seedMaterials(subj);
+  const seedDemoData = process.env.SEED_DEMO_DATA !== "false";
+  if (seedDemoData) { console.log("→ 公共示例资料"); await seedMaterials(subj); }
   console.log("→ 题库"); await seedTasks(ids, subj);
-  console.log("→ 演示账号与预置历史"); await seedDemo(ids, subj);
-  console.log("→ 资料新版本"); await seedMaterialV2(subj);
+  if (seedDemoData) {
+    console.log("→ 演示账号与预置历史"); await seedDemo(ids, subj);
+    console.log("→ 示例资料新版本"); await seedMaterialV2(subj);
+  }
   await pool.end();
   console.log("✓ seed 完成");
 }

@@ -3,7 +3,7 @@
 \subsection{运行环境与配置}
 \Writing{D}{说明 Node/PG、依赖锁、环境变量职责、owner/应用/沙箱连接，报告不含真实密钥。}
 \subsection{从零建立与迁移}
-\Writing{D，A 核对}{独立可丢弃库中建库、迁移、sandbox、seed、启动。已有数据只向前迁移；reset 不针对业务数据。记录实际 journal 范围。}
+\Writing{D，A 核对}{把本地建库、迁移、种子数据、应用启动和验收画成一张步骤图放在这里。用一次干净环境运行的输出说明实际走到了哪一步，并交代已有数据库怎样向前迁移。}
 \subsection{测试环境、基准与 CI}
 \Writing{D}{\code{knowverse_test} 与 \code{knowverse_bench} 隔离，CI 步骤与实际运行分开。YAML 存在不等于远程通过。}
 \subsection{维护、备份与故障恢复}

@@ -59,15 +59,18 @@ npm run build && npm run start   # 生产模式（课堂展示更流畅）
 
 ```ini
 LLM_MODE=live
-LLM_BASE_URL=https://api.openai.com/v1      # 或其它兼容服务的地址
+LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_API_KEY=sk-...                           # 只在服务端读取
-LLM_MODEL=gpt-4o-mini
-# DeepSeek 可使用 LLM_BASE_URL=https://api.deepseek.com/v1 和 LLM_MODEL=deepseek-v4-pro
+LLM_MODEL=deepseek-flash                   # 当前对应 DeepSeek-V4.1-Flash-1017
 LLM_TIMEOUT_MS=45000
 LLM_TOOL_CALLING=true                        # 服务商不支持 function calling 时改为 false
 ```
 
-修改后重启服务。真实模式下调用失败会显示错误与“重试”，不会退回演示内容。说明：真实模式已接入 DeepSeek V4 Pro 做服务层问答验证，评测范围与结果见 `docs/agent-eval.md`；浏览器交互仍需单独验收。
+修改后重启服务。真实模式下调用失败会显示错误与“重试”。配置示例采用 DeepSeek-V4.1-Flash-1017，服务端教材答疑复测见 [Flash 复测](docs/retrieval.md#flash-复测)。
+
+教材检索结合词法、知识点片段和可选的本地 BGE 向量。已有资料运行 `npm run rag:index` 回填，服务器可用 `npm run rag:index -- --watch` 持续补齐。见 [资料检索与 RAG](docs/retrieval.md)。
+
+正式环境可在空白库初始化前设置 `SEED_DEMO_DATA=false`。学生资料按账号隔离，`UPLOAD_DIR` 应指向服务器的持久目录，与数据库一起备份。见 [学生私有资料与原文件](docs/retrieval.md#学生私有资料与原文件)。
 
 ## 常用命令
 
@@ -81,6 +84,7 @@ LLM_TOOL_CALLING=true                        # 服务商不支持 function calli
 | `npm test` | 集成测试（自动使用独立的 `knowverse_test` 库） |
 | `npm run memory:install` | 旧库补救：手动安装 C5 记忆扩展（新库由迁移 0030 自动完成） |
 | `npm run eval:memory` | 独立账号的真实模型跨会话记忆验收 |
+| `npm run eval:textbooks` | 20 道教材题的页码级检索评测，可选运行真实答疑 |
 | `npm run search:install` | 旧库补救：手动安装 C3 倒排索引（新库由迁移 0030 自动完成） |
 | `npm run bench:search` | 独立库4万条模拟消息、50条历史检索评测 |
 | `npm run bench:history` | 先运行 bench 准备数据，再对照知识点查询：owner/kv_app、冷热、并发1/4 |
@@ -141,7 +145,7 @@ docs/                  报告草稿、E-R 图、关系模式图、数据库设�
 ## 已知限制
 
 - 班级星系使用 **2D SVG 星图**，个人花园为 3D；3D 多球环绕场景属于后续工作，当前不宣称已完成。
-- 资料检索仍是词法检索，没有向量检索。历史检索使用 C3 中文倒排索引（迁移 `0030` 自动建表/回填，两字关键词走词项 B-tree）；旧库可运行 `npm run search:install` 补救。未安装时自动回退原 ILIKE 检索，见 `docs/sql/search-handoff.md`。
+- 教材向量当前在授权范围内做精确比较。历史检索使用 C3 中文倒排索引（迁移 `0030` 自动建表/回填，两字关键词走词项 B-tree）；旧库可运行 `npm run search:install` 补救。见 `docs/sql/search-handoff.md`。
 - 演示模式的回答只覆盖少数主题（LEFT JOIN、内连接、条件概率、贝叶斯、范式、分组聚合），其它问题会如实说明并列出检索到的资料片段。
 - 开放题在演示模式下按关键词规则评价，会误判；界面已注明。
 - 扫描件只提示需要 OCR，没有内置 OCR；Word、Excel 等类型只保存元数据。

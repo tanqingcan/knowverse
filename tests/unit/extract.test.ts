@@ -4,6 +4,17 @@ import fs from 'node:fs';
 import {detectType,extractContent,splitLong,MAX_UPLOAD_BYTES} from '../../src/server/extract';
 const fixture=(name:string)=>fs.readFileSync(new URL('../../seed/materials/'+name,import.meta.url));
 describe('C2 资料流水线',()=>{
+ it('包内绝对路径和重排页序均按课件实际顺序定位，缺页给出失败页码', async () => {
+   const zip = new JSZip();
+   zip.file('[Content_Types].xml', 'presentationml');
+   zip.file('ppt/presentation.xml', '<p:sldIdLst><p:sldId r:id="second"/><p:sldId r:id="first"/></p:sldIdLst>');
+   zip.file('ppt/_rels/presentation.xml.rels', '<Relationships><Relationship Id="first" Target="slides/slide1.xml"/><Relationship Id="second" Target="/ppt/slides/slide2.xml"/></Relationships>');
+   for (const i of [1, 2]) zip.file(`ppt/slides/slide${i}.xml`, `<a:p><a:r><a:t xml:space="preserve">讲义内容${i}</a:t></a:r></a:p>`);
+   const extract = async () => extractContent('pptx', await zip.generateAsync({type:'nodebuffer'}));
+   expect((await extract()).chunks.map(c => [c.pageNo, c.content])).toEqual([[1,'讲义内容2'],[2,'讲义内容1']]);
+   zip.remove('ppt/slides/slide2.xml');
+   expect(await extract()).toMatchObject({status:'failed',chunks:[],detail:expect.stringContaining('第 1 页')});
+ });
  it('演示上传样例可提取备注与标题层级',async()=>{
   const ppt=await extractContent('pptx',fixture('C2-含备注的连接查询课件.pptx'));
   expect(ppt.chunks.find(c=>c.content.includes('星灯备注实验'))).toMatchObject({pageNo:1,heading:expect.stringContaining('备注')});

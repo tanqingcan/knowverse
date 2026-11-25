@@ -1,6 +1,8 @@
 {
-  "tables": 55,
-  "foreign_keys": 106,
+  "tables": 57,
+  "foreign_keys": 109,
+  "rls": 25,
+  "triggers": 11,
   "groups": {
     "identity": [
       "users",
@@ -38,6 +40,8 @@
       "material_versions",
       "material_chunks",
       "material_concepts",
+      "material_chunk_concepts",
+      "material_chunk_embeddings",
       "message_citations",
       "notes"
     ],
@@ -138,7 +142,7 @@
     {
       "from": "materials",
       "to": "knowledge",
-      "count": 3
+      "count": 4
     },
     {
       "from": "materials",

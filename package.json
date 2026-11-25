@@ -36,6 +36,8 @@
     "bench:hash": "tsx scripts/hash-index.ts",
     "eval:agent": "tsx scripts/eval-agent.ts",
     "eval:rag": "tsx scripts/eval-rag.ts",
+    "eval:textbooks": "tsx scripts/eval-textbooks.ts",
+    "rag:index": "tsx scripts/index-materials.ts",
     "eval:rag:review": "tsx scripts/eval-rag-review.ts",
     "search:install": "tsx scripts/install-search.ts",
     "bench:search": "tsx scripts/bench-search.ts",

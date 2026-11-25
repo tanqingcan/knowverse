@@ -332,10 +332,36 @@ export const materialChunks = pgTable("material_chunks", {
   paragraphNo: integer("paragraph_no"),                  // TXT/MD 段落号
   heading: text("heading"),
   content: text("content").notNull(),
+  conceptsIndexedAt: timestamp("concepts_indexed_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [
   uniqueIndex("material_chunks_ord_uq").on(t.versionId, t.ord),
   index("material_chunks_content_trgm_idx").using("gin", t.content.op("gin_trgm_ops")),
+]);
+
+export const materialChunkConcepts = pgTable("material_chunk_concepts", {
+  chunkId: uuid("chunk_id").notNull().references(() => materialChunks.id, { onDelete: "cascade" }),
+  conceptId: uuid("concept_id").notNull().references(() => concepts.id, { onDelete: "restrict" }),
+  source: text("source").notNull(),
+  matchedTerm: text("matched_term"),
+  status: text("status").notNull().default("candidate"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+}, (t) => [
+  primaryKey({ columns: [t.chunkId, t.conceptId] }),
+  check("material_chunk_concepts_source_check", sql`${t.source} in ('catalog','user')`),
+  check("material_chunk_concepts_status_check", sql`${t.status} in ('candidate','confirmed','rejected')`),
+  index("material_chunk_concepts_lookup_idx").on(t.conceptId, t.status, t.chunkId),
+]);
+
+export const materialChunkEmbeddings = pgTable("material_chunk_embeddings", {
+  chunkId: uuid("chunk_id").notNull().references(() => materialChunks.id, { onDelete: "cascade" }),
+  modelKey: text("model_key").notNull(),
+  embedding: real("embedding").array().notNull(),
+  indexedAt: timestamp("indexed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.chunkId, t.modelKey] }),
+  check("material_chunk_embeddings_model_key_check", sql`char_length(${t.modelKey}) between 1 and 100`),
+  check("material_chunk_embeddings_embedding_check", sql`array_ndims(${t.embedding}) = 1 and cardinality(${t.embedding}) = 512 and array_position(${t.embedding}, NULL) is null`),
 ]);
 
 /** 资料版本—知识点：提取后的候选概念，需要用户确认 */

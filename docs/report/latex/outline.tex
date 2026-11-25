@@ -1,0 +1,38 @@
+%!TeX program = xelatex
+\documentclass[12pt,a4paper,UTF8]{ctexart}
+\usepackage[top=32mm,bottom=28mm,left=32mm,right=32mm]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\definecolor{OutlineBlue}{HTML}{234E75}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+{\zihao{2}\bfseries\color{OutlineBlue} KNOWVERSE 项目报告大纲\par}
+\vspace{4mm}
+{\color{OutlineBlue!28}\rule{\linewidth}{0.55pt}\par}
+\vspace{8mm}
+
+{\zihao{3}
+摘要\par
+\begin{enumerate}[
+  label=\textcolor{OutlineBlue}{\arabic*.},
+  leftmargin=1.9em,
+  itemsep=3.3mm,
+  topsep=4mm,
+  parsep=0pt]
+  \item 需求分析
+  \item 概要设计
+  \item 数据库设计
+  \item 核心业务详细设计
+  \item 系统实现与交互
+  \item 系统测试与实验评测
+  \item 部署与运行维护
+  \item 大模型辅助设计与审查
+  \item 总结、局限与后续计划
+\end{enumerate}
+参考文献\par
+\vspace{3.3mm}
+附录\par
+}
+\end{document}

@@ -25,4 +25,5 @@ if (appUrl) {
 delete process.env.APP_DATABASE_URL;
 process.env.KV_CONNECTION = "system";
 process.env.LLM_MODE = "demo";
+process.env.SEED_DEMO_DATA = "true";
 process.env.UPLOAD_DIR = "./storage/test-uploads";

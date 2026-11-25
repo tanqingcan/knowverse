@@ -229,7 +229,7 @@ export const SCENE_ASSETS: SceneAssetDef[] = [
     colorParts: ["terrain"], semantics: "environment", editable: false,
   },
   {
-    assetId: "env.clouds", name: "云环", category: "environment", source: "GardenWorld.FrontClouds",
+    assetId: "env.clouds", name: "云环", category: "environment", source: "Props3D.CloudRing",
     colorParts: ["cloud"], semantics: "environment", editable: false,
   },
 ];

@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-11-17T12:43:25.671Z",
+  "captured_at": "2026-11-25T08:07:57.523Z",
   "postgres": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
   "scope": "public逻辑表，排除分区子表与视图；只读系统目录，不含业务行",
   "tables": [
@@ -4057,6 +4057,286 @@
       "policies": []
     },
     {
+      "name": "material_chunk_concepts",
+      "kind": "r",
+      "rls": true,
+      "comment": null,
+      "columns": [
+        {
+          "name": "chunk_id",
+          "type": "uuid",
+          "not_null": true,
+          "ordinal": 1,
+          "default_expr": null
+        },
+        {
+          "name": "concept_id",
+          "type": "uuid",
+          "not_null": true,
+          "ordinal": 2,
+          "default_expr": null
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "not_null": true,
+          "ordinal": 3,
+          "default_expr": null
+        },
+        {
+          "name": "matched_term",
+          "type": "text",
+          "not_null": false,
+          "ordinal": 4,
+          "default_expr": null
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "not_null": true,
+          "ordinal": 5,
+          "default_expr": "'candidate'::text"
+        },
+        {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "ordinal": 6,
+          "default_expr": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "material_chunk_concepts_source_check",
+          "type": "c",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "CHECK ((source = ANY (ARRAY['catalog'::text, 'user'::text])))",
+          "columns": [
+            "source"
+          ],
+          "target_columns": []
+        },
+        {
+          "name": "material_chunk_concepts_status_check",
+          "type": "c",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "CHECK ((status = ANY (ARRAY['candidate'::text, 'confirmed'::text, 'rejected'::text])))",
+          "columns": [
+            "status"
+          ],
+          "target_columns": []
+        },
+        {
+          "name": "material_chunk_concepts_chunk_id_fkey",
+          "type": "f",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "material_chunks",
+          "definition": "FOREIGN KEY (chunk_id) REFERENCES material_chunks(id) ON DELETE CASCADE",
+          "columns": [
+            "chunk_id"
+          ],
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "material_chunk_concepts_concept_id_fkey",
+          "type": "f",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "concepts",
+          "definition": "FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE RESTRICT",
+          "columns": [
+            "concept_id"
+          ],
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "material_chunk_concepts_pkey",
+          "type": "p",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "PRIMARY KEY (chunk_id, concept_id)",
+          "columns": [
+            "chunk_id",
+            "concept_id"
+          ],
+          "target_columns": []
+        }
+      ],
+      "indexes": [
+        {
+          "name": "material_chunk_concepts_lookup_idx",
+          "is_primary": false,
+          "is_unique": false,
+          "valid": true,
+          "expression": false,
+          "predicate": null,
+          "definition": "CREATE INDEX material_chunk_concepts_lookup_idx ON public.material_chunk_concepts USING btree (concept_id, status, chunk_id)",
+          "columns": [
+            "concept_id",
+            "status",
+            "chunk_id"
+          ]
+        },
+        {
+          "name": "material_chunk_concepts_pkey",
+          "is_primary": true,
+          "is_unique": true,
+          "valid": true,
+          "expression": false,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX material_chunk_concepts_pkey ON public.material_chunk_concepts USING btree (chunk_id, concept_id)",
+          "columns": [
+            "chunk_id",
+            "concept_id"
+          ]
+        }
+      ],
+      "triggers": [],
+      "policies": [
+        {
+          "name": "material_chunk_concepts_read",
+          "cmd": "SELECT",
+          "qual": "(EXISTS ( SELECT 1\n   FROM (((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n     JOIN concepts k ON (((k.id = material_chunk_concepts.concept_id) AND (k.subject_id = m.subject_id))))\n  WHERE ((ch.id = material_chunk_concepts.chunk_id) AND (m.archived_at IS NULL) AND ((m.owner_user_id IS NULL) OR (m.owner_user_id = kv_current_user_id())) AND ((k.owner_user_id IS NULL) OR (k.owner_user_id = m.owner_user_id)))))",
+          "with_check": null
+        },
+        {
+          "name": "material_chunk_concepts_write",
+          "cmd": "ALL",
+          "qual": "(EXISTS ( SELECT 1\n   FROM ((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n  WHERE ((ch.id = material_chunk_concepts.chunk_id) AND (m.owner_user_id = kv_current_user_id()) AND (m.archived_at IS NULL))))",
+          "with_check": "(EXISTS ( SELECT 1\n   FROM (((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n     JOIN concepts k ON (((k.id = material_chunk_concepts.concept_id) AND (k.subject_id = m.subject_id))))\n  WHERE ((ch.id = material_chunk_concepts.chunk_id) AND (m.owner_user_id = kv_current_user_id()) AND (m.archived_at IS NULL) AND ((k.owner_user_id IS NULL) OR (k.owner_user_id = m.owner_user_id)))))"
+        }
+      ]
+    },
+    {
+      "name": "material_chunk_embeddings",
+      "kind": "r",
+      "rls": true,
+      "comment": null,
+      "columns": [
+        {
+          "name": "chunk_id",
+          "type": "uuid",
+          "not_null": true,
+          "ordinal": 1,
+          "default_expr": null
+        },
+        {
+          "name": "model_key",
+          "type": "text",
+          "not_null": true,
+          "ordinal": 2,
+          "default_expr": null
+        },
+        {
+          "name": "embedding",
+          "type": "real[]",
+          "not_null": true,
+          "ordinal": 3,
+          "default_expr": null
+        },
+        {
+          "name": "indexed_at",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "ordinal": 4,
+          "default_expr": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "material_chunk_embeddings_embedding_check",
+          "type": "c",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "CHECK (((array_ndims(embedding) = 1) AND (cardinality(embedding) = 512) AND (array_position(embedding, NULL::real) IS NULL)))",
+          "columns": [
+            "embedding"
+          ],
+          "target_columns": []
+        },
+        {
+          "name": "material_chunk_embeddings_model_key_check",
+          "type": "c",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "CHECK (((char_length(model_key) >= 1) AND (char_length(model_key) <= 100)))",
+          "columns": [
+            "model_key"
+          ],
+          "target_columns": []
+        },
+        {
+          "name": "material_chunk_embeddings_chunk_id_fkey",
+          "type": "f",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "material_chunks",
+          "definition": "FOREIGN KEY (chunk_id) REFERENCES material_chunks(id) ON DELETE CASCADE",
+          "columns": [
+            "chunk_id"
+          ],
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "material_chunk_embeddings_pkey",
+          "type": "p",
+          "deferrable": false,
+          "initially_deferred": false,
+          "target": "-",
+          "definition": "PRIMARY KEY (chunk_id, model_key)",
+          "columns": [
+            "chunk_id",
+            "model_key"
+          ],
+          "target_columns": []
+        }
+      ],
+      "indexes": [
+        {
+          "name": "material_chunk_embeddings_pkey",
+          "is_primary": true,
+          "is_unique": true,
+          "valid": true,
+          "expression": false,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX material_chunk_embeddings_pkey ON public.material_chunk_embeddings USING btree (chunk_id, model_key)",
+          "columns": [
+            "chunk_id",
+            "model_key"
+          ]
+        }
+      ],
+      "triggers": [],
+      "policies": [
+        {
+          "name": "material_chunk_embeddings_read",
+          "cmd": "SELECT",
+          "qual": "(EXISTS ( SELECT 1\n   FROM ((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n  WHERE ((ch.id = material_chunk_embeddings.chunk_id) AND (m.archived_at IS NULL) AND ((m.owner_user_id IS NULL) OR (m.owner_user_id = kv_current_user_id())))))",
+          "with_check": null
+        },
+        {
+          "name": "material_chunk_embeddings_write",
+          "cmd": "ALL",
+          "qual": "(EXISTS ( SELECT 1\n   FROM ((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n  WHERE ((ch.id = material_chunk_embeddings.chunk_id) AND (m.owner_user_id = kv_current_user_id()) AND (m.archived_at IS NULL))))",
+          "with_check": "(EXISTS ( SELECT 1\n   FROM ((material_chunks ch\n     JOIN material_versions v ON ((v.id = ch.version_id)))\n     JOIN materials m ON ((m.id = v.material_id)))\n  WHERE ((ch.id = material_chunk_embeddings.chunk_id) AND (m.owner_user_id = kv_current_user_id()) AND (m.archived_at IS NULL))))"
+        }
+      ]
+    },
+    {
       "name": "material_chunks",
       "kind": "r",
       "rls": true,
@@ -4117,6 +4397,13 @@
           "not_null": true,
           "ordinal": 8,
           "default_expr": "now()"
+        },
+        {
+          "name": "concepts_indexed_at",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "ordinal": 9,
+          "default_expr": null
         }
       ],
       "constraints": [

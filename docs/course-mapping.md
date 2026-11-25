@@ -41,12 +41,12 @@
 
 | 课堂知识点 | 我们的实现 | 现场演示 | 比课堂多走的一步 |
 |---|---|---|---|
-| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出（55 个逻辑表），并区分可空/条件唯一性，再人工核对业务FD | `npm run docs:keys` | 键目录可再生成，业务FD仍需人工复核 |
+| 函数依赖、候选键 | 候选键从 `pg_index` 自动导出，区分可空与条件唯一性，再人工核对业务 FD | `npm run docs:keys` | 0032 快照包含 57 个逻辑表 |
 | 1NF / 2NF / 3NF / BCNF | 复核核心FD，撤回全库范式数量 | `docs/schema/normalization-analysis.md` | 区分全局与条件依赖 |
-| 无损连接、依赖保持 | `plants` / `concepts` / `learning_states` 的局部二元无损分解条件 | `docs/schema/wide-table-vs-decomposed.md` | 配了宽表反例与三类异常 |
+| 无损连接、依赖保持 | 对知识点和学习状态的简化投影证明二元无损分解 | `docs/schema/wide-table-vs-decomposed.md` | 用宽表反例解释三类异常 |
 | 4NF（多值依赖） | 别名与先修拆成两张表，避免两个独立 MVD | 同上 | 只说明局部拆分理由，不宣称全库4NF |
 | 反规范化 | 区分用户归属冗余、引用事实与派生状态，注明约束/检查边界 | `npm run verify:invariants`（15 项） | 冗余不是“懒得拆”，而是有补偿机制 |
-| 范式与性能的取舍 | 同一查询走 `(user_id, concept_id, created_at)` 索引 vs 多一次 JOIN | `docs/features-explained.md` 第 18 条 | 用高频路径说明“为什么保留 1NF 的 messages” |
+| 范式与访问路径的取舍 | `messages.user_id` 支持本表过滤和行权限，复合外键约束归属 | `docs/schema/normalization-analysis.md` | 部分依赖可证明，收益需要同口径基准 |
 
 > 2026-11-17复核：撤回原全库范式数量，按 `docs/schema/normalization-analysis.md` 的已确认FD与条件依赖分开讲解。
 
@@ -61,7 +61,7 @@
 | E-R 图 → 关系模式 | `src/db/schema.ts` + `drizzle/0000`–`0028` | `npm run db:migrate` | 迁移可重放，约束与触发器分文件 |
 | 数据模型优化 | 规范化分析 + 两处受控冗余 + 宽表反例 | `docs/schema/wide-table-vs-decomposed.md` | 用函数依赖和无损连接论证，而不是“感觉 3NF” |
 | 设计用户子模式 | 教师视图 + `kv_teacher` 角色 | `npm run demo:grants` | 子模式 = 视图 + 授权，二者一起讲 |
-| 物理设计：B+ 树 / GIN / 部分索引 | 99 个索引；1 个 `pg_trgm` GIN；2 个部分索引 | `docs/sql/index-decisions.md` | 用 EXPLAIN 前后对比，还记录了被否决的负优化 |
+| 物理设计：PostgreSQL B 树 / GIN / 部分索引 | 消息按用户和时间访问，资料正文支持三元组检索 | `docs/sql/index-decisions.md` | 用 EXPLAIN 对比，并保存过反例 |
 | 聚簇 / HASH 存取 | 见 `docs/sql/physical-design.md`（若已生成） | `npm run bench:physical` | 用实测说明什么时候该聚簇、什么时候哈希更小 |
 | 实施与维护 | 迁移、seed、`demo:reset`、夜间维护过程 | `npm run maintenance` | 维护也写进数据库，而不是只写脚本 |
 

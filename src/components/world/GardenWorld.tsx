@@ -326,28 +326,6 @@ function Grass({ items, tint }: { items: ReturnType<typeof scatter>; tint?: stri
   return <instancedMesh ref={ref} args={[geo, mat, items.length]} frustumCulled={false} receiveShadow />;
 }
 
-/** 前景低云：裹住星球前缘，缩小下半球在画面中的占比（InstancedMesh，一次绘制 + 实例色） */
-function FrontClouds() {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const puffs = useMemo(() => Array.from({ length: 16 }, (_, i) => {
-    const x = -2.7 + (i / 15) * 5.4 + (rand(i, 1) - 0.5) * 0.3;
-    const z = 1.78 - Math.abs(x) * 0.12 + rand(i, 2) * 0.22;
-    return { x, z, s: 0.28 + rand(i, 3) * 0.22, lift: 0.02 + rand(i, 4) * 0.06, c: i % 5 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EFE6F3" : "#FFF7EE" };
-  }), []);
-  useEffect(() => {
-    const m = ref.current; if (!m) return;
-    const mx = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion();
-    puffs.forEach((p, i) => {
-      const f = capFrame(p.x, p.z, 0, p.lift);
-      q.copy(f.quat);
-      mx.compose(f.pos, q, new THREE.Vector3(p.s * 1.4, p.s * 0.7, p.s));
-      m.setMatrixAt(i, mx); m.setColorAt(i, col.set(p.c));
-    });
-    m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [puffs]);
-  return <instancedMesh ref={ref} args={[sphereGeo(1, 18, 12), matte("#ffffff", { rough: 1 }), puffs.length]} />;
-}
-
 /** 树木与灌木按几何类型合批（树干/树冠/灌木球/灌木花/接触阴影，各 1 次 draw）。纯装饰、无交互、无动画。 */
 type FloraItem = { x: number; z: number; kind: "tree" | "bush"; seed: number; tint?: string };
 function FloraField({ items }: { items: FloraItem[] }) {
@@ -652,26 +630,38 @@ function LabelTracker({ anchors, labelKey, el, minX = 0 }: { anchors: React.Muta
 /**
  * 帧率限制（配合 Canvas frameloop="demand"）：
  * 原来是每帧都渲染，高刷新率屏幕上 GPU 一直满载（实测约 80 fps、空闲也不停），电脑发热。
- * 现在：最近 4 秒有交互（指针 / 滚轮 / 键盘）按 60 fps；空闲时只剩慢转，按 30 fps；标签页在后台时不渲染。
+ * 现在：最近 4 秒有交互（指针 / 滚轮 / 键盘）按 60 fps；空闲时只剩慢转，按 30 fps；学习窗口的背景按 8 fps 更新，标签页隐藏时取消调度。
  * 所有动画都按时间增量计算，降帧只影响流畅度，不影响动画快慢。
  */
 const ACTIVE_FPS = 60, IDLE_FPS = 30, IDLE_AFTER_MS = 4000;
-function FrameLimiter() {
+function FrameLimiter({ reading }: { reading: boolean }) {
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
-    let raf = 0, last = 0, lastAct = performance.now();
+    let raf = 0, timer = 0, last = 0, lastAct = performance.now();
     const act = () => { lastAct = performance.now(); };
-    const evs = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"] as const;
-    evs.forEach((e) => window.addEventListener(e, act, { passive: true }));
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop);
+    const events = ["pointerdown", "pointermove", "wheel", "keydown"] as const;
+    const frame = (now: number) => {
       if (document.hidden) return;
-      const fps = t - lastAct < IDLE_AFTER_MS ? ACTIVE_FPS : IDLE_FPS;
-      if (t - last >= 1000 / fps - 2) { last = t; invalidate(); }
+      if (reading) {
+        invalidate();
+        timer = window.setTimeout(() => frame(performance.now()), 125);
+      } else {
+        const fps = now - lastAct < IDLE_AFTER_MS ? ACTIVE_FPS : IDLE_FPS;
+        if (now - last >= 1000 / fps - 2) { last = now; invalidate(); }
+        raf = requestAnimationFrame(frame);
+      }
     };
-    raf = requestAnimationFrame(loop);
-    return () => { cancelAnimationFrame(raf); evs.forEach((e) => window.removeEventListener(e, act)); };
-  }, [invalidate]);
+    const stop = () => { cancelAnimationFrame(raf); window.clearTimeout(timer); };
+    const restart = () => { stop(); frame(performance.now()); };
+    if (!reading) events.forEach(e => window.addEventListener(e, act, { passive: true }));
+    document.addEventListener("visibilitychange", restart);
+    restart();
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", restart);
+      events.forEach(e => window.removeEventListener(e, act));
+    };
+  }, [invalidate, reading]);
   return null;
 }
 
@@ -824,7 +814,7 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
   const register = useMemo(() => (k: string, o: THREE.Object3D | null) => { if (o) anchors.current.set(k, o); else anchors.current.delete(k); }, []);
   const beds = useMemo(() => layoutBeds(gardens, plants, props.bedMoves), [gardens, plants, props.bedMoves]);
   const plantMap = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
-  // 内圈（花园）保持原来的密度；外圈铺满整个可见球面，转到侧面/背面也有草
+  // 三片环带各留少量地被，知识点植物仍按实际学习记录完整绘制。
   // H04：草/野花是「全星球群组」，操作单元 = 整组密度（scale 当倍率，0.2–3），不逐株进入编辑。
   const grassDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "grassGroup")?.scale ?? 1);
   const bloomDensity = clampDensity((props.decor ?? []).find((d) => d.kind === "wildflowerGroup")?.scale ?? 1);
@@ -833,9 +823,18 @@ function Scene(props: WorldProps & { labelEl: React.RefObject<HTMLDivElement | n
     blocked: (props.decor ?? []).filter(d=>!d.hidden && (isBuildingKind(d.kind)||["tree","bush","chair"].includes(d.kind))).map(d=>({x:d.x,z:d.z,r:(d.kind==="chair"?.13:d.kind==="tree"?.10:d.kind==="bush"?.12:.3)*d.scale})),
     paths: Object.entries(props.bedMoves).filter(([k])=>k.startsWith("__path-")).map(([,p])=>p)
   } : undefined, [props.decor,props.bedMoves]);
-  const benchGroundcover = useMemo(() => (props.decor ?? []).filter(d=>d.kind === "chair" && !d.hidden).flatMap(d=>scatter([],42,197,.72,.19,{blocked:[],paths:[]}).map(p=>({...p,x:p.x+d.x,z:p.z+d.z,s:p.s*.8}))), [props.decor]);
-  const grass = useMemo(() => [...scatter(beds, Math.round(380 * grassDensity), 11, 2.4,0,vegetationObstacles), ...scatter(beds, Math.round(650 * grassDensity), 23, 4.05, 2.4,vegetationObstacles), ...scatter(beds, Math.round(1300 * grassDensity), 51, 6.3, 4.05,vegetationObstacles), ...benchGroundcover], [beds, grassDensity,vegetationObstacles,benchGroundcover]);
-  const blooms = useMemo(() => [...scatter(beds, Math.round(140 * bloomDensity), 29, 2.4,0,vegetationObstacles), ...scatter(beds, Math.round(220 * bloomDensity), 31, 4.05, 2.4,vegetationObstacles), ...scatter(beds, Math.round(440 * bloomDensity), 61, 6.3, 4.05,vegetationObstacles)], [beds, bloomDensity,vegetationObstacles]);
+  const benchGroundcover = useMemo(() => (props.decor ?? []).filter(d=>d.kind === "chair" && !d.hidden).flatMap(d=>scatter([],12,197,.72,.19,{blocked:[],paths:[]}).map(p=>({...p,x:p.x+d.x,z:p.z+d.z,s:p.s*.8}))), [props.decor]);
+  const grass = useMemo(() => [
+    ...scatter(beds, Math.round(120 * grassDensity), 11, 2.4, 0, vegetationObstacles),
+    ...scatter(beds, Math.round(160 * grassDensity), 23, 4.05, 2.4, vegetationObstacles),
+    ...scatter(beds, Math.round(240 * grassDensity), 51, 6.3, 4.05, vegetationObstacles),
+    ...benchGroundcover,
+  ], [beds, grassDensity, vegetationObstacles, benchGroundcover]);
+  const blooms = useMemo(() => [
+    ...scatter(beds, Math.round(60 * bloomDensity), 29, 2.4, 0, vegetationObstacles),
+    ...scatter(beds, Math.round(70 * bloomDensity), 31, 4.05, 2.4, vegetationObstacles),
+    ...scatter(beds, Math.round(110 * bloomDensity), 61, 6.3, 4.05, vegetationObstacles),
+  ], [beds, bloomDensity, vegetationObstacles]);
   // H09：场景锚点（门口/道路端点/地表印迹/星灯停靠）统一从布局实例推导，建筑搬走后跟着走
   const poses = useMemo(() => homePoses(props.decor), [props.decor]);
   const terrain = useMemo(() => paintTerrain(beds, poses, !!props.bedMoves?.__manualPaths), [beds, poses, props.bedMoves?.__manualPaths]);
@@ -1204,6 +1203,16 @@ class GLBoundary extends React.Component<{ onFail: () => void; children: React.R
 }
 
 export function GardenWorld(props: WorldProps) {
+  // 课堂演示流畅模式：可由启动器或 URL 参数启用。
+  const [lite] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (new URLSearchParams(window.location.search).has("lite")) return true;
+    try {
+      return window.localStorage.getItem("kv-demo-lite") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [hover, setHoverState] = useState<string | null>(null);
   const labelEl = useRef<HTMLDivElement>(null);
   const drag = useRef({ yaw: 0, tilt: 0 });
@@ -1429,11 +1438,11 @@ export function GardenWorld(props: WorldProps) {
       onPointerUp={(e) => endPointer(e.pointerId)} onPointerCancel={(e) => endPointer(e.pointerId)}
       onPointerLeave={(e) => endPointer(e.pointerId)}>
       <GLBoundary onFail={props.onFail}>
-        <Canvas shadows frameloop="demand" dpr={props.mode === "focus" ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
-          gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
-          onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
+        <Canvas shadows={!lite} frameloop="demand" dpr={lite ? 1 : props.mode === "focus" ? [1, 1.25] : [1, 1.5]} camera={{ fov: 30, position: [0, 8, 8], near: 0.1, far: 60 }}
+          gl={{ antialias: !lite, alpha: true, powerPreference: "high-performance", toneMapping: THREE.NeutralToneMapping }}
+          onCreated={({ gl }) => { gl.setClearColor(0x000000, 0); gl.shadowMap.type = lite ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap; if (!gl.getContext()) props.onFail(); }}
           onPointerMissed={() => { setHover(null); props.onPlaceMiss?.(); }}>
-          <FrameLimiter />
+          <FrameLimiter reading={props.mode === "focus"} />
           <Suspense fallback={null}>
             <PerfProbe />
             <Scene {...props} labelEl={labelEl} selEl={selEl} plateEls={plateEls} hover={hover} setHover={setHover} drag={drag} zoom={zoom} decorDrag={decorDrag} lastDecorMove={lastDecorMove} pointerToCap={pointerToCap} nudge={nudgeRef} />

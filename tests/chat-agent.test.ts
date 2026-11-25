@@ -39,9 +39,11 @@ const server = http.createServer((req, res) => {
         ? "SELECT c.title FROM courses c LEFT JOIN enrollments e ON e.cid = c.cid AND e.term = '2026春' WHERE e.cid IS NULL"
         : "SELECT * FROM no_such_table" } }));
     const fake = behavior === "cite_fake";
+    const context = lastBody.messages[1]?.content ?? "";
+    const quote = context.match(/^\[资料1\] .*\n([^\n]+)/m)?.[1]?.slice(0, 32);
     reply(JSON.stringify({
       answer: `模型回答：右表条件应放在 ON 中 [资料1]${fake ? "，另见 [资料9]" : ""}。`,
-      basis: "mixed", citations: [{ ref: "资料1" }, ...(fake ? [{ ref: "资料9" }] : [])], concepts: ["左外连接"], followups: [],
+      basis: "mixed", citations: [{ ref: "资料1", quote }, ...(fake ? [{ ref: "资料9" }] : [])], concepts: ["左外连接"], followups: [],
     }));
   });
 });

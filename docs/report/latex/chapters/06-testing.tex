@@ -20,11 +20,12 @@
 \end{tabular}
 \caption{2026-11-17 历史实验，\code{kv_app}、每组 20 请求、预热 2 次；非本次复测}\label{tab:history-bench}
 \end{table}
-\Writing{A/D}{补 owner 对照、前后 SQL/计划与图。时间含连接、事务与查询，不含 HTTP/浏览器；固定先原后改写、小样本、合成数据和负载干扰限制保留，不以最好一组代表全部。}
+\FloatBarrier
+\Writing{A 提数据，D 作图}{紧接结果表放分组对照图，完整展示应用角色下不同命中量、不同并发的原查询与改写 P95，标毫秒和样本。解释已验证的结果等价、测量范围与限制。}
 \subsection{来源与检索质量专项}
 \Writing{C}{区分检索命中、摘录合法、语义正确。已有集 50 问是 40 有资料+10 无资料，38/40 为有效引用，不是答案准确率；8 主题改写不当 50 独立主题。人工金标准缺失如实写，记忆指标同样具体定义。}
 \subsection{端到端与界面验收}
 \Writing{B/D}{列日期、浏览器、视口、WebGL。2026-11-17 的 15/15 主流程为静态降级，不能扩大成 3D 全流程；引用真实截图与结果 JSON。}
 \subsection{缺陷修复与测试局限}
-\Writing{D，各交一个案例}{至少三例：旧行为、定位、修改、回归、剩余限制；包含失败和负优化。最终统计从原始输出读取，不累加历史批次。}
+\Writing{D，收各模块材料}{挑有证据的缺陷写清现象、定位、修改和复测。有必要时放诊断截图或前后结果表。报告中的汇总数字从相应版本的原始输出核对。}
 \Evidence{docs/test-report.md; docs/test-evidence/vitest-history-2026-11-17.json; docs/sql/history-optimization.json; docs/sql/rag-c4-closeout.md}

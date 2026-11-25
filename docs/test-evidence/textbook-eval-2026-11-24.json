@@ -1,0 +1,2005 @@
+{
+  "date": "2026-11-24",
+  "embedding": "BAAI/bge-small-zh-v1.5@7999e1d3359715c523056ef9478215996d62a620",
+  "threshold": 0.55,
+  "lexicalBaseline": {
+    "summary": {
+      "questions": 20,
+      "positives": 16,
+      "negatives": 4,
+      "hitAt1": 9,
+      "hitAt4": 9,
+      "allEvidenceAt4": 8,
+      "negativeEmpty": 4,
+      "p50Ms": 4.64,
+      "p95Ms": 6.82
+    },
+    "rankByQuestion": {
+      "D01": [
+        1
+      ],
+      "D02": [
+        0
+      ],
+      "D03": [
+        0
+      ],
+      "D04": [
+        1
+      ],
+      "D05": [
+        1
+      ],
+      "D06": [
+        1
+      ],
+      "D07": [
+        1
+      ],
+      "D08": [
+        0,
+        0
+      ],
+      "D09": [
+        1
+      ],
+      "D10": [
+        1
+      ],
+      "P01": [
+        0
+      ],
+      "P02": [
+        1
+      ],
+      "P03": [
+        0
+      ],
+      "P04": [
+        0
+      ],
+      "P05": [
+        0
+      ],
+      "P06": [
+        0,
+        1
+      ],
+      "N01": [],
+      "N02": [],
+      "N03": [],
+      "N04": []
+    }
+  },
+  "generationBeforePromptChange": {
+    "model": "deepseek-v4-pro",
+    "metrics": {
+      "completed": 20,
+      "withAllExpectedSourceGroups": 10,
+      "noEvidenceAbstentions": 4,
+      "citations": 18,
+      "originalExcerpts": 18,
+      "materialAnswersMedianMs": 9516,
+      "materialAnswersMaxMs": 16993
+    },
+    "answers": [
+      {
+        "id": "D01",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "当 LEFT JOIN 右边没有匹配到记录时，结果中**左表的元组仍然保留，右表的所有属性列全部取 NULL**。[资料1]\n\n最小例子：学生表（左）有“张三、李四”，选课表（右）只有“张三”的选课记录。执行 `学生 LEFT JOIN 选课` 后，李四这一行会保留，但选课表对应的列（如课程号、成绩）都是 NULL。\n\n注意一个常见坑：如果之后在 WHERE 里写了右表的条件（如 `WHERE 成绩 > 60`），李四这类 NULL 行会被过滤掉，等于退化成内连接的效果。要让右表条件生效又不丢左表行，应把条件写进 ON 里。[资料4]",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "quote": "对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。",
+            "fromOriginal": true,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 14 段",
+            "quote": "LEFT JOIN 之后在 WHERE 中写右表条件，导致没有匹配的左表元组消失。",
+            "fromOriginal": true,
+            "passage": "错误一：LEFT JOIN 之后在 WHERE 中写右表条件，导致没有匹配的左表元组消失。修正方法是把右表条件移到 ON 中，或者明确改用 INNER JOIN。"
+          }
+        ],
+        "ms": 8787
+      },
+      {
+        "id": "D02",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "右边的字段填 **NULL**。\n\n左外连接（LEFT JOIN）会保留左表的全部元组；当右表没有匹配时，右表的属性全部取 NULL [资料1]。\n\n最小例子：\n```sql\nSELECT 学生.*, 选课.*\nFROM 学生 LEFT JOIN 选课 ON 学生.学号 = 选课.学号;\n```\n一个班都没选的学生，其“选课”表对应的字段（如课程号、成绩等）都会显示为 NULL。",
+        "citations": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "quote": "右表没有匹配时，右表属性取 NULL",
+            "fromOriginal": true,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          }
+        ],
+        "ms": 11013
+      },
+      {
+        "id": "D03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 229
+      },
+      {
+        "id": "D04",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**结论：要保留没选课的人，学期条件必须写进 ON，不能写进 WHERE。**\n\n**区别**：\n- **ON**：决定元组如何配对（连接条件）。\n- **WHERE**：连接完成后对整行筛选。\n\n**为什么学期条件要放 ON**：LEFT JOIN 中，没选课的人右表属性会补成 NULL。如果把学期条件（右表条件）写进 WHERE，这些 NULL 行会因为比较结果为 UNKNOWN 被筛掉，结果退化成内连接，没选课的人就消失了 [资料3]。\n\n**最小例子**：\n```sql\nSELECT s.name, e.term\nFROM student s\nLEFT JOIN enroll e ON s.id = e.sid AND e.term = '2026秋';\n```\n学期条件放在 ON 里，没选 2026 秋课程的学生仍会以 `e.term = NULL` 的形式保留下来。若把 `e.term = '2026秋'` 挪到 WHERE，这些学生就会被过滤掉。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 10 段",
+            "quote": "那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接",
+            "fromOriginal": true,
+            "passage": "ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选。对 LEFT JOIN 而言，如果把针对右表的条件（例如 e.term = '2026秋'）写在 WHERE 中，那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接。若希望保留左表全部元组，应把右表条件写进 ON。"
+          }
+        ],
+        "ms": 16993
+      },
+      {
+        "id": "D05",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "结论：没选课的学生，用 `COUNT(*)` 会得到 1，是因为 `COUNT(*)` 数的是**行**，而不是某个字段的非空值。\n\n最小例子：\n- 学生“张三”在 enrollments 表里没有任何记录。\n- 做 `LEFT JOIN` 后，张三仍然会出现在结果里，只是右表（enrollments）的所有属性都是 NULL，于是结果里**仍然有张三这一行**。[资料3][资料4]\n- `COUNT(*)` 统计的是这一组里有多少行 → 张三这一行存在 → 结果是 1。\n- 而 `COUNT(e.cid)` 只统计 `e.cid` 这一列里**非 NULL** 的值。张三的 `e.cid` 是 NULL，所以不计入 → 结果是 0。[资料1]\n\n一句话：`COUNT(*)` 数行，`COUNT(列名)` 数该列非空值。没选课的人行还在，但 `e.cid` 是 NULL，所以前者是 1、后者是 0。",
+        "citations": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "quote": "没有选课的学生 n = 0；用 COUNT(*) 会得到 1",
+            "fromOriginal": true,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "quote": "对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL",
+            "fromOriginal": true,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "quote": "保留左表的全部元组\n右表没有匹配时，右表属性取 NULL",
+            "fromOriginal": true,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          }
+        ],
+        "ms": 10244
+      },
+      {
+        "id": "D06",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**结论：** `NULL = NULL` 的结果不是 TRUE，而是 UNKNOWN。因为 SQL 采用三值逻辑（TRUE / FALSE / UNKNOWN），任何与 NULL 的比较（包括 `NULL = NULL`）结果都是 UNKNOWN；而 WHERE 与 HAVING 只保留条件为 TRUE 的元组，所以用 `= NULL` 判断空值永远筛不出结果 [资料1]。\n\n**真正查空值该用：** `IS NULL`（判断为空）或 `IS NOT NULL`（判断非空）[资料1][资料3]。\n\n**最小例子：** 假设表 `student` 中某行 `cid` 为 NULL，执行 `WHERE cid = NULL` 时，比较结果为 UNKNOWN，该行不会被选出；改成 `WHERE cid IS NULL` 才能正确选出它。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 12 段",
+            "quote": "任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。",
+            "fromOriginal": true,
+            "passage": "SQL 使用三值逻辑：TRUE、FALSE、UNKNOWN。任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 16 段",
+            "quote": "错误三：用 = NULL 判断空值。应使用 IS NULL。",
+            "fromOriginal": true,
+            "passage": "错误三：用 = NULL 判断空值。应使用 IS NULL。"
+          }
+        ],
+        "ms": 7563
+      },
+      {
+        "id": "D07",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "应选 **HAVING**。\n\n因为“平均分超过 75”是对**分组之后**每组计算出的聚合值（AVG(score)）做筛选，而 WHERE 是在分组前对单个元组筛选，无法使用聚合函数。\n\n最小例子：\n```sql\nSELECT cid, AVG(score) AS avg_score\nFROM enrollments\nGROUP BY cid\nHAVING AVG(score) > 75;\n```\n这里 `AVG(score)` 是每组算出的一个值，所以放在 HAVING 里。\n\n补充：HAVING 与 WHERE 一样，只保留条件为 TRUE 的组；若某组平均分为 NULL（如全为 NULL），比较结果为 UNKNOWN，该组会被排除 [资料3]。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 12 段",
+            "quote": "WHERE 与 HAVING 只保留条件为 TRUE 的元组",
+            "fromOriginal": true,
+            "passage": "SQL 使用三值逻辑：TRUE、FALSE、UNKNOWN。任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。"
+          }
+        ],
+        "ms": 12882
+      },
+      {
+        "id": "D08",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true,
+          false
+        ],
+        "answer": "**结论**：没选课的人被算成 1，是因为用了 `COUNT(*)` 而不是 `COUNT(e.cid)`。`COUNT(*)` 统计的是分组内所有行，即使 `e.cid` 为 NULL，LEFT JOIN 也会为没选课的学生生成一行（该行 enrollments 侧全为 NULL），所以每组至少有一行，计数为 1；而 `COUNT(e.cid)` 只统计非 NULL 的选课记录，没选课时为 0。[资料1]\n\n**筛掉平均分不达标的组**：用 `HAVING` 子句，因为它在分组后筛选组，且可以使用聚合函数，例如 `HAVING AVG(score) > 75`。",
+        "citations": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "quote": "没有选课的学生 n = 0；用 COUNT(*) 会得到 1",
+            "fromOriginal": true,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          }
+        ],
+        "ms": 12398
+      },
+      {
+        "id": "D09",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "“星灯备注实验”出现在**第 1 页**。它说的是：LEFT JOIN 的右表过滤条件应放在 **ON** 中，这样可以保留没有匹配记录的左表行。[资料1]",
+        "citations": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 1 页幻灯片",
+            "quote": "C2备注专属标记：星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中，可以保留没有匹配记录的左表行。这段只在第1页演讲者备注里",
+            "fromOriginal": true,
+            "passage": "C2备注专属标记：星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中，可以保留没有匹配记录的左表行。这段只在第1页演讲者备注里，幻灯片正文没有。"
+          }
+        ],
+        "ms": 3517
+      },
+      {
+        "id": "D10",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "结论：LEFT JOIN 后，右表没有匹配的元组会被补成一行 NULL，而 COUNT(*) 统计的是“行数”而不是“非空值个数”，所以这行 NULL 也会被算作 1。要统计右表实际匹配的数量，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。[资料1]\n\n最小例子：学生表 s 有 3 人，其中 1 人没选课。`s LEFT JOIN e` 后得到 3 行，没选课那行的 e.cid 是 NULL。`COUNT(*)` 结果是 3，`COUNT(e.cid)` 结果是 2。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 15 段",
+            "quote": "补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)",
+            "fromOriginal": true,
+            "passage": "错误二：使用 COUNT(*) 统计左外连接中右表的匹配数。补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。"
+          }
+        ],
+        "ms": 5695
+      },
+      {
+        "id": "N01",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 79
+      },
+      {
+        "id": "N02",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 77
+      },
+      {
+        "id": "N03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 79
+      },
+      {
+        "id": "N04",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 74
+      },
+      {
+        "id": "P01",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 7824
+      },
+      {
+        "id": "P02",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**结论：P(A|B) 与 P(B|A) 一般不同，因为两者的分母不同。**\n\n由定义，P(A|B) = P(AB)/P(B)，而 P(B|A) = P(AB)/P(A)。分子都是 P(AB)，但分母分别是 P(B) 和 P(A)，一般情况下 P(A) ≠ P(B)，所以两个条件概率不相等 [资料1]。\n\n**最小例子：** 设一个班 10 人，其中 4 人戴眼镜（事件 A），5 人是女生（事件 B），戴眼镜的女生有 2 人。\n- P(A|B) = 女生中戴眼镜的比例 = 2/5 = 0.4\n- P(B|A) = 戴眼镜者中女生的比例 = 2/4 = 0.5\n\n两者不同，正是因为分母一个是“女生人数”(5)，一个是“戴眼镜人数”(4) [资料1]。\n\n只有当 P(A) = P(B) 时，这两个条件概率才恰好相等；此外，若 A、B 独立，则 P(A|B) = P(A) 且 P(B|A) = P(B)，此时二者也未必相等（除非 P(A) = P(B)）[资料3]。",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 1 页",
+            "quote": "一般情况下 P(A|B) 与 P(B|A) 不相等，因为两者的分母不同。",
+            "fromOriginal": true,
+            "passage": "1 条件概率的定义\n知屿 KNOWVERSE 演示用原创讲义。\n设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条\n件概率。\n直观上，已知 B 发生后，样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例。一般情况下 P(A|B)\n与 P(B|A) 不相等，因为两者的分母不同。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 4 页",
+            "quote": "当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)",
+            "fromOriginal": true,
+            "passage": "4 事件的独立性\n若 P(AB) = P(A) P(B)，称事件 A 与 B 相互独立。当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即\nB 是否发生不影响 A 发生的概率。\n注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。"
+          }
+        ],
+        "ms": 8778
+      },
+      {
+        "id": "P03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 77
+      },
+      {
+        "id": "P04",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "检测为阳性时，真正患病的概率约为 **0.161**（即约 16.1%）。\n\n教材给出的例子：患病率 1%、检测灵敏度 95%、健康人误报率 5%，代入贝叶斯公式后，阳性结果中真正患病的概率约为 0.161。教材特别指出，先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。[资料1]",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "quote": "检测为阳性时真正患病的概率约为 0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。",
+            "fromOriginal": true,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          }
+        ],
+        "ms": 5332
+      },
+      {
+        "id": "P05",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "结论：两个不能同时发生的事（互斥事件）之间，确实可能“有影响”——因为一个发生会彻底排除另一个，这种影响体现在条件概率上；但若两者概率都大于 0，则它们一定**不独立**。\n\n最小例子：掷一枚骰子，A =“掷出 1 点”，B =“掷出 2 点”。A、B 不能同时发生（互斥），且 P(A)=P(B)=1/6 > 0。此时 P(A|B)=0，而 P(A)=1/6，二者不相等，所以 A、B 不独立——B 的发生把 A 的概率从 1/6 压到了 0，这就是“影响”。\n\n教材依据：\n- 互斥与独立是不同概念，两个概率都大于 0 的互斥事件一定不独立 [资料4]。\n- 判断独立要看 P(AB) 是否等于 P(A)P(B)，而不是凭直觉 [资料1]。互斥时 P(AB)=0，而 P(A)P(B)>0，故不独立。\n\n注意：教材中“独立”的定义是 P(AB)=P(A)P(B)，等价于 P(A|B)=P(A)（当 P(B)>0 时）[资料4]。互斥事件满足 P(AB)=0，因此只要 P(A)、P(B) 都大于 0，就必然 P(AB)≠P(A)P(B)，即不独立。",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 4 页",
+            "quote": "互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。",
+            "fromOriginal": true,
+            "passage": "4 事件的独立性\n若 P(AB) = P(A) P(B)，称事件 A 与 B 相互独立。当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即\nB 是否发生不影响 A 发生的概率。\n注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 6 段",
+            "quote": "判断两个事件是否独立，要检验 P(AB) 是否等于 P(A)P(B)，而不是凭直觉判断它们“有没有关系”。",
+            "fromOriginal": true,
+            "passage": "判断两个事件是否独立，要检验 P(AB) 是否等于 P(A)P(B)，而不是凭直觉判断它们“有没有关系”。"
+          }
+        ],
+        "ms": 14724
+      },
+      {
+        "id": "P06",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false,
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 17187
+      }
+    ]
+  },
+  "final": {
+    "generation": "deepseek-v4-pro",
+    "summary": {
+      "questions": 20,
+      "positives": 16,
+      "negatives": 4,
+      "hitAt1": 11,
+      "hitAt4": 13,
+      "allEvidenceAt4": 12,
+      "negativeEmpty": 4,
+      "p50Ms": 13.23,
+      "p95Ms": 42.33
+    },
+    "records": [
+      {
+        "id": "D01",
+        "subject": "dbms",
+        "question": "LEFT JOIN 右边没配到记录时，结果长什么样？",
+        "evidence": [
+          [
+            [
+              "slides",
+              3,
+              "右表没有匹配时，右表属性取 NULL"
+            ],
+            [
+              "joins",
+              8,
+              "结果中右表的属性全部取 NULL"
+            ],
+            [
+              "notes",
+              3,
+              "右表没有匹配时，右表属性取 NULL"
+            ]
+          ]
+        ],
+        "expected": "左表行仍在，右表属性补 NULL。",
+        "terms": [
+          "左外连接",
+          "left join",
+          "left outer join",
+          "左连接",
+          "左外联接",
+          "右边没配",
+          "没配到记",
+          "到记录时",
+          "结果长什",
+          "长什么样"
+        ],
+        "retrievalMs": 12.7,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.3 左外连接",
+            "score": 24,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "heading": "左外连接 LEFT JOIN",
+            "score": 24,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "heading": "左外连接 LEFT JOIN",
+            "score": 24,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 14 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 19.923076923076923,
+            "passage": "错误一：LEFT JOIN 之后在 WHERE 中写右表条件，导致没有匹配的左表元组消失。修正方法是把右表条件移到 ON 中，或者明确改用 INNER JOIN。"
+          }
+        ]
+      },
+      {
+        "id": "D02",
+        "subject": "dbms",
+        "question": "我想保留全部学生，包括一个班都没选的，右边的字段填什么？",
+        "evidence": [
+          [
+            [
+              "slides",
+              3,
+              "右表没有匹配时，右表属性取 NULL"
+            ],
+            [
+              "joins",
+              8,
+              "结果中右表的属性全部取 NULL"
+            ],
+            [
+              "notes",
+              3,
+              "右表没有匹配时，右表属性取 NULL"
+            ]
+          ]
+        ],
+        "expected": "左外连接保留学生，未匹配时右表列为 NULL。",
+        "terms": [
+          "我想保留",
+          "保留全部",
+          "全部学生",
+          "包括一个",
+          "一个班都",
+          "班都没选",
+          "右边的字",
+          "的字段填",
+          "段填什么"
+        ],
+        "retrievalMs": 241.27,
+        "ranks": [
+          1
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "heading": "左外连接 LEFT JOIN",
+            "score": 0.6074622869491577,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          }
+        ]
+      },
+      {
+        "id": "D03",
+        "subject": "dbms",
+        "question": "只想要两边都对得上的行，应该用什么连接？",
+        "evidence": [
+          [
+            [
+              "slides",
+              2,
+              "只保留满足连接条件的元组组合"
+            ],
+            [
+              "notes",
+              2,
+              "只保留满足连接条件的元组组合"
+            ],
+            [
+              "joins",
+              6,
+              "内连接（INNER JOIN）只保留满足连接条件的元组组合"
+            ]
+          ]
+        ],
+        "expected": "使用内连接，结果只有满足匹配条件的组合。",
+        "terms": [
+          "只想要两",
+          "要两边都",
+          "边都对得",
+          "对得上的",
+          "应该用什",
+          "用什么连"
+        ],
+        "retrievalMs": 18.85,
+        "ranks": [
+          0
+        ],
+        "semantic": "used",
+        "candidates": []
+      },
+      {
+        "id": "D04",
+        "subject": "dbms",
+        "question": "LEFT JOIN 中 ON 和 WHERE 的区别是什么？要保留没选课的人，学期条件放哪？",
+        "evidence": [
+          [
+            [
+              "slides",
+              4,
+              "希望保留左表全部元组：右表条件写进 ON"
+            ],
+            [
+              "joins",
+              10,
+              "若希望保留左表全部元组，应把右表条件写进 ON"
+            ],
+            [
+              "notes",
+              4,
+              "希望保留左表全部元组：右表条件写进 ON"
+            ]
+          ]
+        ],
+        "expected": "ON 决定配对；WHERE 过滤结果；右表学期条件写入 ON。",
+        "terms": [
+          "连接条件与过滤条件",
+          "where 子句",
+          "on 和 where",
+          "on 与 where",
+          "on 条件",
+          "on 子句",
+          "left join",
+          "left outer join",
+          "左连接",
+          "左外联接",
+          "左外连接",
+          "WHERE",
+          "的区别是",
+          "别是什么",
+          "要保留没",
+          "留没选课",
+          "选课的人",
+          "学期条件",
+          "条件放哪"
+        ],
+        "retrievalMs": 5.22,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 4 页幻灯片",
+            "heading": "ON 与 WHERE：条件放在哪里",
+            "score": 48,
+            "passage": "ON 与 WHERE：条件放在哪里\nON：决定元组如何配对（连接条件）\nWHERE：连接完成后筛选整行\nLEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接\n希望保留左表全部元组：右表条件写进 ON"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 4 页幻灯片",
+            "heading": "ON 与 WHERE：条件放在哪里",
+            "score": 48,
+            "passage": "ON 与 WHERE：条件放在哪里\nON：决定元组如何配对（连接条件）\nWHERE：连接完成后筛选整行\nLEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接\n希望保留左表全部元组：右表条件写进 ON"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 10 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.4 ON 与 WHERE 的区别",
+            "score": 48,
+            "passage": "ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选。对 LEFT JOIN 而言，如果把针对右表的条件（例如 e.term = '2026秋'）写在 WHERE 中，那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接。若希望保留左表全部元组，应把右表条件写进 ON。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 14 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 29.923076923076923,
+            "passage": "错误一：LEFT JOIN 之后在 WHERE 中写右表条件，导致没有匹配的左表元组消失。修正方法是把右表条件移到 ON 中，或者明确改用 INNER JOIN。"
+          }
+        ]
+      },
+      {
+        "id": "D05",
+        "subject": "dbms",
+        "question": "为什么没选课的人用 COUNT(*) 会得到 1？怎么才是 0？",
+        "evidence": [
+          [
+            [
+              "slides",
+              5,
+              "没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+            ],
+            [
+              "joins",
+              15,
+              "补齐 NULL 的元组也会被 COUNT(*) 计为 1"
+            ],
+            [
+              "notes",
+              5,
+              "没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+            ]
+          ]
+        ],
+        "expected": "COUNT(*) 计入补齐行，COUNT(e.cid) 忽略 NULL。",
+        "terms": [
+          "COUNT(",
+          "为什么没",
+          "么没选课",
+          "选课的人",
+          "会得到",
+          "怎么才是"
+        ],
+        "retrievalMs": 3,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "heading": "示例：统计本学期选课数",
+            "score": 21.5748031496063,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "heading": "示例：统计本学期选课数",
+            "score": 21.5748031496063,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          }
+        ]
+      },
+      {
+        "id": "D06",
+        "subject": "dbms",
+        "question": "比较 NULL = NULL 为什么不是 TRUE？真正查空值该用哪个条件？",
+        "evidence": [
+          [
+            [
+              "joins",
+              12,
+              "任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN"
+            ]
+          ]
+        ],
+        "expected": "比较结果为 UNKNOWN，用 IS NULL 判断空值。",
+        "terms": [
+          "NULL 与三值逻辑",
+          "is null",
+          "null",
+          "三值逻辑",
+          "空值",
+          "TRUE",
+          "比较",
+          "为什么不",
+          "真正查空",
+          "查空值该",
+          "值该用哪",
+          "用哪个条"
+        ],
+        "retrievalMs": 3.86,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 12 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.5 NULL 与三值逻辑",
+            "score": 43.886792452830186,
+            "passage": "SQL 使用三值逻辑：TRUE、FALSE、UNKNOWN。任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 10 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.4 ON 与 WHERE 的区别",
+            "score": 28.9478672985782,
+            "passage": "ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选。对 LEFT JOIN 而言，如果把针对右表的条件（例如 e.term = '2026秋'）写在 WHERE 中，那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接。若希望保留左表全部元组，应把右表条件写进 ON。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 16 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 19.85185185185185,
+            "passage": "错误三：用 = NULL 判断空值。应使用 IS NULL。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 15 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 19.50375939849624,
+            "passage": "错误二：使用 COUNT(*) 统计左外连接中右表的匹配数。补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。"
+          }
+        ]
+      },
+      {
+        "id": "D07",
+        "subject": "dbms",
+        "question": "聚合后只保留平均分超过 75 的组，WHERE 和 HAVING 应选哪个？",
+        "evidence": [
+          [
+            [
+              "slides",
+              6,
+              "WHERE 在分组前筛选元组，HAVING 在分组后筛选组"
+            ],
+            [
+              "notes",
+              6,
+              "WHERE 在分组前筛选元组，HAVING 在分组后筛选组"
+            ]
+          ]
+        ],
+        "expected": "用 HAVING AVG(score) > 75；WHERE 在分组前筛行。",
+        "terms": [
+          "分组",
+          "聚合函数",
+          "having",
+          "分组聚合",
+          "group by",
+          "WHERE",
+          "聚合后只",
+          "后只保留",
+          "保留平均",
+          "平均分超",
+          "的组",
+          "应选哪个"
+        ],
+        "retrievalMs": 4.91,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 6 页幻灯片",
+            "heading": "分组聚合 GROUP BY 与 HAVING",
+            "score": 34,
+            "passage": "分组聚合 GROUP BY 与 HAVING\nGROUP BY 按属性值分组，聚合函数对每组计算一个值\nWHERE 在分组前筛选元组，HAVING 在分组后筛选组\nHAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 6 页幻灯片",
+            "heading": "分组聚合 GROUP BY 与 HAVING",
+            "score": 34,
+            "passage": "分组聚合 GROUP BY 与 HAVING\nGROUP BY 按属性值分组，聚合函数对每组计算一个值\nWHERE 在分组前筛选元组，HAVING 在分组后筛选组\nHAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 12 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.5 NULL 与三值逻辑",
+            "score": 29.169590643274855,
+            "passage": "SQL 使用三值逻辑：TRUE、FALSE、UNKNOWN。任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "heading": "示例：统计本学期选课数",
+            "score": 18.896860986547086,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          }
+        ]
+      },
+      {
+        "id": "D08",
+        "subject": "dbms",
+        "question": "先统计没选课的人为什么可能被算成 1；再说用哪个子句筛掉平均分不达标的组。",
+        "evidence": [
+          [
+            [
+              "slides",
+              5,
+              "没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+            ],
+            [
+              "joins",
+              15,
+              "补齐 NULL 的元组也会被 COUNT(*) 计为 1"
+            ],
+            [
+              "notes",
+              5,
+              "没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+            ]
+          ],
+          [
+            [
+              "slides",
+              6,
+              "WHERE 在分组前筛选元组，HAVING 在分组后筛选组"
+            ],
+            [
+              "notes",
+              6,
+              "WHERE 在分组前筛选元组，HAVING 在分组后筛选组"
+            ]
+          ]
+        ],
+        "expected": "COUNT(*) 会计入补齐行，可计右表非空列；分组后的平均分用 HAVING。",
+        "terms": [
+          "先统计没",
+          "计没选课",
+          "选课的人",
+          "的人为什",
+          "为什么可",
+          "么可能被",
+          "能被算成",
+          "再说用哪",
+          "用哪个子",
+          "个子句筛",
+          "句筛掉平",
+          "掉平均分",
+          "均分不达",
+          "不达标的"
+        ],
+        "retrievalMs": 21.9,
+        "ranks": [
+          1,
+          2
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "heading": "示例：统计本学期选课数",
+            "score": 0.6321172714233398,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 6 页幻灯片",
+            "heading": "分组聚合 GROUP BY 与 HAVING",
+            "score": 0.576277494430542,
+            "passage": "分组聚合 GROUP BY 与 HAVING\nGROUP BY 按属性值分组，聚合函数对每组计算一个值\nWHERE 在分组前筛选元组，HAVING 在分组后筛选组\nHAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75"
+          }
+        ]
+      },
+      {
+        "id": "D09",
+        "subject": "dbms",
+        "question": "“星灯备注实验”在第几张？它说右表过滤条件放在哪里？",
+        "evidence": [
+          [
+            [
+              "notes",
+              1,
+              "星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中"
+            ]
+          ]
+        ],
+        "expected": "第 1 张幻灯片的演讲者备注，把右表过滤条件放在 ON 中。",
+        "terms": [
+          "星灯备注实验",
+          "在第几张",
+          "它说右表",
+          "右表过滤",
+          "过滤条件",
+          "条件放在",
+          "放在哪里"
+        ],
+        "retrievalMs": 3.72,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 1 页幻灯片",
+            "heading": "第3章 连接查询 · 备注",
+            "score": 49.8348623853211,
+            "passage": "C2备注专属标记：星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中，可以保留没有匹配记录的左表行。这段只在第1页演讲者备注里，幻灯片正文没有。"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 4 页幻灯片",
+            "heading": "ON 与 WHERE：条件放在哪里",
+            "score": 29.8018018018018,
+            "passage": "ON 与 WHERE：条件放在哪里\nON：决定元组如何配对（连接条件）\nWHERE：连接完成后筛选整行\nLEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接\n希望保留左表全部元组：右表条件写进 ON"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 4 页幻灯片",
+            "heading": "ON 与 WHERE：条件放在哪里",
+            "score": 29.8018018018018,
+            "passage": "ON 与 WHERE：条件放在哪里\nON：决定元组如何配对（连接条件）\nWHERE：连接完成后筛选整行\nLEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接\n希望保留左表全部元组：右表条件写进 ON"
+          }
+        ]
+      },
+      {
+        "id": "D10",
+        "subject": "dbms",
+        "question": "新版讲义的常见错误清单怎么解释 COUNT(*) 把没选课的人算成 1？",
+        "evidence": [
+          [
+            [
+              "joins",
+              15,
+              "补齐 NULL 的元组也会被 COUNT(*) 计为 1"
+            ]
+          ]
+        ],
+        "expected": "新版讲义清单的错误二，COUNT(*) 会计入补齐的行。",
+        "terms": [
+          "COUNT(",
+          "新版讲义",
+          "讲义的常",
+          "的常见错",
+          "见错误清",
+          "误清单怎",
+          "单怎么解",
+          "把没选课",
+          "选课的人",
+          "的人算成"
+        ],
+        "retrievalMs": 3.58,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 15 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 15.869158878504672,
+            "passage": "错误二：使用 COUNT(*) 统计左外连接中右表的匹配数。补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 16 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 4,
+            "passage": "错误三：用 = NULL 判断空值。应使用 IS NULL。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 14 段",
+            "heading": "第3章 SQL 连接查询（讲义） > 3.6 常见错误清单",
+            "score": 4,
+            "passage": "错误一：LEFT JOIN 之后在 WHERE 中写右表条件，导致没有匹配的左表元组消失。修正方法是把右表条件移到 ON 中，或者明确改用 INNER JOIN。"
+          }
+        ]
+      },
+      {
+        "id": "P01",
+        "subject": "prob",
+        "question": "已经知道 B 发生，计算 A 的概率时分母用谁？写出公式。",
+        "evidence": [
+          [
+            [
+              "probability",
+              1,
+              "P(A|B) = P(AB) / P(B)"
+            ]
+          ]
+        ],
+        "expected": "P(A|B)=P(AB)/P(B)，要求 P(B)>0。",
+        "terms": [
+          "已经知道",
+          "发生",
+          "计算",
+          "的概率时",
+          "率时分母",
+          "分母用谁",
+          "写出公式"
+        ],
+        "retrievalMs": 42.33,
+        "ranks": [
+          0
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 5 段",
+            "heading": null,
+            "score": 0.7096490263938904,
+            "passage": "贝叶斯公式题通常给出先验概率 P(Bi) 与条件概率 P(A|Bi)，要求计算后验概率 P(Bi|A)。注意分母是全概率 P(A)。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 4 段",
+            "heading": null,
+            "score": 0.6850967407226562,
+            "passage": "全概率公式题需要先找出一组互斥且完备的事件 B1, B2, …, Bn，再按 P(A) = Σ P(Bi) P(A|Bi) 计算。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 3 段",
+            "heading": null,
+            "score": 0.6727694869041443,
+            "passage": "条件概率题的关键是先确定“已知发生的事件”是什么。题目中“在……的学生中”“已知……”等表述通常指明了条件事件 B，此时样本空间缩小为 B。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "heading": "3 贝叶斯公式",
+            "score": 0.6126958131790161,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          }
+        ]
+      },
+      {
+        "id": "P02",
+        "subject": "prob",
+        "question": "为什么 P(A|B) 和 P(B|A) 一般不同？",
+        "evidence": [
+          [
+            [
+              "probability",
+              1,
+              "与 P(B|A) 不相等，因为两者的分母不同"
+            ]
+          ]
+        ],
+        "expected": "两者条件不同，分母分别是 P(B) 和 P(A)。",
+        "terms": [
+          "conditional probability",
+          "p(a|b)",
+          "条件概率",
+          "P(B|A)",
+          "一般不同"
+        ],
+        "retrievalMs": 5.63,
+        "ranks": [
+          1
+        ],
+        "semantic": "off",
+        "candidates": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 1 页",
+            "heading": "1 条件概率的定义",
+            "score": 35.96078431372549,
+            "passage": "1 条件概率的定义\n知屿 KNOWVERSE 演示用原创讲义。\n设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条\n件概率。\n直观上，已知 B 发生后，样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例。一般情况下 P(A|B)\n与 P(B|A) 不相等，因为两者的分母不同。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 2 页",
+            "heading": "2 乘法公式与全概率公式",
+            "score": 31.75438596491228,
+            "passage": "2 乘法公式与全概率公式\n由条件概率的定义可得乘法公式：P(AB) = P(B) P(A|B) = P(A) P(B|A)。\n若事件 B1, B2, …, Bn 两两互斥且并为整个样本空间，则对任意事件 A，有全概率公式 P(A) = Σ P(Bi)\nP(A|Bi)。全概率公式的思想是“分情况讨论，再加权求和”。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 4 页",
+            "heading": "4 事件的独立性",
+            "score": 21.183431952662723,
+            "passage": "4 事件的独立性\n若 P(AB) = P(A) P(B)，称事件 A 与 B 相互独立。当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即\nB 是否发生不影响 A 发生的概率。\n注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 3 段",
+            "heading": null,
+            "score": 20,
+            "passage": "条件概率题的关键是先确定“已知发生的事件”是什么。题目中“在……的学生中”“已知……”等表述通常指明了条件事件 B，此时样本空间缩小为 B。"
+          }
+        ]
+      },
+      {
+        "id": "P03",
+        "subject": "prob",
+        "question": "按不同情况分别算，再把它们加权加起来，前提是这些情况满足什么条件？",
+        "evidence": [
+          [
+            [
+              "probability",
+              2,
+              "两两互斥且并为整个样本空间"
+            ],
+            [
+              "exercises",
+              4,
+              "互斥且完备的事件"
+            ]
+          ]
+        ],
+        "expected": "用全概率公式，各情况互斥且穷尽样本空间。",
+        "terms": [
+          "按不同情",
+          "同情况分",
+          "况分别算",
+          "再把它们",
+          "它们加权",
+          "加权加起",
+          "前提是这",
+          "是这些情",
+          "些情况满",
+          "况满足什",
+          "足什么条"
+        ],
+        "retrievalMs": 13.81,
+        "ranks": [
+          0
+        ],
+        "semantic": "used",
+        "candidates": []
+      },
+      {
+        "id": "P04",
+        "subject": "prob",
+        "question": "课上那个检测阳性的例子，实际上患病的概率有多大？",
+        "evidence": [
+          [
+            [
+              "probability",
+              3,
+              "检测为阳性时真正患病的概率约为 0.161"
+            ]
+          ]
+        ],
+        "expected": "约 0.161（16.1%），不要把灵敏度当答案。",
+        "terms": [
+          "课上那个",
+          "那个检测",
+          "检测阳性",
+          "阳性的例",
+          "实际上患",
+          "上患病的",
+          "病的概率",
+          "概率有多"
+        ],
+        "retrievalMs": 13.23,
+        "ranks": [
+          1
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "heading": "3 贝叶斯公式",
+            "score": 0.6181403398513794,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          }
+        ]
+      },
+      {
+        "id": "P05",
+        "subject": "prob",
+        "question": "两个不能同时发生的事，为什么彼此也可能有影响？如果各自概率都大于零呢？",
+        "evidence": [
+          [
+            [
+              "probability",
+              4,
+              "两个概率都大于 0 的互斥事件一定不独立"
+            ]
+          ]
+        ],
+        "expected": "正概率的互斥事件不独立，交集概率为零但乘积大于零。",
+        "terms": [
+          "两个不能",
+          "不能同时",
+          "同时发生",
+          "发生的事",
+          "为什么彼",
+          "么彼此也",
+          "此也可能",
+          "可能有影",
+          "如果各自",
+          "各自概率",
+          "概率都大",
+          "都大于零"
+        ],
+        "retrievalMs": 13.77,
+        "ranks": [
+          4
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 6 段",
+            "heading": null,
+            "score": 0.577070415019989,
+            "passage": "判断两个事件是否独立，要检验 P(AB) 是否等于 P(A)P(B)，而不是凭直觉判断它们“有没有关系”。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 3 段",
+            "heading": null,
+            "score": 0.5677810907363892,
+            "passage": "条件概率题的关键是先确定“已知发生的事件”是什么。题目中“在……的学生中”“已知……”等表述通常指明了条件事件 B，此时样本空间缩小为 B。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 4 段",
+            "heading": null,
+            "score": 0.5595621466636658,
+            "passage": "全概率公式题需要先找出一组互斥且完备的事件 B1, B2, …, Bn，再按 P(A) = Σ P(Bi) P(A|Bi) 计算。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 4 页",
+            "heading": "4 事件的独立性",
+            "score": 0.5594172477722168,
+            "passage": "4 事件的独立性\n若 P(AB) = P(A) P(B)，称事件 A 与 B 相互独立。当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即\nB 是否发生不影响 A 发生的概率。\n注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。"
+          }
+        ]
+      },
+      {
+        "id": "P06",
+        "subject": "prob",
+        "question": "分别说明已知 B 后 A 的概率怎么算；再说报告阳性的那个人真正患病的概率。",
+        "evidence": [
+          [
+            [
+              "probability",
+              1,
+              "P(A|B) = P(AB) / P(B)"
+            ]
+          ],
+          [
+            [
+              "probability",
+              3,
+              "检测为阳性时真正患病的概率约为 0.161"
+            ]
+          ]
+        ],
+        "expected": "先给出 P(AB)/P(B)，再给出大约 0.161。",
+        "terms": [
+          "分别说明",
+          "说明已知",
+          "的概率怎",
+          "率怎么算",
+          "再说报告",
+          "报告阳性",
+          "阳性的那",
+          "的那个人",
+          "个人真正",
+          "真正患病",
+          "患病的概"
+        ],
+        "retrievalMs": 14.54,
+        "ranks": [
+          0,
+          2
+        ],
+        "semantic": "used",
+        "candidates": [
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 3 段",
+            "heading": null,
+            "score": 0.6956238746643066,
+            "passage": "条件概率题的关键是先确定“已知发生的事件”是什么。题目中“在……的学生中”“已知……”等表述通常指明了条件事件 B，此时样本空间缩小为 B。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "heading": "3 贝叶斯公式",
+            "score": 0.5773235559463501,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 4 段",
+            "heading": null,
+            "score": 0.6693464517593384,
+            "passage": "全概率公式题需要先找出一组互斥且完备的事件 B1, B2, …, Bn，再按 P(A) = Σ P(Bi) P(A|Bi) 计算。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 5 段",
+            "heading": null,
+            "score": 0.6636601090431213,
+            "passage": "贝叶斯公式题通常给出先验概率 P(Bi) 与条件概率 P(A|Bi)，要求计算后验概率 P(Bi|A)。注意分母是全概率 P(A)。"
+          }
+        ]
+      },
+      {
+        "id": "N01",
+        "subject": "dbms",
+        "question": "春季阅卷的铜铃校验码是什么？",
+        "evidence": [],
+        "expected": "校验码只在另一个用户的私有合成笔记里；当前账号没有依据。",
+        "terms": [
+          "春季阅卷的铜铃校验码",
+          "验码是什"
+        ],
+        "retrievalMs": 17.81,
+        "ranks": [],
+        "semantic": "used",
+        "candidates": []
+      },
+      {
+        "id": "N02",
+        "subject": "prob",
+        "question": "老师今年划定的补考具体日期是哪一天？",
+        "evidence": [],
+        "expected": "资料没有公布补考日期。",
+        "terms": [
+          "老师今年",
+          "今年划定",
+          "划定的补",
+          "的补考具",
+          "考具体日",
+          "体日期是",
+          "期是哪一"
+        ],
+        "retrievalMs": 13.55,
+        "ranks": [],
+        "semantic": "used",
+        "candidates": []
+      },
+      {
+        "id": "N03",
+        "subject": "dbms",
+        "question": "课件中贝叶斯检测例子的阳性患病率是多少？",
+        "evidence": [],
+        "expected": "数据库课程资料不包含概率课教材的检测案例。",
+        "terms": [
+          "课件中贝",
+          "中贝叶斯",
+          "叶斯检测",
+          "检测例子",
+          "例子的阳",
+          "的阳性患",
+          "性患病率",
+          "病率是多"
+        ],
+        "retrievalMs": 12.73,
+        "ranks": [],
+        "semantic": "used",
+        "candidates": []
+      },
+      {
+        "id": "N04",
+        "subject": "dbms",
+        "question": "课程讲义中 B+ 树叶子如何进行下溢合并？",
+        "evidence": [],
+        "expected": "知识点目录含索引，但评测语料没有下溢合并的原文。",
+        "terms": [
+          "索引",
+          "b+树",
+          "index",
+          "课程讲义",
+          "树叶子如",
+          "子如何进",
+          "何进行下",
+          "行下溢合"
+        ],
+        "retrievalMs": 16.56,
+        "ranks": [],
+        "semantic": "used",
+        "candidates": []
+      }
+    ],
+    "answers": [
+      {
+        "id": "D01",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "LEFT JOIN 右边没配到记录时，结果中该左表元组仍然保留，但右表的属性全部取 NULL。[资料1]\n\n例如“列出所有学生，包括没有选课的学生”：没选课的学生在选课表里没有对应行，结果里该学生的选课相关字段（如课程号、成绩）都是 NULL，但学生自己的字段正常显示。[资料1]",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "quote": "对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。",
+            "fromOriginal": true,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          }
+        ],
+        "ms": 10986
+      },
+      {
+        "id": "D02",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "右边的字段填 **NULL**。\n\n左外连接（LEFT JOIN）保留左表的全部元组，当左表某行在右表找不到匹配时，结果中右表的属性全部取 NULL [资料1]。所以“一个班都没选”的学生，其右边（选课表）的字段都填 NULL。",
+        "citations": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 3 页幻灯片",
+            "quote": "右表没有匹配时，右表属性取 NULL",
+            "fromOriginal": true,
+            "passage": "左外连接 LEFT JOIN\n保留左表的全部元组\n右表没有匹配时，右表属性取 NULL\n适用场景：列出所有学生，包括没有选课的学生"
+          }
+        ],
+        "ms": 5926
+      },
+      {
+        "id": "D03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 234
+      },
+      {
+        "id": "D04",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**结论：学期条件应放在 ON 中。**\n\n1. **ON 与 WHERE 的分工**：ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选 [资料3]。\n\n2. **为什么放 WHERE 会丢人**：对 LEFT JOIN 而言，如果把针对右表的条件（例如学期条件）写在 WHERE 中，那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接 [资料3]。也就是说，LEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接 [资料2]。\n\n3. **正确做法**：若希望保留左表全部元组（即保留没选课的人），应把右表条件写进 ON [资料2][资料3]。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 10 段",
+            "quote": "ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选。",
+            "fromOriginal": true,
+            "passage": "ON 子句给出连接条件，决定元组如何配对；WHERE 子句在连接完成之后对结果元组进行筛选。对 LEFT JOIN 而言，如果把针对右表的条件（例如 e.term = '2026秋'）写在 WHERE 中，那些右表属性为 NULL 的补齐元组会因为比较结果为 UNKNOWN 而被筛掉，最终结果等同于内连接。若希望保留左表全部元组，应把右表条件写进 ON。"
+          },
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 4 页幻灯片",
+            "quote": "LEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接",
+            "fromOriginal": true,
+            "passage": "ON 与 WHERE：条件放在哪里\nON：决定元组如何配对（连接条件）\nWHERE：连接完成后筛选整行\nLEFT JOIN 中把右表条件写进 WHERE，会过滤掉右表为 NULL 的行，结果退化为内连接\n希望保留左表全部元组：右表条件写进 ON"
+          }
+        ],
+        "ms": 12746
+      },
+      {
+        "id": "D05",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**为什么 COUNT(*) 会得到 1？**\n\nCOUNT(*) 统计的是“行数”，而不是某个列的非空值个数。左外连接（LEFT JOIN）会保留左表的全部元组，对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL [资料3]。也就是说，没选课的学生在连接结果里仍然占一行，只是 enrollments 那一侧的列全是 NULL。这一行本身是存在的，所以 COUNT(*) 把它数进去，得到 1 [资料1]。\n\n**怎么才能得到 0？**\n\n改用 COUNT(e.cid)：它只统计 e.cid 这一列中非 NULL 的值的个数。没选课的学生那一行里 e.cid 是 NULL，不会被计入，所以结果是 0 [资料1]。\n\n一句话：COUNT(*) 数“行”，没选课的学生也有一行（右表全 NULL），所以是 1；COUNT(e.cid) 数“非空值”，NULL 不计入，所以是 0。",
+        "citations": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "quote": "没有选课的学生 n = 0；用 COUNT(*) 会得到 1",
+            "fromOriginal": true,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "quote": "对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL",
+            "fromOriginal": true,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          }
+        ],
+        "ms": 9195
+      },
+      {
+        "id": "D06",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**为什么 `NULL = NULL` 不是 TRUE？**\n\nSQL 采用三值逻辑（TRUE、FALSE、UNKNOWN），任何与 NULL 的比较（包括 `NULL = NULL`）结果都是 UNKNOWN，而不是 TRUE [资料1]。由于 `WHERE` 与 `HAVING` 只保留条件为 TRUE 的元组，所以 `NULL = NULL` 这种写法无法筛选出空值 [资料1]。\n\n**真正查空值该用哪个条件？**\n\n判断空值必须使用 `IS NULL` 或 `IS NOT NULL` [资料1]。讲义中明确把“用 `= NULL` 判断空值”列为错误，指出应使用 `IS NULL` [资料3]。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 12 段",
+            "quote": "任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。",
+            "fromOriginal": true,
+            "passage": "SQL 使用三值逻辑：TRUE、FALSE、UNKNOWN。任何与 NULL 的比较（包括 NULL = NULL）结果都是 UNKNOWN。WHERE 与 HAVING 只保留条件为 TRUE 的元组。判断空值必须使用 IS NULL 或 IS NOT NULL。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 16 段",
+            "quote": "错误三：用 = NULL 判断空值。应使用 IS NULL。",
+            "fromOriginal": true,
+            "passage": "错误三：用 = NULL 判断空值。应使用 IS NULL。"
+          }
+        ],
+        "ms": 11511
+      },
+      {
+        "id": "D07",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "应选 **HAVING**。\n\n因为“平均分超过 75”是对分组后每组计算出的聚合值（AVG(score)）进行筛选，属于分组后的筛选。WHERE 在分组前筛选元组，HAVING 在分组后筛选组 [资料1]。HAVING 中可以使用聚合函数，例如 `HAVING AVG(score) > 75` [资料1]。",
+        "citations": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 6 页幻灯片",
+            "quote": "WHERE 在分组前筛选元组，HAVING 在分组后筛选组",
+            "fromOriginal": true,
+            "passage": "分组聚合 GROUP BY 与 HAVING\nGROUP BY 按属性值分组，聚合函数对每组计算一个值\nWHERE 在分组前筛选元组，HAVING 在分组后筛选组\nHAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75"
+          }
+        ],
+        "ms": 8622
+      },
+      {
+        "id": "D08",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true,
+          true
+        ],
+        "answer": "**1. 没选课的人为什么可能被算成 1**\n\n左外连接（LEFT JOIN）会把右表没有匹配的学生也保留下来，其 enrollments 列被补齐为 NULL。此时 `COUNT(*)` 统计的是该组内的**行数**，而不是非空值个数——即使 e.cid 是 NULL，这一行也会被计为 1，所以没选课的学生会得到 n = 1。改用 `COUNT(e.cid)` 只统计非空的 cid，没选课的学生才得到 n = 0 [资料1]。\n\n**2. 用哪个子句筛掉平均分不达标的组**\n\n用 **HAVING**。因为 HAVING 在分组后筛选组，且其中可以使用聚合函数，例如 `HAVING AVG(score) > 75` [资料2]。WHERE 在分组前筛选元组，无法对分组后的聚合结果（如平均分）做筛选 [资料2]。",
+        "citations": [
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 5 页幻灯片",
+            "quote": "没有选课的学生 n = 0；用 COUNT(*) 会得到 1",
+            "fromOriginal": true,
+            "passage": "示例：统计本学期选课数\nSELECT s.name, COUNT(e.cid) AS n\nFROM students s LEFT JOIN enrollments e\nON e.sid = s.sid AND e.term = '2026秋'\nGROUP BY s.sid, s.name;\n没有选课的学生 n = 0；用 COUNT(*) 会得到 1"
+          },
+          {
+            "title": "第3章 连接查询（课件）",
+            "version": 1,
+            "location": "第 6 页幻灯片",
+            "quote": "HAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75",
+            "fromOriginal": true,
+            "passage": "分组聚合 GROUP BY 与 HAVING\nGROUP BY 按属性值分组，聚合函数对每组计算一个值\nWHERE 在分组前筛选元组，HAVING 在分组后筛选组\nHAVING 中可以使用聚合函数，例如 HAVING AVG(score) > 75"
+          }
+        ],
+        "ms": 16269
+      },
+      {
+        "id": "D09",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "“星灯备注实验”在第 1 页，且只出现在该页的演讲者备注里，幻灯片正文没有 [资料1]。它说右表过滤条件放在 **ON** 中，这样可以保留没有匹配记录的左表行 [资料1]。",
+        "citations": [
+          {
+            "title": "评测上传课件与备注",
+            "version": 1,
+            "location": "第 1 页幻灯片",
+            "quote": "C2备注专属标记：星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中，可以保留没有匹配记录的左表行。这段只在第1页演讲者备注里，幻灯片正文没有。",
+            "fromOriginal": true,
+            "passage": "C2备注专属标记：星灯备注实验。LEFT JOIN 的右表过滤条件放在 ON 中，可以保留没有匹配记录的左表行。这段只在第1页演讲者备注里，幻灯片正文没有。"
+          }
+        ],
+        "ms": 5409
+      },
+      {
+        "id": "D10",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "讲义的解释是：左外连接会把左表中没有匹配的元组保留下来，此时右表属性全部取 NULL [资料4]。而 COUNT(*) 统计的是“行数”，不是“非空值的个数”，所以这一行虽然右表全是 NULL，仍会被 COUNT(*) 计为 1，导致没选课的人被误算成“选了 1 门课” [资料1]。\n\n修正方法是改用 COUNT(右表的非空列)，例如 COUNT(e.cid)：因为 NULL 不会被列计数计入，没选课的人该列是 NULL，结果就是 0 [资料1]。",
+        "citations": [
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 15 段",
+            "quote": "补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。",
+            "fromOriginal": true,
+            "passage": "错误二：使用 COUNT(*) 统计左外连接中右表的匹配数。补齐 NULL 的元组也会被 COUNT(*) 计为 1，应改用 COUNT(右表的非空列)，例如 COUNT(e.cid)。"
+          },
+          {
+            "title": "第3章 SQL 连接查询（讲义）",
+            "version": 2,
+            "location": "第 8 段",
+            "quote": "对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。",
+            "fromOriginal": true,
+            "passage": "左外连接（LEFT JOIN，也写作 LEFT OUTER JOIN）保留左表的全部元组。对于左表中在右表找不到匹配的元组，结果中右表的属性全部取 NULL。左外连接常用于“列出所有学生，包括没有选课的学生”这类需求。"
+          }
+        ],
+        "ms": 8160
+      },
+      {
+        "id": "N01",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 72
+      },
+      {
+        "id": "N02",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 73
+      },
+      {
+        "id": "N03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 77
+      },
+      {
+        "id": "N04",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 78
+      },
+      {
+        "id": "P01",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "已知 B 发生、计算 A 的概率时，分母用 **P(B)**（即条件事件 B 的概率），公式为：\n\n**P(A|B) = P(AB) / P(B)**（要求 P(B) > 0）[资料5]\n\n直观上，已知 B 发生后样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例 [资料5]。注意一般情况下 P(A|B) 与 P(B|A) 不相等，因为两者的分母不同 [资料5]。",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 1 页",
+            "quote": "设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条件概率。",
+            "fromOriginal": true,
+            "passage": "1 条件概率的定义\n知屿 KNOWVERSE 演示用原创讲义。\n设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条\n件概率。\n直观上，已知 B 发生后，样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例。一般情况下 P(A|B)\n与 P(B|A) 不相等，因为两者的分母不同。"
+          }
+        ],
+        "ms": 11647
+      },
+      {
+        "id": "P02",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "因为两者的分母不同。\n\n- P(A|B) = P(AB) / P(B)，分母是 P(B)，即把样本空间缩小为 B，看 A 在 B 中所占的比例 [资料1]。\n- P(B|A) = P(AB) / P(A)，分母是 P(A)，即把样本空间缩小为 A，看 B 在 A 中所占的比例 [资料1]。\n\n两者分子相同（都是 P(AB)），但分母分别是 P(B) 和 P(A)，一般情况下 P(A) ≠ P(B)，所以 P(A|B) 与 P(B|A) 一般不相等 [资料1]。",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 1 页",
+            "quote": "一般情况下 P(A|B) 与 P(B|A) 不相等，因为两者的分母不同。",
+            "fromOriginal": true,
+            "passage": "1 条件概率的定义\n知屿 KNOWVERSE 演示用原创讲义。\n设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条\n件概率。\n直观上，已知 B 发生后，样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例。一般情况下 P(A|B)\n与 P(B|A) 不相等，因为两者的分母不同。"
+          }
+        ],
+        "ms": 10907
+      },
+      {
+        "id": "P03",
+        "status": "complete",
+        "error": null,
+        "basis": "insufficient",
+        "citedEvidenceGroups": [
+          false
+        ],
+        "answer": "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。",
+        "citations": [],
+        "ms": 77
+      },
+      {
+        "id": "P04",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "检测为阳性时，真正患病的概率约为 **0.161**（即约 16.1%）。[资料1]\n\n也就是说，即使检测灵敏度高达 95%，由于该病患病率只有 1%，阳性结果中真正患病的人仍只占约六分之一，其余大多是误报。[资料1]",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "quote": "检测为阳性时真正患病的概率约为0.161。",
+            "fromOriginal": true,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          }
+        ],
+        "ms": 9134
+      },
+      {
+        "id": "P05",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true
+        ],
+        "answer": "**结论：互斥（不能同时发生）与独立（互不影响）是两个不同的概念，不能混为一谈。**\n\n1. **“不能同时发生”说的是互斥，不是“没有影响”。** 互斥只表示 P(AB)=0，即两个事件不会一起出现；而“有没有影响”要看独立性的定义——是否满足 P(AB)=P(A)P(B)，不能凭直觉判断“有没有关系”[资料1]。\n\n2. **互斥恰恰意味着“有影响”，而且影响是负向的。** 独立要求“B 是否发生不影响 A 发生的概率”，即 P(A|B)=P(A)[资料4]。但两个互斥事件中，一旦 B 发生，A 就必然不发生（P(A|B)=0），这显然不等于 P(A)——所以 B 的发生强烈地“影响”了 A。\n\n3. **若两个事件概率都大于 0，则互斥事件一定不独立。** 因为 P(A)>0、P(B)>0 时 P(A)P(B)>0，而互斥时 P(AB)=0，两者不相等，不满足独立定义[资料4]。\n\n所以“不能同时发生”非但不代表“没有影响”，反而是一种极强的负相关：一个发生，另一个就被彻底排除。",
+        "citations": [
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 6 段",
+            "quote": "判断两个事件是否独立，要检验 P(AB) 是否等于 P(A)P(B)，而不是凭直觉判断它们“有没有关系”。",
+            "fromOriginal": true,
+            "passage": "判断两个事件是否独立，要检验 P(AB) 是否等于 P(A)P(B)，而不是凭直觉判断它们“有没有关系”。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 4 页",
+            "quote": "当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即 B 是否发生不影响 A 发生的概率。注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。",
+            "fromOriginal": true,
+            "passage": "4 事件的独立性\n若 P(AB) = P(A) P(B)，称事件 A 与 B 相互独立。当 P(B) > 0 时，A 与 B 独立等价于 P(A|B) = P(A)，即\nB 是否发生不影响 A 发生的概率。\n注意：互斥与独立是不同的概念。两个概率都大于 0 的互斥事件一定不独立。"
+          }
+        ],
+        "ms": 11116
+      },
+      {
+        "id": "P06",
+        "status": "complete",
+        "error": null,
+        "basis": "materials",
+        "citedEvidenceGroups": [
+          true,
+          true
+        ],
+        "answer": "**1. 已知 B 后 A 的概率怎么算**\n\n用条件概率公式：当 P(B) > 0 时，P(A|B) = P(AB) / P(B)，即在事件 B 发生的条件下事件 A 发生的条件概率 [资料5]。直观上，已知 B 发生后样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例 [资料5]。注意一般情况下 P(A|B) 与 P(B|A) 不相等，因为两者的分母不同 [资料5]。\n\n**2. 报告阳性的那个人真正患病的概率**\n\n这是由“结果”（检测阳性）反推“原因”（真正患病）的问题，用贝叶斯公式 [资料2]。设 B1 为患病、B2 为健康，A 为检测阳性，则 P(B1|A) = P(B1) P(A|B1) / [P(B1) P(A|B1) + P(B2) P(A|B2)]，分母就是全概率 P(A) [资料2][资料4]。\n\n代入讲义例题数据：患病率 1%、灵敏度 95%、健康人误报率 5%，检测为阳性时真正患病的概率约为 0.161 [资料2]。也就是说，即使检测较准确，先验概率很小时阳性结果中也可能有大量误报 [资料2]。",
+        "citations": [
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 1 页",
+            "quote": "设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条件概率。",
+            "fromOriginal": true,
+            "passage": "1 条件概率的定义\n知屿 KNOWVERSE 演示用原创讲义。\n设 A、B 是两个事件，且 P(B) > 0，称 P(A|B) = P(AB) / P(B) 为在事件 B 发生的条件下事件 A 发生的条\n件概率。\n直观上，已知 B 发生后，样本空间缩小为 B，条件概率就是 A 在 B 中所占的比例。一般情况下 P(A|B)\n与 P(B|A) 不相等，因为两者的分母不同。"
+          },
+          {
+            "title": "条件概率与贝叶斯公式（讲义）",
+            "version": 1,
+            "location": "第 3 页",
+            "quote": "P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公式，它由“结果”反推“原因”的概率。",
+            "fromOriginal": true,
+            "passage": "3 贝叶斯公式\n在全概率公式的条件下，若 P(A) > 0，则 P(Bi|A) = P(Bi) P(A|Bi) / Σ P(Bj) P(A|Bj)。这就是贝叶斯公\n式，它由“结果”反推“原因”的概率。\n例：某病患病率为 1%，检测灵敏度为 95%，健康人误报率为 5%。检测为阳性时真正患病的概率约为\n0.161。先验概率很小时，即使检测较准确，阳性结果中也可能有大量误报。"
+          },
+          {
+            "title": "第一章习题说明",
+            "version": 1,
+            "location": "第 5 段",
+            "quote": "注意分母是全概率 P(A)。",
+            "fromOriginal": true,
+            "passage": "贝叶斯公式题通常给出先验概率 P(Bi) 与条件概率 P(A|Bi)，要求计算后验概率 P(Bi|A)。注意分母是全概率 P(A)。"
+          }
+        ],
+        "ms": 21351
+      }
+    ],
+    "checks": {
+      "scanStatus": "needs_ocr",
+      "scanChunks": 0,
+      "otherOwnerCanRetrieve": true
+    },
+    "generationMetrics": {
+      "completed": 20,
+      "withAllExpectedSourceGroups": 14,
+      "noEvidenceAbstentions": 4,
+      "citations": 22,
+      "originalExcerpts": 22,
+      "materialAnswersMedianMs": 10946,
+      "materialAnswersMaxMs": 21351
+    }
+  },
+  "reviewNotes": {
+    "D03": "仍未召回内连接的定义，缺依据提示合理但漏答。",
+    "D07": "首轮只引三值逻辑；复测正确引用课件第6页。",
+    "D08": "首轮只有计数的引用；复测分别给出第5页和第6页。",
+    "P01": "初检前四无定义页，复测追加检索找回 PDF 第1页。",
+    "P02": "首轮将一般不等夸大为仅当两事件概率相等才相等；复测删去该结论。",
+    "P03": "加权分情况的口语问法仍未召回全概率原文。",
+    "P05": "核心结论正概率互斥则不独立有据；结尾的极强负相关超出原文与题意。",
+    "P06": "初检缺 PDF 第1页；复测追加检索补回并给出处。"
+  }
+}

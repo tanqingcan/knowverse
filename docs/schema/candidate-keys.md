@@ -2,7 +2,7 @@
 
 > 数据库强制候选键：完整、有效、所有键列 NOT NULL 的唯一索引，剔除含更小唯一列组的超键。INCLUDE 列不参与键。可空 UNIQUE 和部分/表达式唯一性单列，不作为全局候选键。业务函数依赖仍需人工核对。
 
-表数：55（排除分区子表与视图）。
+表数：57（排除分区子表与视图）。
 
 |表|主键|强制候选键|可空 UNIQUE|条件/表达式唯一性|非最小超键|
 |---|---|---|---|---|---|
@@ -35,6 +35,8 @@
 |learning_goals|(id)|(id)|—|—|—|
 |learning_intents|(id)|(id)|—|(class_id, user_id, concept_id, direction)|—|
 |learning_states|(user_id, concept_id)|(user_id, concept_id)|—|—|—|
+|material_chunk_concepts|(chunk_id, concept_id)|(chunk_id, concept_id)|—|—|—|
+|material_chunk_embeddings|(chunk_id, model_key)|(chunk_id, model_key)|—|—|—|
 |material_chunks|(id)|(id)；(version_id, ord)|—|—|—|
 |material_concepts|(version_id, concept_id)|(version_id, concept_id)|—|—|—|
 |material_versions|(id)|(id)；(material_id, version_no)|—|—|—|

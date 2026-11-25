@@ -1,16 +1,16 @@
 \section{概要设计}\label{sec:architecture}
 \ChapterOwner{C}{A、B}
 \subsection{系统总体架构与边界}
-\Writing{C，B 提供图}{画浏览器、页面/API、服务模块、数据访问层、PostgreSQL、外部模型、文件存储和独立 SQL 沙箱。箭头标请求或数据含义，模型不直接操作业务数据库。}
+\Writing{C 主画，B 补界面入口}{在本节开头放总架构图。主线画浏览器、页面/API、业务服务和 PostgreSQL/文件存储。将外部模型和独立 SQL 沙箱放在服务层旁，标出各自边界。箭头写明发送什么请求或返回什么数据。}
 \subsection{模块职责与依赖}
 \Writing{C}{按身份、问答、历史检索、资料、练习成长、班级协作分模块，说明责任和依赖，不只展示目录树。}
 \subsection{主要数据流与信任边界}
-\Writing{C，A 复核}{选一次答疑、一次作答画概要流程，标用户身份、外部调用、返回校验、短事务和落表位置。}
+\Writing{C，A 复核}{挑一个请求讲清身份经过哪些层、在哪调用外部服务、何时落表。这里可以回引详细设计中的时序图。}
 \subsection{技术选型与理由}
 PostgreSQL 是本系统使用的关系数据库管理系统，负责保存、查询数据及执行约束和事务；16 表示主版本。报告的论证重点是关系如何设计、操作如何正确执行，版本号本身不作为创新点。
 \Writing{C}{按真实工程说明 Next.js、TypeScript、Drizzle、模型接口的职责，实验章记录实际小版本和环境。}
 \subsection{接口与异常约定}
-\Writing{C}{选 5--8 个实际接口列方法、输入、输出、权限和失败处理，完整 API 放附录。接口名称从代码核对，不能按想象填写。}
+\Writing{C}{选能说明业务的实际接口，交代方法、输入、输出、权限和失败处理。完整 API 索引放附录。}
 \subsection{演示模式与真实模式}
 \Writing{C}{说明 demo 不调用模型、live 使用外部服务；两者消息和证据持久化路径，以及出题和评分方式的差别。}
 \Evidence{src/app/api/; src/server/; src/db/index.ts; docs/agent.md}
