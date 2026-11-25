@@ -1,6 +1,6 @@
 import type { AgentAnswer, RefMaterial } from '../agent/prompts';
 /** 结构/原文核验，不能替代语义蕴含判断。 */
-export function validateCitations(input: AgentAnswer, materials: RefMaterial[]) {
+export function validateCitations(input: AgentAnswer, materials: RefMaterial[], { requireQuote = false } = {}) {
   const normalize=(s:string)=>s.replace(/\s+/g,'');
   const available=new Map(materials.map(m=>[m.ref,m]));
   const bodyRefs=new Set([...input.answer.matchAll(/\[(资料\d+)\]/g)].map(m=>m[1]));
@@ -8,6 +8,7 @@ export function validateCitations(input: AgentAnswer, materials: RefMaterial[]) 
   const citations=input.citations.flatMap(c=>{
     const ref=c.ref.replace(/[\[\]]/g,''); const m=available.get(ref);
     if(!m||!bodyRefs.has(ref)||seen.has(ref)){rejected++;return [];}
+    if(requireQuote && !c.quote){rejected++;return [];}
     if(c.quote && (normalize(c.quote).length<4||!normalize(m.content).includes(normalize(c.quote)))){rejected++;return [];}
     seen.add(ref);if(c.quote)verified++;else unverified++;
     return [{...c,ref}];

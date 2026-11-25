@@ -28,7 +28,7 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   passwordHash: text("password_hash").notNull(),          // scrypt$salt$hash
   isDemo: boolean("is_demo").notNull().default(false),    // 预置演示账号（界面明确标注）
-  timezone: text("timezone").notNull().default("Asia/Taipei"),
+  timezone: text("timezone").notNull().default("Asia/Shanghai"),
   reducedMotion: boolean("reduced_motion").notNull().default(false),
   renderMode: text("render_mode").notNull().default("auto"),
   onboardedAt: ts("onboarded_at"),
@@ -258,6 +258,18 @@ export const messageConcepts = pgTable("message_concepts", {
   check("message_concepts_status_ck", sql`${t.status} in ('candidate','confirmed','rejected')`),
 ]);
 
+/** 倒排检索词项（C3）：中文二元组/英文词项 → 消息；由触发器同步 */
+export const messageTerms = pgTable("message_terms", {
+  term: text("term").notNull(),
+  messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  weight: real("weight").notNull(),
+}, (t) => [
+  primaryKey({ name: "message_terms_pk", columns: [t.term, t.messageId] }),
+  index("message_terms_message_idx").on(t.messageId),
+  index("message_terms_trgm_idx").using("gin", t.term.op("gin_trgm_ops")),
+  check("message_terms_weight_ck", sql`${t.weight} > 0`),
+]);
+
 /** AI 提出、但尚无对应知识点的新概念候选——AI 只能提议，由用户决定是否建立 */
 export const conceptSuggestions = pgTable("concept_suggestions", {
   id: id(),
@@ -320,10 +332,36 @@ export const materialChunks = pgTable("material_chunks", {
   paragraphNo: integer("paragraph_no"),                  // TXT/MD 段落号
   heading: text("heading"),
   content: text("content").notNull(),
+  conceptsIndexedAt: timestamp("concepts_indexed_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [
   uniqueIndex("material_chunks_ord_uq").on(t.versionId, t.ord),
   index("material_chunks_content_trgm_idx").using("gin", t.content.op("gin_trgm_ops")),
+]);
+
+export const materialChunkConcepts = pgTable("material_chunk_concepts", {
+  chunkId: uuid("chunk_id").notNull().references(() => materialChunks.id, { onDelete: "cascade" }),
+  conceptId: uuid("concept_id").notNull().references(() => concepts.id, { onDelete: "restrict" }),
+  source: text("source").notNull(),
+  matchedTerm: text("matched_term"),
+  status: text("status").notNull().default("candidate"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+}, (t) => [
+  primaryKey({ columns: [t.chunkId, t.conceptId] }),
+  check("material_chunk_concepts_source_check", sql`${t.source} in ('catalog','user')`),
+  check("material_chunk_concepts_status_check", sql`${t.status} in ('candidate','confirmed','rejected')`),
+  index("material_chunk_concepts_lookup_idx").on(t.conceptId, t.status, t.chunkId),
+]);
+
+export const materialChunkEmbeddings = pgTable("material_chunk_embeddings", {
+  chunkId: uuid("chunk_id").notNull().references(() => materialChunks.id, { onDelete: "cascade" }),
+  modelKey: text("model_key").notNull(),
+  embedding: real("embedding").array().notNull(),
+  indexedAt: timestamp("indexed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.chunkId, t.modelKey] }),
+  check("material_chunk_embeddings_model_key_check", sql`char_length(${t.modelKey}) between 1 and 100`),
+  check("material_chunk_embeddings_embedding_check", sql`array_ndims(${t.embedding}) = 1 and cardinality(${t.embedding}) = 512 and array_position(${t.embedding}, NULL) is null`),
 ]);
 
 /** 资料版本—知识点：提取后的候选概念，需要用户确认 */
@@ -470,10 +508,16 @@ export const memories = pgTable("memories", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),                           // fact | preference | event
   content: text("content").notNull(),
+  contentNorm: text("content_norm"),                      // 归一化内容：去重/冲突判定（C5）
   conceptId: uuid("concept_id").references(() => concepts.id, { onDelete: "set null" }),
   sourceMessageId: uuid("source_message_id").references(() => messages.id, { onDelete: "set null" }),
   sourceConversationId: uuid("source_conversation_id").references(() => conversations.id, { onDelete: "set null" }),
   status: text("status").notNull().default("active"),     // active | deleted | corrected
+  confidence: real("confidence").notNull().default(0.8),
+  importance: integer("importance").notNull().default(3),
+  expiresAt: ts("expires_at"),
+  revokedAt: ts("revoked_at"),
+  revokeReason: text("revoke_reason"),
   correctsId: uuid("corrects_id").references((): AnyPgColumn => memories.id, { onDelete: "set null" }),
   createdAt: createdAt(),
   updatedAt: ts("updated_at").defaultNow().notNull(),
@@ -481,8 +525,33 @@ export const memories = pgTable("memories", {
   index("memories_user_status_idx").on(t.userId, t.status),
   index("memories_source_msg_idx").on(t.sourceMessageId),
   index("memories_concept_idx").on(t.conceptId),
+  uniqueIndex("memories_active_norm_uq").on(t.userId, t.kind, t.contentNorm)
+    .where(sql`${t.status} = 'active' AND ${t.contentNorm} IS NOT NULL`),
   check("memories_kind_ck", sql`${t.kind} in ('fact','preference','event')`),
   check("memories_status_ck", sql`${t.status} in ('active','deleted','corrected')`),
+  check("memories_confidence_ck", sql`${t.confidence} between 0 and 1`),
+  check("memories_importance_ck", sql`${t.importance} between 1 and 5`),
+]);
+
+/** 记忆版本号（C5）：记忆变更后让会话摘要失效 */
+export const memoryControls = pgTable("memory_controls", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull().default(0),
+});
+
+/** 会话摘要（C5）：每 6 轮或超长时重写，带记忆版本 */
+export const conversationSummaries = pgTable("conversation_summaries", {
+  conversationId: uuid("conversation_id").primaryKey().references(() => conversations.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  uptoSeq: integer("upto_seq").notNull(),
+  summary: text("summary").notNull(),
+  modelCallId: uuid("model_call_id").references(() => modelCalls.id, { onDelete: "set null" }),
+  memoryRevision: integer("memory_revision").notNull().default(0),
+  method: text("method").notNull().default("extractive-v1"),
+  updatedAt: ts("updated_at").defaultNow().notNull(),
+}, (t) => [
+  index("conversation_summaries_user_idx").on(t.userId),
+  check("conversation_summaries_upto_ck", sql`${t.uptoSeq} > 0`),
 ]);
 
 /**

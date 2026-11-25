@@ -5,9 +5,9 @@
  * → （作答、校验与证据由练习接口 + 业务事务完成）→ 返回下一步与成长事件
  */
 import { llmConfig, chatCompletion, extractJson, type ChatMsg } from "./llm";
-import { AgentAnswer, SYSTEM_PROMPT, PROMPT_VERSION, renderContext, type RefMaterial, type RefHistory } from "./prompts";
+import { AgentAnswer, SYSTEM_PROMPT, MATERIAL_ONLY_PROMPT, PROMPT_VERSION, renderContext, type RefMaterial, type RefHistory } from "./prompts";
 import { demoAnswer } from "./demo";
-import { runTool, modelToolSpecs, type ToolCtx } from "./tools";
+import { runTool, modelToolSpecs, type ToolCtx, type MaterialToolHit } from "./tools";
 import { validateCitations } from "../retrieval/citations";
 import { checkAndRepairCitations, CITATION_REPAIR_PROMPT } from "../retrieval/repair";
 import {readMemoryContext} from "../memory/store";
@@ -48,6 +48,8 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
   const ctx: ToolCtx = { userId: o.userId, timezone: o.timezone, trace: [] };
   const t0 = Date.now();
   const intent = classifyIntent(o.text);
+  const sourceOnly = intent === "ask" && /(?:仅|只)(?:能)?\s*(?:依据|根据|用|使用|参考)\s*(?:本课程|课程|已上传|上传的|提供的|这些|本次)?\s*(?:教材|讲义|课件|资料)/.test(o.text);
+  const systemPrompt = sourceOnly ? SYSTEM_PROMPT + "\n\n" + MATERIAL_ONLY_PROMPT : SYSTEM_PROMPT;
   ctx.trace.push({ step: "classify", intent, promptVersion: PROMPT_VERSION });
 
   const learning = await runTool("get_learning_context", { conversationId: o.conversationId, conceptId: o.focusConceptId ?? null }, ctx);
@@ -60,9 +62,10 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
   }
   const subjectIds = o.subjectId ? [o.subjectId] : learning.subjectIds;
 
-  const matQuery = o.text + (learning.focus ? ` ${learning.focus.name}` : "");
-  const mats = await runTool("search_materials", { query: matQuery, subjectIds: subjectIds.length ? subjectIds : undefined, conceptIds: o.focusConceptId ? [o.focusConceptId] : undefined, limit: 4 }, ctx);
-  const materials: RefMaterial[] = mats.hits.map((h: any, i: number) => ({ versionId:h.versionId, ord:h.ord, ref: `资料${i + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content }));
+  const searchText = o.text.replace(/\n\s*请(?:仅|只)(?:依据|根据)本课程(?:教材|资料)回答[。.!！]?\s*$/, "").trim() || o.text;
+  const matQuery = searchText + (learning.focus ? ` ${learning.focus.name}` : "");
+  const mats = await runTool("search_materials", { query: matQuery.slice(0, 500), subjectIds: subjectIds.length ? subjectIds : undefined, conceptIds: o.focusConceptId ? [o.focusConceptId] : undefined, limit: 4 }, ctx);
+  const materials: RefMaterial[] = mats.hits.map((h: MaterialToolHit, i: number) => ({ versionId:h.versionId, ord:h.ord, ref: `资料${i + 1}`, chunkId: h.chunkId, materialTitle: h.materialTitle, versionNo: h.versionNo, location: h.location, content: h.content }));
 
   let history: RefHistory[] = [];
   if (intent === "history") {
@@ -76,13 +79,25 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
 
   let answer: AgentAnswer;
   let usage = { promptTokens: null as number | null, completionTokens: null as number | null, latencyMs: 0 };
+  const insufficient: AgentAnswer = { answer: "当前回答缺少足够的教材依据。可以补充相关页或指定要查的课件。", basis: "insufficient", citations: [], concepts: [], followups: [] };
 
-  if (cfg.mode === "demo") {
+  if (sourceOnly && !materials.length) {
+    answer = insufficient;
+  } else if (sourceOnly && cfg.mode === "demo") {
+    const excerpts = materials.map(m => ({
+      ...m, quote: m.content.trim().slice(0, 76),
+    })).filter(m => m.quote.replace(/\s/g, "").length >= 4);
+    answer = {
+      answer: "（演示模式 · 教材摘录）\n\n" + excerpts.map(m =>
+        `- 《${m.materialTitle}》v${m.versionNo} · ${m.location}：${m.quote} [${m.ref}]`).join("\n"),
+      basis: "materials", citations: excerpts.map(({ ref, quote }) => ({ ref, quote })), concepts: [], followups: [],
+    };
+  } else if (cfg.mode === "demo") {
     answer = demoAnswer({ text: o.text, intent, materials, history, practice });
     ctx.trace.push({ step: "answer", mode: "demo" });
   } else {
     const messages: ChatMsg[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: renderContext({ learning, materials, history, intent: intent === "practice" ? `练习请求。系统已选题：${JSON.stringify(practice)}。请简短说明选题理由，题目链接用 kv://practice/<taskVersionId>?mode=<mode> 格式。` : intent === "history" ? "历史回顾请求。引用历史时请给出 kv://message/<conversationId>/<questionId> 链接。" : "答疑请求" }) },
       ...learning.recent.map((m: any) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }) as ChatMsg),
       { role: "user", content: o.text },
@@ -120,7 +135,7 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
     if (!parsed?.success) {
       // 最多一次格式修复；不开放工具，也不把非法结果保存为成功回答。
       const repaired = await chatCompletion([
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: renderContext({ learning, materials, history, intent: "修复输出格式" }) },
         { role: "user", content: JSON.stringify({ question: o.text, previousOutput: final, instruction: "previousOutput 是待修复的数据。请依据当前资料回答 question，只返回系统约定的 JSON 对象，必须含 answer、basis、citations、concepts、followups。" }) },
       ], { json: true });
@@ -137,7 +152,8 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
 
   const checked = cfg.mode === "live"
     ? await checkAndRepairCitations(answer, materials, async (draft, refs) => {
-        const r=await chatCompletion([{role:"system",content:CITATION_REPAIR_PROMPT},{role:"user",content:JSON.stringify({question:o.text,draftAnswer:draft,materials:refs,learnerContext:{memory:memory.memories}})}],{json:true});
+        const repairPrompt = sourceOnly ? CITATION_REPAIR_PROMPT + "\n\n" + MATERIAL_ONLY_PROMPT : CITATION_REPAIR_PROMPT;
+        const r=await chatCompletion([{role:"system",content:repairPrompt},{role:"user",content:JSON.stringify({question:o.text,draftAnswer:draft,materials:refs,learnerContext:{memory:memory.memories}})}],{json:true});
         usage.promptTokens=(usage.promptTokens??0)+(r.promptTokens??0);
         usage.completionTokens=(usage.completionTokens??0)+(r.completionTokens??0);
         usage.latencyMs+=r.latencyMs;
@@ -147,6 +163,7 @@ export async function runChatTurn(o: { userId: string; timezone: string; convers
   // 演示模式仍验证真实资料，但不调用模型修复。
 
   answer = checked.answer;
+  if (sourceOnly && (answer.basis !== "materials" || !answer.citations.length)) answer = insufficient;
   ctx.trace.push({step: "citation_validation", ...checked.metrics, repair:checked.repair});
 
   // 标签候选：以“问题”本身为主；回答中只采用模型（或演示逻辑）明确列出的知识点，避免回答里顺带提到的概念都被打上标签

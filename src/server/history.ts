@@ -33,11 +33,29 @@ export type HistoryHit = {
 };
 
 /** 生成核心检索 SQL（导出以便报告与 EXPLAIN 使用同一份语句） */
-export function buildHistorySql(input: HistoryQuery, userId: string, tz: string, indexed = true) {
+export function buildHistorySql(input: HistoryQuery, userId: string, tz: string, indexed = true, optimizeConcept = true) {
   if (!indexed) return buildHistorySqlBaseline(input,userId,tz);
   const params: unknown[] = [userId, tz];
   const p = (v: unknown) => { params.push(v); return `$${params.length}`; };
   const where: string[] = ["qm.user_id = $1", "qm.role = 'user'", "c.archived_at IS NULL"];
+  let conceptCandidate = "";
+  const useConceptCandidate = optimizeConcept && !!input.conceptIds?.length;
+  if (useConceptCandidate) {
+    const ids = p(input.conceptIds);
+    // 候选问答包含问题标签或最新回复标签；在候选层排除旧回复，避免后续重复匹配。
+    conceptCandidate = `concept_candidates AS MATERIALIZED (
+      SELECT DISTINCT mapped.qid
+      FROM message_concepts mc JOIN messages tagged ON tagged.id=mc.message_id
+      CROSS JOIN LATERAL (
+        SELECT tagged.id AS qid WHERE tagged.role='user'
+        UNION ALL
+        SELECT tagged.reply_to_id WHERE tagged.reply_to_id IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM messages newer WHERE newer.reply_to_id=tagged.reply_to_id
+            AND newer.user_id=$1 AND newer.seq>tagged.seq)
+      ) mapped
+      WHERE mc.concept_id=ANY(${ids}::uuid[]) AND mc.status<>'rejected' AND tagged.user_id=$1
+    ),`;
+  }
   let candidate = "";
   if (input.keyword) {
     const kw = p(`%${escapeLike(input.keyword)}%`);
@@ -77,7 +95,7 @@ export function buildHistorySql(input: HistoryQuery, userId: string, tz: string,
 
   if (input.from) where.push(`qm.created_at >= (${p(input.from)}::date)::timestamp AT TIME ZONE $2`);
   if (input.to) where.push(`qm.created_at < ((${p(input.to)}::date + 1)::timestamp AT TIME ZONE $2)`);
-  if (input.conceptIds?.length) {
+  if (input.conceptIds?.length && !useConceptCandidate) {
     where.push(`EXISTS (SELECT 1 FROM message_concepts mc
                          WHERE mc.message_id IN (qm.id, am.id) AND mc.status <> 'rejected'
                            AND mc.concept_id = ANY(${p(input.conceptIds)}::uuid[]))`);
@@ -89,10 +107,11 @@ export function buildHistorySql(input: HistoryQuery, userId: string, tz: string,
   }
   const limit = p(input.pageSize);
   const offset = p((input.page - 1) * input.pageSize);
-  const text = `WITH ${candidate} base AS (
+  const text = `WITH ${conceptCandidate}${candidate} base AS (
   SELECT qm.id AS question_id, qm.conversation_id, qm.content AS question, qm.created_at,
          c.title, c.origin, ${input.keyword ? "cand.score" : "0::real"} AS relevance, am.id AS answer_id, am.content AS answer, am.status AS answer_status
-  FROM ${input.keyword ? "cand JOIN messages qm ON qm.id = cand.qid" : "messages qm"}
+  FROM ${useConceptCandidate ? "concept_candidates tagged JOIN messages qm ON qm.id=tagged.qid" : "messages qm"}
+  ${input.keyword ? "JOIN cand ON cand.qid=qm.id" : ""}
   JOIN conversations c ON c.id = qm.conversation_id AND c.user_id = qm.user_id
   LEFT JOIN LATERAL (
      SELECT a.id, a.content, a.status FROM messages a

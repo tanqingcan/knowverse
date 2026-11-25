@@ -1,7 +1,7 @@
 # 数据字典（自动生成）
 
 > 由 `npm run docs:dictionary` 从 `information_schema` / `pg_indexes` 反向生成，**请勿手工编辑**。
-> 生成时间：2026-10-27T14:56:25.340Z　表数：45
+> 生成时间：2026-11-16T11:52:30.022Z　表数：55
 
 ## 目录
 
@@ -11,15 +11,20 @@
 - [card_publications](#card_publications)
 - [card_sources](#card_sources)
 - [card_versions](#card_versions)
+- [cdc_consumed](#cdc_consumed)
+- [cdc_offsets](#cdc_offsets)
 - [class_members](#class_members)
+- [class_stats](#class_stats)
 - [classes](#classes)
 - [concept_aliases](#concept_aliases)
 - [concept_prerequisites](#concept_prerequisites)
 - [concept_suggestions](#concept_suggestions)
 - [concepts](#concepts)
 - [contributions](#contributions)
+- [conversation_summaries](#conversation_summaries)
 - [conversations](#conversations)
 - [evaluations](#evaluations)
+- [garden_knowledge_places](#garden_knowledge_places)
 - [gardens](#gardens)
 - [goal_concepts](#goal_concepts)
 - [growth_events](#growth_events)
@@ -33,12 +38,17 @@
 - [material_concepts](#material_concepts)
 - [material_versions](#material_versions)
 - [materials](#materials)
+- [memories](#memories)
+- [memory_controls](#memory_controls)
 - [message_citations](#message_citations)
 - [message_concepts](#message_concepts)
+- [message_terms](#message_terms)
 - [messages](#messages)
 - [model_calls](#model_calls)
 - [notes](#notes)
 - [outbox_events](#outbox_events)
+- [planet_layout_items](#planet_layout_items)
+- [planet_layouts](#planet_layouts)
 - [planets](#planets)
 - [plants](#plants)
 - [sharing_preferences](#sharing_preferences)
@@ -156,6 +166,32 @@
 
 ---
 
+## cdc_consumed
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| event_id | bigint | 否 |  |
+| topic | text | 否 |  |
+| consumed_at | timestamp with time zone | 否 | `now()` |
+
+- **主键**：`event_id`
+- **索引**：`cdc_consumed_pkey`
+
+---
+
+## cdc_offsets
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| slot_name | text | 否 |  |
+| last_lsn | pg_lsn | 否 |  |
+| updated_at | timestamp with time zone | 否 | `now()` |
+
+- **主键**：`slot_name`
+- **索引**：`cdc_offsets_pkey`
+
+---
+
 ## class_members
 
 | 列 | 类型 | 可空 | 默认 |
@@ -169,6 +205,23 @@
 - **外键**：(class_id) → classes(id)；(user_id) → users(id)
 - **CHECK**：`class_members_role_ck`
 - **索引**：`class_members_pk`, `class_members_user_idx`
+
+---
+
+## class_stats
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| class_id | uuid | 否 |  |
+| member_count | integer | 否 | `0` |
+| shared_planet_count | integer | 否 | `0` |
+| last_active_at | timestamp with time zone | 是 |  |
+| updated_at | timestamp with time zone | 否 | `now()` |
+
+- **主键**：`class_id`
+- **外键**：(class_id) → classes(id)
+- **CHECK**：`class_stats_nonneg_ck`
+- **索引**：`class_stats_pkey`
 
 ---
 
@@ -278,6 +331,26 @@
 
 ---
 
+## conversation_summaries
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| conversation_id | uuid | 否 |  |
+| user_id | uuid | 否 |  |
+| upto_seq | integer | 否 |  |
+| summary | text | 否 |  |
+| model_call_id | uuid | 是 |  |
+| memory_revision | integer | 否 | `0` |
+| method | text | 否 | `'extractive-v1'::text` |
+| updated_at | timestamp with time zone | 否 | `now()` |
+
+- **主键**：`conversation_id`
+- **外键**：(conversation_id) → conversations(id)；(model_call_id) → model_calls(id)；(user_id) → users(id)
+- **CHECK**：`conversation_summaries_upto_seq_check`
+- **索引**：`conversation_summaries_pkey`, `conversation_summaries_user_idx`
+
+---
+
 ## conversations
 
 | 列 | 类型 | 可空 | 默认 |
@@ -320,6 +393,22 @@
 - **外键**：(attempt_id) → attempts(id)；(model_call_id) → model_calls(id)
 - **CHECK**：`evaluations_verdict_ck`
 - **索引**：`evaluations_attempt_uq`, `evaluations_pkey`
+
+---
+
+## garden_knowledge_places
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| user_id | uuid | 否 |  |
+| concept_id | uuid | 否 |  |
+| place | text | 否 |  |
+| created_at | timestamp with time zone | 否 | `now()` |
+
+- **主键**：`user_id`, `concept_id`, `place`
+- **外键**：(concept_id) → concepts(id)；(user_id) → users(id)
+- **CHECK**：`garden_knowledge_places_place_check`
+- **索引**：`garden_knowledge_places_pkey`
 
 ---
 
@@ -491,7 +580,7 @@
 - **主键**：`user_id`, `concept_id`
 - **外键**：(concept_id) → concepts(id)；(user_id) → users(id)
 - **CHECK**：`learning_states_stage_ck`
-- **索引**：`learning_states_pk`, `learning_states_review_idx`
+- **索引**：`learning_states_bud_due_idx`, `learning_states_pk`, `learning_states_review_idx`
 
 ---
 
@@ -577,6 +666,48 @@
 
 ---
 
+## memories
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| id | uuid | 否 | `gen_random_uuid()` |
+| user_id | uuid | 否 |  |
+| kind | text | 否 |  |
+| content | text | 否 |  |
+| concept_id | uuid | 是 |  |
+| source_message_id | uuid | 是 |  |
+| source_conversation_id | uuid | 是 |  |
+| status | text | 否 | `'active'::text` |
+| corrects_id | uuid | 是 |  |
+| created_at | timestamp with time zone | 否 | `now()` |
+| updated_at | timestamp with time zone | 否 | `now()` |
+| content_norm | text | 是 |  |
+| confidence | real | 否 | `0.8` |
+| importance | integer | 否 | `3` |
+| expires_at | timestamp with time zone | 是 |  |
+| revoked_at | timestamp with time zone | 是 |  |
+| revoke_reason | text | 是 |  |
+
+- **主键**：`id`
+- **外键**：(concept_id) → concepts(id)；(corrects_id) → memories(id)；(source_conversation_id) → conversations(id)；(source_message_id) → messages(id)；(user_id) → users(id)
+- **CHECK**：`memories_confidence_ck`, `memories_importance_ck`, `memories_kind_ck`, `memories_status_ck`
+- **索引**：`memories_active_norm_uq`, `memories_concept_idx`, `memories_pkey`, `memories_source_msg_idx`, `memories_user_status_idx`
+
+---
+
+## memory_controls
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| user_id | uuid | 否 |  |
+| revision | integer | 否 | `0` |
+
+- **主键**：`user_id`
+- **外键**：(user_id) → users(id)
+- **索引**：`memory_controls_pkey`
+
+---
+
 ## message_citations
 
 | 列 | 类型 | 可空 | 默认 |
@@ -613,6 +744,21 @@
 
 ---
 
+## message_terms
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| term | text | 否 |  |
+| message_id | uuid | 否 |  |
+| weight | real | 否 |  |
+
+- **主键**：`term`, `message_id`
+- **外键**：(message_id) → messages(id)
+- **CHECK**：`message_terms_weight_check`
+- **索引**：`message_terms_message_idx`, `message_terms_pkey`, `message_terms_trgm_idx`
+
+---
+
 ## messages
 
 | 列 | 类型 | 可空 | 默认 |
@@ -635,7 +781,7 @@
 - **主键**：`id`
 - **外键**：(conversation_id, user_id) → conversations(id, user_id)；(model_call_id) → model_calls(id)；(reply_to_id) → messages(id)
 - **CHECK**：`messages_basis_ck`, `messages_mode_ck`, `messages_role_ck`, `messages_status_ck`
-- **索引**：`messages_content_trgm_idx`, `messages_conv_seq_uq`, `messages_pkey`, `messages_reply_idx`, `messages_user_created_idx`
+- **索引**：`messages_content_trgm_idx`, `messages_conv_seq_uq`, `messages_pending_idx`, `messages_pkey`, `messages_reply_idx`, `messages_user_created_idx`
 
 ---
 
@@ -700,6 +846,57 @@
 
 - **主键**：`id`
 - **索引**：`outbox_events_pkey`, `outbox_undelivered_idx`
+
+---
+
+## planet_layout_items
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| id | uuid | 否 | `gen_random_uuid()` |
+| layout_id | uuid | 否 |  |
+| kind | text | 否 |  |
+| x | real | 否 |  |
+| z | real | 否 |  |
+| rot | real | 否 | `0` |
+| scale | real | 否 | `1` |
+| width | real | 是 |  |
+| length | real | 是 |  |
+| color | text | 是 |  |
+| stage | text | 是 |  |
+| sort_order | integer | 否 | `0` |
+| created_at | timestamp with time zone | 否 | `now()` |
+| parts | jsonb | 是 |  |
+| instance_id | text | 是 |  |
+
+- **主键**：`id`
+- **外键**：(layout_id) → planet_layouts(id)
+- **CHECK**：`planet_layout_items_kind_ck`
+- **索引**：`planet_layout_items_layout_idx`, `planet_layout_items_pkey`
+
+---
+
+## planet_layouts
+
+| 列 | 类型 | 可空 | 默认 |
+|---|---|---|---|
+| id | uuid | 否 | `gen_random_uuid()` |
+| planet_id | uuid | 否 |  |
+| revision | integer | 否 | `1` |
+| status | text | 否 | `'draft'::text` |
+| published_revision | integer | 是 |  |
+| created_at | timestamp with time zone | 否 | `now()` |
+| updated_at | timestamp with time zone | 否 | `now()` |
+| published_items | jsonb | 是 |  |
+| schema_version | integer | 否 | `1` |
+| bed_moves | jsonb | 是 |  |
+| terrain | jsonb | 是 |  |
+| water | real | 是 |  |
+
+- **主键**：`id`
+- **外键**：(planet_id) → planets(id)
+- **CHECK**：`planet_layouts_revision_ck`, `planet_layouts_status_ck`
+- **索引**：`planet_layouts_pkey`, `planet_layouts_planet_uq`
 
 ---
 

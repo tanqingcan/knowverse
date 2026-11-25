@@ -1,6 +1,6 @@
 # C5 记忆系统
 
-2026-11-11，提示词版本`chat-v1.5`。复用已有`memories`表与B的记忆面板，不另建`user_memories`。数据库扩展草案为`docs/sql/drafts/memory-system.sql`，本机已安装，正式Drizzle/schema与RLS仍需A集成。
+2026-11-11，提示词版本`chat-v1.5`。复用已有`memories`表与B的记忆面板，不另建`user_memories`。**2026-11-16：A 已把 `docs/sql/drafts/memory-system.sql` 正式并入迁移 `0030_rag_tables.sql`，并在 `src/db/schema.ts` 登记；新增字段、`memory_controls`、`conversation_summaries` 与 RLS 随 `npm run db:migrate` 自动生效，无需再运行 `memory:install`。**
 
 ## 长期记忆链路
 

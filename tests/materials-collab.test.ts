@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
 import { q, q1, makeUser, concept, subject } from "./helpers";
-import { uploadMaterial, materialDetail, searchMaterials } from "@/server/materials";
+import { uploadMaterial, loadMaterialFile, materialDetail, searchMaterials, markRead, setMaterialConcept } from "@/server/materials";
 import { createClass, joinClass, setSharing, addIntent, findPartners, createGroup, joinGroup, drainOutbox, galaxy } from "@/server/classes";
 import type { CurrentUser } from "@/server/auth";
 
@@ -14,6 +14,56 @@ const seedDir = path.join(process.cwd(), "seed", "materials");
 beforeAll(async () => { U = await makeUser("mat"); V = await makeUser("matv"); sid = await subject("dbms"); });
 
 describe("资料提取", () => {
+  it("原文件按学生和版本保存，旧格式仍可下载，其他学生无法取得", async () => {
+    const name = "个人讲义.md";
+    const input = {userId:U.id, subjectId:sid, title:"私人分区存储", course:"测试", kind:"notes", fileName:name, mimeType:null};
+    const original = Buffer.from("# 第一版\n\n分区术语甲只出现在旧版。");
+    const updated = Buffer.from("# 第二版\n\n分区术语乙只出现在新版。");
+    const v1 = await uploadMaterial({...input,buf:original});
+    const v2 = await uploadMaterial({...input,materialId:v1.materialId,buf:updated});
+    const pathRow = await q1("SELECT storage_path FROM material_versions WHERE id=$1",[v2.versionId]);
+    expect(pathRow.storage_path).toBe(`${U.id}/${v2.versionId}`);
+    expect(await loadMaterialFile(U.id,v1.materialId,2)).toEqual({name,content:updated});
+    expect(await loadMaterialFile(U.id,v1.materialId,1)).toEqual({name,content:original});
+    await expect(loadMaterialFile(V.id,v1.materialId,1)).rejects.toMatchObject({code:"not_found"});
+    expect((await searchMaterials(V.id,"“分区术语乙”")).hits.some(h=>h.materialId===v1.materialId)).toBe(false);
+
+    const legacy = `${v1.versionId.replaceAll("-", "").slice(0, 16)}-legacy.md`;
+    fs.writeFileSync(path.join(process.env.UPLOAD_DIR!,legacy),original);
+    await q("UPDATE material_versions SET storage_path=$2 WHERE id=$1",[v1.versionId,legacy]);
+    expect(await loadMaterialFile(U.id,v1.materialId,1)).toEqual({name,content:original});
+  });
+
+  it("保存原件失败时登记失败状态，修复存储后可以上传同一份新版本", async () => {
+    const input = {userId:U.id, subjectId:sid, title:"存储失败重试", course:"测试", kind:"notes", fileName:"retry.txt", mimeType:null, buf:Buffer.from("测试失败重试。")};
+    const dir = process.env.UPLOAD_DIR!;
+    const blocker = path.join(dir, "blocked-" + U.id);
+    fs.writeFileSync(blocker,"not a folder");
+    let failed: {id:string;status:string;detail:string} | null;
+    try {
+      process.env.UPLOAD_DIR = blocker;
+      await expect(uploadMaterial(input)).rejects.toMatchObject({code:"upload_storage_failed"});
+      failed = await q1("SELECT m.id,v.status,v.status_detail AS detail FROM materials m JOIN material_versions v ON v.material_id=m.id WHERE m.owner_user_id=$1 AND m.title=$2",[U.id,input.title]);
+      expect(failed).toMatchObject({status:"failed",detail:"原文件保存失败，请重试"});
+    } finally {
+      process.env.UPLOAD_DIR = dir;
+      fs.unlinkSync(blocker);
+    }
+    const retried = await uploadMaterial({...input,materialId:failed!.id});
+    expect(retried).toMatchObject({status:"ready",versionNo:2});
+  });
+  it("阅读证据关联本版本已确认的知识点，个人仅可维护自己的资料标签", async () => {
+    const input = {userId:U.id, subjectId:sid, title:"阅读依据", course:"测试", kind:"notes", fileName:"read.txt", mimeType:null, buf:Buffer.from("左外连接保留左表全部记录。")};
+    const {versionId} = await uploadMaterial(input);
+    const id = await concept("左外连接");
+    await expect(markRead(U.id, versionId, id)).rejects.toMatchObject({code:"not_found"});
+    await setMaterialConcept(U.id, versionId, id, "confirmed");
+    await markRead(U.id, versionId, id);
+    expect(await q1("SELECT kind FROM learning_evidence WHERE user_id=$1 AND concept_id=$2 AND material_version_id=$3", [U.id,id,versionId])).toMatchObject({kind:"read"});
+    await expect(markRead(U.id, versionId, await concept("内连接"))).rejects.toMatchObject({code:"not_found"});
+    const shared = await uploadMaterial({...input,userId:null});
+    await expect(setMaterialConcept(U.id, shared.versionId, id, "rejected")).rejects.toMatchObject({code:"not_found"});
+  });
   it("PPTX：按幻灯片顺序保存页号", async () => {
     const r = await uploadMaterial({ userId: U.id, subjectId: sid, title: "课件", course: "测试", kind: "slides", fileName: "deck.pptx", mimeType: null, buf: fs.readFileSync(path.join(seedDir, "连接查询课件.pptx")) });
     expect(r.status).toBe("ready");

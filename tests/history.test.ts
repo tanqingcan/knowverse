@@ -1,7 +1,7 @@
 /** 历史问答检索：关键词（含中文）、时间（时区与边界）、知识点、组合条件、分页、定位原消息、数据隔离 */
 import { describe, it, expect, beforeAll } from "vitest";
 import { q, q1, makeUser, concept } from "./helpers";
-import { searchHistory } from "@/server/history";
+import { buildHistorySql, searchHistory } from "@/server/history";
 import { conversationWindow, sendMessage } from "@/server/chat";
 import type { CurrentUser } from "@/server/auth";
 
@@ -34,7 +34,7 @@ beforeAll(async () => {
 
 describe("历史问答检索", () => {
   it("英文关键词：命中标题、问题或回答，大小写不敏感，并给出高亮片段", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { keyword: "left join", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { keyword: "left join", page: 1, pageSize: 10 });
     expect(r.total).toBe(1);
     const h = r.hits[0];
     expect(h.questionSegs.some((s) => s.hit && s.text.toLowerCase() === "left join")).toBe(true);
@@ -42,23 +42,23 @@ describe("历史问答检索", () => {
   });
 
   it("中文关键词（两个字，低于 trigram 长度）仍然真实有效", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { keyword: "分母", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { keyword: "分母", page: 1, pageSize: 10 });
     expect(r.total).toBe(1);
     expect(r.hits[0].questionSegs.map((s) => s.text).join("")).toContain("条件概率");
-    const r2 = await searchHistory(A.id, "Asia/Taipei", { keyword: "左外连接", page: 1, pageSize: 10 });
+    const r2 = await searchHistory(A.id, "Asia/Shanghai", { keyword: "左外连接", page: 1, pageSize: 10 });
     // 倒排版还召回已标为左外连接的英文问题；旧版只匹配中文子串。
     expect(r2.total).toBe(r2.searchMode === 'inverted' ? 2 : 1);
   });
 
   it("关键词中的 % 与 _ 被当作普通字符，不会变成通配符", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { keyword: "%", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { keyword: "%", page: 1, pageSize: 10 });
     expect(r.total).toBe(0);
-    const r2 = await searchHistory(A.id, "Asia/Taipei", { keyword: "_", page: 1, pageSize: 10 });
+    const r2 = await searchHistory(A.id, "Asia/Shanghai", { keyword: "_", page: 1, pageSize: 10 });
     expect(r2.total).toBe(0);
   });
 
   it("日期按用户时区的自然日筛选，左闭右开：3 月 10 日不包含次日 00:10 的问题", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { from: "2026-03-10", to: "2026-03-10", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { from: "2026-03-10", to: "2026-03-10", page: 1, pageSize: 10 });
     expect(r.total).toBe(1);
     expect(r.hits[0].localDate).toBe("2026-03-10 23:30");
     // 换成 UTC：台北 3/10 23:30 是 UTC 15:30，3/11 00:10 是 UTC 3/10 16:10，二者都属于 UTC 的 3 月 10 日
@@ -67,21 +67,21 @@ describe("历史问答检索", () => {
   });
 
   it("知识点筛选（经由 message_concepts 关联表）", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { conceptIds: [innerJoin], page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { conceptIds: [innerJoin], page: 1, pageSize: 10 });
     expect(r.total).toBe(1);
     expect(r.hits[0].concepts.map((c) => c.id)).toContain(innerJoin);
   });
 
   it("多条件组合：关键词 + 日期 + 知识点", async () => {
-    const hit = await searchHistory(A.id, "Asia/Taipei", { keyword: "连接", from: "2026-03-10", to: "2026-03-11", conceptIds: [leftJoin], page: 1, pageSize: 10 });
+    const hit = await searchHistory(A.id, "Asia/Shanghai", { keyword: "连接", from: "2026-03-10", to: "2026-03-11", conceptIds: [leftJoin], page: 1, pageSize: 10 });
     expect(hit.total).toBe(1);
-    const miss = await searchHistory(A.id, "Asia/Taipei", { keyword: "连接", from: "2026-03-11", to: "2026-03-11", conceptIds: [leftJoin], page: 1, pageSize: 10 });
+    const miss = await searchHistory(A.id, "Asia/Shanghai", { keyword: "连接", from: "2026-03-11", to: "2026-03-11", conceptIds: [leftJoin], page: 1, pageSize: 10 });
     expect(miss.total).toBe(0);
   });
 
   it("分页：总数、页数正确，页与页之间不重复", async () => {
-    const p1 = await searchHistory(A.id, "Asia/Taipei", { keyword: "星屿", page: 1, pageSize: 5 });
-    const p3 = await searchHistory(A.id, "Asia/Taipei", { keyword: "星屿", page: 3, pageSize: 5 });
+    const p1 = await searchHistory(A.id, "Asia/Shanghai", { keyword: "星屿", page: 1, pageSize: 5 });
+    const p3 = await searchHistory(A.id, "Asia/Shanghai", { keyword: "星屿", page: 3, pageSize: 5 });
     expect(p1.total).toBe(13);
     expect(p1.pages).toBe(3);
     expect(p1.hits).toHaveLength(5);
@@ -94,15 +94,15 @@ describe("历史问答检索", () => {
   });
 
   it("权限：只检索本人记录（B 的同名关键词不会出现在 A 的结果中）", async () => {
-    const a = await searchHistory(A.id, "Asia/Taipei", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
+    const a = await searchHistory(A.id, "Asia/Shanghai", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
     expect(a.hits.every((h) => h.conversationTitle !== "B 的连接问题")).toBe(true);
-    const b = await searchHistory(B.id, "Asia/Taipei", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
+    const b = await searchHistory(B.id, "Asia/Shanghai", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
     expect(b.total).toBe(1);
     expect(b.hits[0].conversationTitle).toBe("B 的连接问题");
   });
 
   it("结果定位原消息：打开会话窗口包含该消息及前后文；他人无法打开", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { keyword: "星屿 第 7", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { keyword: "星屿 第 7", page: 1, pageSize: 10 });
     const h = r.hits[0];
     const w = await conversationWindow(A.id, h.conversationId, { aroundMessageId: h.questionId });
     const ids = w.messages.map((m: any) => m.id);
@@ -112,7 +112,7 @@ describe("历史问答检索", () => {
   });
 
   it("从历史会话继续提问：新消息追加到原会话，刷新（重新读取）后仍在；记录上次上下文", async () => {
-    const r = await searchHistory(A.id, "Asia/Taipei", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
+    const r = await searchHistory(A.id, "Asia/Shanghai", { keyword: "LEFT JOIN", page: 1, pageSize: 10 });
     const conv = r.hits[0].conversationId;
     const before = (await conversationWindow(A.id, conv)).messages.length;
     await sendMessage(A, { conversationId: conv, text: "那 RIGHT JOIN 也会这样吗？" });
@@ -122,7 +122,33 @@ describe("历史问答检索", () => {
     const u = await q1(`SELECT last_conversation_id FROM users WHERE id = $1`, [A.id]);
     expect(u.last_conversation_id).toBe(conv);
     // 新问题可以被检索到
-    const again = await searchHistory(A.id, "Asia/Taipei", { keyword: "RIGHT JOIN", page: 1, pageSize: 10 });
+    const again = await searchHistory(A.id, "Asia/Shanghai", { keyword: "RIGHT JOIN", page: 1, pageSize: 10 });
     expect(again.total).toBe(1);
+  });
+});
+
+// 回归：候选集合不能改变最新回复、标签状态、去重、组合与分页语义。
+describe("知识点候选集合优化", () => {
+  it("问题/回答标签、多标签不重复、拒绝标签和旧回复不能误召回", async () => {
+    const u=await makeUser("hopt");
+    const a=await qa(u,"优化回归","优化回归问题","第一条回答","2026-05-01T10:00:00+08:00",leftJoin);
+    const old=await q1(`SELECT id FROM messages WHERE reply_to_id=$1`,[a.questionId]);
+    await q(`INSERT INTO message_concepts(message_id,concept_id,source,status) VALUES($1,$2,'user','confirmed')`,[old.id,innerJoin]);
+    await q(`INSERT INTO messages(conversation_id,user_id,seq,role,content,reply_to_id) VALUES($1,$2,3,'assistant','最新回答',$3)`,[a.conversationId,u.id,a.questionId]);
+    const b=await qa(u,"回答标签","回答命中","答案","2026-05-02T10:00:00+08:00");
+    const answer=await q1(`SELECT id FROM messages WHERE reply_to_id=$1`,[b.questionId]);
+    await q(`INSERT INTO message_concepts(message_id,concept_id,source,status) VALUES($1,$3,'user','confirmed'),($2,$3,'user','confirmed')`,[b.questionId,answer.id,innerJoin]);
+    const rejected=await qa(u,"已拒绝","拒绝","答案","2026-05-03T10:00:00+08:00");
+    await q(`INSERT INTO message_concepts(message_id,concept_id,source,status) VALUES($1,$2,'ai','rejected')`,[rejected.questionId,innerJoin]);
+    for(const input of [
+      {conceptIds:[innerJoin],page:1,pageSize:10},
+      {conceptIds:[leftJoin,innerJoin],page:1,pageSize:1},
+      {conceptIds:[leftJoin,innerJoin],keyword:'优化回归',from:'2026-05-01',to:'2026-05-01',page:1,pageSize:10},
+      {conceptIds:[leftJoin,innerJoin],page:2,pageSize:1},
+    ]){
+      const run=async(opt:boolean)=>{const stmt=buildHistorySql(input,u.id,'Asia/Shanghai',true,opt);return q(stmt.text,stmt.params);};
+      expect(await run(true)).toEqual(await run(false));
+    }
+    expect((await searchHistory(u.id,'Asia/Shanghai',{conceptIds:[innerJoin],page:1,pageSize:10})).hits.map(x=>x.questionId)).toEqual([b.questionId]);
   });
 });

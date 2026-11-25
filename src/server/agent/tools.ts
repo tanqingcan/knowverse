@@ -134,9 +134,12 @@ export const searchMaterialsTool = tool({
   jsonSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
   run: async (ctx, inp) => {
     const r = await searchMaterials(ctx.userId, inp.query, inp);
+    if (r.semantic !== "off") ctx.trace.push({ step: "material_semantic_recall", status: r.semantic, hits: r.hits.length });
     return { terms: r.terms, hits: r.hits.map((h) => ({ ord: h.ord, chunkId: h.chunkId, versionId: h.versionId, versionNo: h.versionNo, materialTitle: h.materialTitle, location: locationLabel(h), content: h.content, score: h.score })) };
   },
 });
+
+export type MaterialToolHit = z.output<typeof searchMaterialsTool.output>["hits"][number];
 
 export const proposeConceptTags = tool({
   name: "propose_concept_tags",

@@ -1,0 +1,69 @@
+%!TeX program = xelatex
+\documentclass[12pt,a4paper,UTF8]{ctexart}
+% 用户只提供了 main.tex 文本；实际 RUCReport.sty 尚未提供。
+% 找到并审阅样式文件后可放到同目录；模板封面元信息按其定义填写。
+\newif\ifRUCTemplate
+\IfFileExists{RUCReport.sty}{\RUCTemplatetrue\usepackage{RUCReport}}{\RUCTemplatefalse}
+\input{preamble}
+\input{metadata}
+\begin{document}
+\ifRUCTemplate
+  \cover
+\else
+  \begin{titlepage}
+  \centering
+  \vspace*{18mm}
+  {\zihao{2}\bfseries \CourseName\par}
+  \vspace{22mm}
+  {\zihao{1}\bfseries 项目报告写作框架\par}
+  \vspace{14mm}
+  {\zihao{3}\bfseries \ProjectName\par}
+  \vspace{3mm}
+  {\zihao{-3}\bfseries \ProjectSubtitle\par}
+  \vspace{18mm}
+  {\large \TeamInformation\par}
+  \vfill
+  {\large \ReportDate\par}
+  \vspace{8mm}
+  \begin{minipage}{.86\linewidth}\small
+  本文件为报告架构、章节任务与协作分工预览，不是可直接提交的项目报告。
+  当前使用基础封面；原模板样式文件补齐后再核对正式封面。
+  \end{minipage}
+  \end{titlepage}
+\fi
+\pagenumbering{Roman}
+\input{chapters/00-writing-guide}
+\clearpage
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+\input{chapters/abstract}
+\clearpage
+\input{chapters/01-requirements}
+\clearpage
+\input{chapters/02-architecture}
+\clearpage
+\input{chapters/03-database-design}
+\clearpage
+\input{chapters/04-detailed-design}
+\clearpage
+\input{chapters/05-implementation}
+\clearpage
+\input{chapters/06-testing}
+\clearpage
+\input{chapters/07-deployment}
+\clearpage
+\input{chapters/08-llm-assisted-design}
+\clearpage
+\input{chapters/09-conclusion}
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{参考文献}
+\bibliographystyle{unsrt}
+\bibliography{reference}
+\clearpage
+\appendix
+\input{chapters/appendix-resources}
+\clearpage
+\input{chapters/appendix-contributions}
+\end{document}

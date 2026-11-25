@@ -5,15 +5,15 @@ export async function checkAndRepairCitations(
   input:AgentAnswer, materials:RefMaterial[],
   repair:(input:AgentAnswer,materials:RefMaterial[])=>Promise<AgentAnswer>,
 ) {
-  const initial=validateCitations(input,materials);
+  const initial=validateCitations(input,materials,{requireQuote:true});
   const needsRepair=materials.length>0 && (input.basis==='materials'||input.basis==='mixed') &&
     (initial.metrics.rejected>0||initial.metrics.accepted===0||initial.metrics.unverifiedQuotes>0);
   if(!needsRepair)return {...initial,repair:{attempted:false,succeeded:false}};
   try {
     const revised=await repair(input,materials);
-    const checked=validateCitations(revised,materials);
+    const checked=validateCitations(revised,materials,{requireQuote:true});
     // 修复不能靠改成general绕开校验；有效引用必须有可核验的原文。
-    if(checked.metrics.accepted>0&&checked.metrics.unverifiedQuotes===0&&checked.metrics.rejected===0)
+    if((checked.answer.basis==='materials'||checked.answer.basis==='mixed')&&checked.metrics.accepted>0&&checked.metrics.rejected===0)
       return {...checked,repair:{attempted:true,succeeded:true}};
   }catch {/* 失败保留首次校验结果；不丢失已验证引用 */}
   return {...initial,repair:{attempted:true,succeeded:false}};

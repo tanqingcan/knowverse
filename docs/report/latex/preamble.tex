@@ -1,0 +1,30 @@
+\ifRUCTemplate\else
+  \usepackage[margin=25mm,headheight=15pt]{geometry}
+\fi
+\usepackage{graphicx}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{xcolor,listings}
+\usepackage{pdflscape}
+\usepackage{placeins}
+\usepackage{xurl}
+\usepackage{hyperref}
+\hypersetup{hidelinks,pdfauthor={KNOWVERSE 项目组},pdftitle={KNOWVERSE 项目报告写作框架}}
+\urlstyle{same}
+\renewcommand{\arraystretch}{1.22}
+\setlength{\emergencystretch}{2em}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+\renewcommand{\thefigure}{\thesection-\arabic{figure}}
+\renewcommand{\thetable}{\thesection-\arabic{table}}
+\makeatletter
+\@addtoreset{figure}{section}
+\@addtoreset{table}{section}
+\makeatother
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\Writing}[2]{\par\smallskip\noindent\textbf{写作任务（#1）}：#2\par\smallskip}
+\newcommand{\Evidence}[1]{\par\smallskip{\small\raggedright\noindent 证据入口：\path{#1}\par}}
+\newcommand{\ChapterOwner}[2]{\noindent\textbf{主笔：#1；复核：#2。}\par\medskip}
+\lstdefinestyle{SQL}{language=SQL,basicstyle=\small\ttfamily,breaklines=true,columns=fullflexible,
+  numbers=left,numberstyle=\tiny\color{gray},numbersep=8pt,frame=single,
+  keywordstyle=\bfseries\color{blue!50!black},showstringspaces=false,tabsize=2}

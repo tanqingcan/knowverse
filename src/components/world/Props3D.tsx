@@ -283,21 +283,17 @@ export function GrassField({ items }: { items: { pos: THREE.Vector3; quat: THREE
 export function CloudRing({ R }: { R: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const puffs = useMemo(() => {
-    const upper = Array.from({ length: 46 }, (_, i) => {
-      const a = (i / 46) * Math.PI * 2 + rand(i, 1) * 0.2;
-      const y = -R * (0.2 + rand(i, 2) * 0.22);
-      const rr = Math.sqrt(R * R - y * y) * (1.0 + rand(i, 3) * 0.08);
-      return { p: [Math.sin(a) * rr, y, Math.cos(a) * rr] as [number, number, number], s: 0.32 + rand(i, 4) * 0.34, c: i % 4 === 0 ? "#F7DCCF" : i % 3 === 0 ? "#EDE3F2" : "#FFF7EE" };
+    const count = 18;
+    return Array.from({ length: count }, (_, i) => {
+      const angle = i / count * Math.PI * 2;
+      const y = -R * (0.29 + rand(i, 2) * 0.10);
+      const radius = Math.sqrt(R * R - y * y);
+      return {
+        p: [Math.sin(angle) * radius, y, Math.cos(angle) * radius] as [number, number, number],
+        s: 0.48 + rand(i, 4) * 0.18,
+        c: i % 3 === 0 ? "#EDE3F2" : "#FFF7EE",
+      };
     });
-    // Overlapping cloud rows wrap the exposed lower cap, including its pole.
-    const lower = [{depth:.46,count:34},{depth:.65,count:30},{depth:.82,count:24},{depth:.95,count:16},{depth:1.02,count:7}].flatMap((layer,row)=>Array.from({length:layer.count},(_,i)=>{
-      const seed=100+row*40+i;
-      const a=i/layer.count*Math.PI*2+row*.31;
-      const y=-R*layer.depth+(rand(seed,2)-.5)*.10;
-      const rr=layer.depth>=1 ? .22 : Math.sqrt(R*R-Math.min(R*R,y*y))*1.025;
-      return {p:[Math.sin(a)*rr,y,Math.cos(a)*rr] as [number,number,number],s:.50+rand(seed,4)*.14,c:(i+row)%5===0 ? "#EDE3F2" : (i+row)%3===0 ? "#F7DCCF" : "#FFF7EE"};
-    }));
-    return [...upper,...lower];
   }, [R]);
   useEffect(() => {
     const m = ref.current; if (!m) return;
@@ -308,8 +304,7 @@ export function CloudRing({ R }: { R: number }) {
     });
     m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }, [puffs]);
-  // 性能：云团是柔和的大球，12×8 分段已足够圆（原 16×12，157 个实例共约 5.5 万面 → 约 2.8 万）
-  return <instancedMesh ref={ref} args={[sphereGeo(1, 12, 8), matte("#ffffff", { rough: 1 }), puffs.length]} />;
+  return <instancedMesh ref={ref} args={[sphereGeo(1, 8, 5), matte("#ffffff", { rough: 1 }), puffs.length]} />;
 }
 
 /** 观星台：石台 + 低圆顶 + 望远镜 + 门口暖灯，放在星球背面，环绕时有可去的地方 */

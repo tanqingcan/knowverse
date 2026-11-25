@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: typecheck-test-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: knowverse_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d knowverse_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/knowverse_test
+      APP_DATABASE_URL: postgres://kv_app:kv_app_dev@127.0.0.1:5432/knowverse_test
+      ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      SANDBOX_DATABASE_URL: postgres://kv_sandbox:kv_sandbox_pw@127.0.0.1:5432/knowverse_sandbox
+      LLM_MODE: demo
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Enable logical WAL for CDC coverage
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec "$POSTGRES_CONTAINER" psql -U postgres -d postgres -c "ALTER SYSTEM SET wal_level = 'logical';"
+          docker restart "$POSTGRES_CONTAINER"
+          for i in {1..30}; do
+            if docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d knowverse_test; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      # global-setup resets, migrates and seeds the isolated test DB.
+      - name: Test (including RLS and SQL sandbox)
+        run: npm test
+      - name: Production build
+        run: npm run build

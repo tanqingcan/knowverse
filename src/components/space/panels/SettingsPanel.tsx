@@ -23,12 +23,12 @@ export function SettingsPanel() {
         <label className="row"><input type="checkbox" checked={space.user.reducedMotion} onChange={(e) => set({ reducedMotion: e.target.checked })} />低动效（关闭镜头动画、入场动画、花瓣展开与光点）</label>
         <label className="field"><span>星球渲染</span>
           <select className="select" value={space.user.renderMode} onChange={(e) => set({ renderMode: e.target.value })}>
-            <option value="auto">自动（WebGL 可用时使用 3D）</option><option value="3d">3D（WebGL）</option><option value="2d">静态绘本（SVG，最省电）</option>
+            <option value="auto">自动（设备报告 3D 性能受限时使用静态绘本）</option><option value="3d">3D（WebGL）</option><option value="2d">静态绘本（SVG，最省电）</option>
           </select>
         </label>
         <label className="field"><span>时区（用于历史检索的日期范围）</span>
           <select className="select" value={space.user.timezone} onChange={(e) => set({ timezone: e.target.value })}>
-            {["Asia/Taipei", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"].map((z) => <option key={z} value={z}>{z}</option>)}
+            {["Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"].map((z) => <option key={z} value={z}>{z}</option>)}
           </select>
         </label>
       </div>

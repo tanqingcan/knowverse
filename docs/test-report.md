@@ -1,6 +1,82 @@
 # 系统测试报告
 
-> 本报告只记录**实际执行过**的测试。执行环境：开发容器（Linux，Node.js 22.23，PostgreSQL 16.15，Chromium/Playwright 无头浏览器，WebGL 由 SwiftShader 软件渲染）。执行日期 2026-10-26。
+> 当前复测：**2026-11-17，Windows / Node v22.18.0 / PostgreSQL 16.14 / Vitest 3.2.4**。数据库专项后250例、37个文件通过。正式课程报告与 PPT 不在本轮范围内；本文件是工程验收记录。
+
+## 数据库专项复测
+
+知识点候选集改写后，37个文件、250例全部通过（53.12秒），typecheck与生产build通过。[本轮完整JSON](test-evidence/vitest-history-2026-11-17.json)。新增1例查询语义综合回归及1例引用FD合法反例；没有改写旧迁移或增加索引。
+
+[冷热/RLS/并发对照](sql/history-optimization.md)、[5页阶段汇报提纲](database-progress-briefing.md)、[范式复核](schema/normalization-analysis.md)。原全库范式数量撤回；候选键目录已区分可空/条件唯一性与超键。
+
+## 首轮收尾自动化基线（248例）
+
+命令：`npm test -- --reporter=default --reporter=json --outputFile=docs/test-evidence/vitest-2026-11-17.json`。
+
+```text
+Test Files  36 passed (36)
+     Tests  248 passed (248)
+  Duration  46.82s
+```
+
+零失败、零跳过。[实际 Vitest 输出 JSON](test-evidence/vitest-2026-11-17.json)。测试直接调用服务层与真实 PostgreSQL；RLS 使用 kv_app（非所有者）单独检查。logical WAL 已开启，CDC 实际解码执行。测试库固定本机 `knowverse_test`，首次自动创建，每次 reset → migrate → seed。
+
+| 分类 | 文件数 | 用例数 | 主要覆盖 |
+|---|---:|---:|---|
+| 数据库 / 安全 / RLS | 5 | 24 | 不变量、越权、0030 新表、倒排索引触发器与 RLS、视图/存储过程 |
+| 作答 / 结算 / 沙箱 | 3 | 38 | 并发幂等、回滚、成长规则、23 个新增安全/等价用例 |
+| 审计 / 时间机器 / 班级统计 / CDC | 5 | 16 | 分区审计、as-of、增量一致性、分享过滤、WAL 消费 |
+| 学习计划 / 周报 | 2 | 8 | 计划约束、先修、SQL 统计口径 |
+| 问答 / 检索 / 记忆 / 资料 / 协作 | 6 | 51 | 引用版本、组合检索、记忆失效、解析异常、并发小组 |
+| 单元测试 | 15 | 111 | 家园布局/几何/可达性、检索、引用修复、模型调用错误、文件提取 |
+| 合计 | 36 | 248 | 与本轮 JSON 一致 |
+
+2026-11-16 交接基线为 225 例 / 35 文件；本轮先复现该基线，再新增 `sandbox.test.ts` 23 例。未改写 0000–0030；0031 统一默认时区。真实 HTTP 新账号验证默认 Asia/Shanghai，题库与上传仍通过 kv_app 执行。
+
+## 从零迁移、构建与审计
+
+在独立 `knowverse_test` 指向的终端执行 `npm run db:reset`：32 个 journal 条目（0000–0031）从零迁移、角色/沙箱设置、资料/15 道题/演示数据 seed 成功。
+
+| 命令 | 本轮实际结果 |
+|---|---|
+| `npm run typecheck` | 通过 |
+| `npm run build` | 通过，45 个静态页面生成；icon.svg 路由存在 |
+| `npm run verify:invariants` | 干净种子库：15 项，0 错误、0 警告 |
+| `npm run security:audit` | 6 项，0 失败；S6 SQL 插值仍属人工审阅项目 |
+| `npm run bench` | 两次成功、每次仍为 40000 条合成消息；业务库/远程库输入均被拒绝 |
+
+随后对现有本机业务库仅执行 `npm run db:migrate` 应用 0031（未 reset/seed），迁移成功；不变量 15 项为 0 错误、1 警告（既有 `growth.stage_changed` outbox 从 2026-11-16 未投递），安全自查 6 项 0 失败。该队列未清空，需要运行维护时消费/监控；此结果与上表干净种子库审计分开记录。
+
+共享造数提取后，原 `bench:search` 的 50 条查询也已复跑：索引路径 50/50 总数与 gold 一致，命中 50 条；结果另存 [search-eval-d2-2026-11-17.json](test-evidence/search-eval-d2-2026-11-17.json)，没有覆盖 C 的历史评测。另在没有 `.env` 的临时工作目录单独执行 setup-env，确认 CI 传入的 kv_app 连接被保留为 TEST_APP_DATABASE_URL，而业务 owner 被定向到 knowverse_test。
+
+验证期间首次数据库连接和构建目录写入被执行沙箱拒绝（EACCES/EPERM）；在允许访问本机数据库与项目构建目录的执行环境重跑后通过，没有删除校验或吞异常。
+
+**审计顺序**：先 reset → migrate → seed，再运行不变量/安全检查；全套测试会故意构造不一致的 fixture（如时间重放和漂移用例），不能把测试后同库的坏状态冒充生产审计结果。曾实测测试后出现 3 项错误、1 项警告，重新在干净种子库审计全部消失。流程与远程发布待办见 [release.md](release.md)。
+
+## HTTP、浏览器与视觉验收
+
+[12 条 QA 清单](qa-checklist.md) 分别标明浏览器、HTTP 与服务层证据，不能把 API 验收写成所有按钮已逐一操作。
+
+`node tests/e2e/qa-api.mjs`：7 组补充 HTTP 检查通过，使用新建验收账号、真实接口、kv_app、demo 模式，覆盖新用户开场、时区、四种文件上传、三类判题、证据修正、时间机器、分享过滤、非成员 403、学习卡发布。实际结果：[qa-api-2026-11-17.json](test-evidence/qa-api-2026-11-17.json)。
+
+浏览器主流程与截图详见 [QA 清单](qa-checklist.md)。本轮修复旧冒烟脚本的 menuitem 选择器、写死的初始“种子”阶段、固定引导按钮文本及固定历史条数；当前按实际 API 阶段核对界面，并要求组合检索包含本轮唯一标识的问题。异常也保留 result.json 和失败截图。
+
+最终浏览器结果：**15/15 检查点通过**，Windows Edge、1440×900、禁用 WebGL 的静态绘本降级。主流程包含引用定位、引导题错误诊断、独立变式开花、成长卡、关键词 6 组→组合 2 组、原消息高亮/续问/刷新恢复。[结果 JSON](test-evidence/e2e-2026-11-17.json)、[截图目录](screenshots/acceptance-2026-11-17/)。3D 完整业务流程没有在本轮重新跑完；3D 模型截图单独检查。
+
+B1：8 组 16 张真实历史模型/当前模型对比，[来源、取景及逐图链接](screenshots/ui/b1-comparison.md)，[错误/溢出记录](test-evidence/b1-comparison.json)。花园及花朵由 Edge + SwiftShader 渲染，无真机帧率结论；开发 fixture 与实际用户档案界面分别记录。
+
+## 性能与限制
+
+五类查询基准、SQL、采样、执行计划：[bench-results.md](sql/bench-results.md)、[原始 JSON](sql/bench-results.json)。第二次成功运行：历史关键词 P95 16.857 ms，日期范围 25.377 ms，知识点 683.181 ms，时间轴 1.194 ms，班级统计 0.436 ms。不同轮次会因规划器/缓存/负载变化；知识点筛选 P95 约 0.57–0.68 秒，是值得后续优化的查询。仅 2 个模拟成员，所有者连接、时间轴/班级统计为精简投影，不能当成并发、RLS 或大班性能承诺。
+
+本轮固定 `LLM_MODE=demo`，没有调用付费真实模型。真实模式错误路径由本地模拟服务验证；C 已保存的真实模型服务层评测见 [agent-eval.md](agent-eval.md)，该历史记录不代表本轮重新执行，也不是浏览器真实模型端到端验收。预置数据有标注，开放题规则判分不代表模型效果。
+
+星系本轮按 **2D SVG** 交付，3D 多球环绕尚未实现；个人花园为 3D。没有真实 GPU/真机手机、Safari、NVDA/VoiceOver、百万级数据、并发压测或生产恢复演练。沙箱为正则静态检查 + 只读事务 + 独立库，系统目录元数据可见，不是完整 SQL/资源隔离；见 [沙箱边界](sql/sandbox.md)。远程 CI、main 保护与正式 tag 尚未执行，不能标记完成。
+
+---
+
+# 历史记录：2026-10-26
+
+以下为原始验收存档，47 例/4 文件和 Linux 环境只描述当时版本，**不是当前结果**。
 
 ## 1. 自动化集成测试（Vitest，真实 PostgreSQL）
 

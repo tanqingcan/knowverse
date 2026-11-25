@@ -4,6 +4,13 @@ import type {AgentAnswer,RefMaterial} from '../../src/server/agent/prompts';
 const refs:RefMaterial[]=[{ref:'资料1',chunkId:'a',materialTitle:'连接',versionNo:1,location:'第1段',content:'内连接只保留满足连接条件的元组组合。没有匹配的行不会出现。'}];
 const draft:AgentAnswer={answer:'内连接只保留匹配行。',basis:'materials',citations:[{ref:'资料1',quote:'内连接只保留满足连接条件的元组组合。'}],concepts:[],followups:[]};
 describe('有界引用修复',()=>{
+ it('实时回答只有片段编号且修复失败时，不保存引用或摘录', async () => {
+   const noQuote = {...draft, answer:'结论。[资料1]', citations:[{ref:'资料1'}]};
+   const result = await checkAndRepairCitations(noQuote, refs, async () => noQuote);
+   expect(result.answer.basis).toBe('insufficient');
+   expect(result.answer.citations).toEqual([]);
+   expect(result.answer.answer).not.toContain('[资料1]');
+ });
  it('漏正文标记由模型修复后重新核验',async()=>{
   const repair=vi.fn().mockResolvedValue({...draft,answer:'内连接只保留匹配行。[资料1]'});
   const r=await checkAndRepairCitations(draft,refs,repair);

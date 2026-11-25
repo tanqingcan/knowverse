@@ -1,0 +1,169 @@
+{
+  "at": "2026-11-17T03:57:16.116Z",
+  "beforeCommit": "5480ae4",
+  "afterBaseCommit": "ae53fe6",
+  "renderer": "Edge / SwiftShader（软件渲染，不代表真机帧率）",
+  "note": "旧版为 Git 归档模型；花朵单种预览在两边使用相同的扩大取景相机 position=[0,0.65,1.4], lookAt=[0,0.27,0], fov=30，未修改旧版模型。其余为相同开发 fixture URL/视口/低动效参数，花园的默认构图由对应版本决定。",
+  "screenshots": [
+    {
+      "version": "before",
+      "name": "rose",
+      "path": "/dev/flowers?sp=rose",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-01-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "sunflower",
+      "path": "/dev/flowers?sp=sunflower",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-02-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "iris",
+      "path": "/dev/flowers?sp=iris",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-03-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "lily",
+      "path": "/dev/flowers?sp=lily",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-04-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "garden",
+      "path": "/dev/garden?reduced",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-05-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "selected",
+      "path": "/dev/garden?reduced&sel=1&pose=tend",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-06-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "mobile-garden",
+      "path": "/dev/garden?reduced",
+      "width": 390,
+      "height": 844,
+      "file": "b1-07-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "before",
+      "name": "mobile-selected",
+      "path": "/dev/garden?reduced&sel=1&pose=tend",
+      "width": 390,
+      "height": 844,
+      "file": "b1-08-before.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "rose",
+      "path": "/dev/flowers?sp=rose",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-01-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "sunflower",
+      "path": "/dev/flowers?sp=sunflower",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-02-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "iris",
+      "path": "/dev/flowers?sp=iris",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-03-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "lily",
+      "path": "/dev/flowers?sp=lily",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-04-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "garden",
+      "path": "/dev/garden?reduced",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-05-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "selected",
+      "path": "/dev/garden?reduced&sel=1&pose=tend",
+      "width": 1440,
+      "height": 900,
+      "file": "b1-06-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "mobile-garden",
+      "path": "/dev/garden?reduced",
+      "width": 390,
+      "height": 844,
+      "file": "b1-07-after.png",
+      "errors": [],
+      "overflow": 0
+    },
+    {
+      "version": "after",
+      "name": "mobile-selected",
+      "path": "/dev/garden?reduced&sel=1&pose=tend",
+      "width": 390,
+      "height": 844,
+      "file": "b1-08-after.png",
+      "errors": [],
+      "overflow": 0
+    }
+  ]
+}

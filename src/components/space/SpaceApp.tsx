@@ -91,12 +91,17 @@ function writeUrl(p: PanelState) {
   window.history.replaceState(null, "", qs ? `/space?${qs}` : "/space");
 }
 
-function useWebGL() {
-  const [ok, setOk] = useState<boolean | null>(null);
+function useWebGL(mode?: Space["user"]["renderMode"]) {
+  const [supportedMode, setSupportedMode] = useState<string | null>(null);
   useEffect(() => {
-    try { const c = document.createElement("canvas"); setOk(!!(c.getContext("webgl2") || c.getContext("webgl"))); } catch { setOk(false); }
-  }, []);
-  return ok;
+    if (!mode || mode === "2d") return;
+    try {
+      const gl = document.createElement("canvas").getContext("webgl2", { failIfMajorPerformanceCaveat: mode === "auto" });
+      setSupportedMode(gl ? mode : null);
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch { setSupportedMode(null); }
+  }, [mode]);
+  return !!mode && supportedMode === mode;
 }
 function useNarrow() {
   const [n, setN] = useState(false);
@@ -218,7 +223,7 @@ export function SpaceApp() {
   const [intro, setIntro] = useState<"long" | "short" | "none">("none");
   const [introPlaying, setIntroPlaying] = useState(false);
   const pendingCard = useRef<GrowthCard>(null);
-  const webgl = useWebGL();
+  const webgl = useWebGL(space?.user.renderMode);
   const narrow = useNarrow();
   const decorStore = useDecor();
 
@@ -601,8 +606,7 @@ export function SpaceApp() {
 
   const reduced = (space?.user.reducedMotion ?? false) || osReduced;
   reducedRef.current = reduced;
-  const renderMode = space?.user.renderMode ?? "auto";
-  const use3d = !render3dFailed && webgl === true && (renderMode === "3d" || (renderMode === "auto"));
+  const use3d = !render3dFailed && webgl;
 
   const scenePlants = useMemo(() => (space?.plants ?? []).map((p) => ({ ...p, stage: override?.[p.id] ?? p.stage, gardenIndex: space!.gardens.findIndex((g) => g.id === p.gardenId) })), [space, override]);
   const sceneGardens = useMemo(() => (space?.gardens ?? []).map((g) => ({ id: g.id, name: g.name })), [space]);

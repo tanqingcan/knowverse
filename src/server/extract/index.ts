@@ -128,11 +128,13 @@ async function extractPptx(buf: Buffer): Promise<ExtractResult> {
   const relMap = new Map<string, string>();
   for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
     const tag = m[0];
-    const id = tag.match(/Id="([^"]+)"/)?.[1];
-    const target = tag.match(/Target="([^"]+)"/)?.[1];
-    if (id && target) relMap.set(id, target);
+    const id = tag.match(/\bId=["']([^"']+)["']/)?.[1];
+    const target = tag.match(/\bTarget=["']([^"']+)["']/)?.[1];
+    if (id && target && !/TargetMode=["']External["']/.test(tag)) {
+      relMap.set(id, path.posix.resolve("/ppt", target).slice(1));
+    }
   }
-  let order = [...pres.matchAll(/<p:sldId\b[^>]*r:id="([^"]+)"/g)].map((m) => relMap.get(m[1])).filter(Boolean).map((t) => "ppt/" + t!.replace(/^\.?\//, "").replace(/^\.\.\//, ""));
+  let order = [...pres.matchAll(/<p:sldId\b[^>]*r:id=["']([^"']+)["']/g)].map(m => relMap.get(m[1]) ?? "");
   if (!order.length) {
     order = Object.keys(zip.files).filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
       .sort((a, b) => Number(a.match(/(\d+)\.xml$/)![1]) - Number(b.match(/(\d+)\.xml$/)![1]));
@@ -141,9 +143,9 @@ async function extractPptx(buf: Buffer): Promise<ExtractResult> {
   let notesCount = 0;
   for (let i = 0; i < order.length; i++) {
     const xml = await zip.file(order[i])?.async("string");
-    if (!xml) continue;
+    if (!xml) return { status: "failed", chunks: [], pageCount: order.length, detail: `无法读取第 ${i + 1} 页幻灯片，请重新导出课件` };
     const paras = [...xml.matchAll(/<a:p\b[\s\S]*?<\/a:p>/g)]
-      .map((p) => [...p[0].matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((t) => decodeXml(t[1])).join(""))
+      .map((p) => [...p[0].matchAll(/<a:t\b[^>]*>([\s\S]*?)<\/a:t>/g)].map((t) => decodeXml(t[1])).join(""))
       .map((s) => s.trim()).filter(Boolean);
     const content = paras.join("\n");
     if (content) for (const piece of splitLong(content)) chunks.push({ pageNo: i + 1, paragraphNo: null, heading: paras[0].slice(0, 40), content: piece });

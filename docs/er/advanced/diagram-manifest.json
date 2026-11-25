@@ -1,0 +1,168 @@
+{
+  "tables": 57,
+  "foreign_keys": 109,
+  "rls": 25,
+  "triggers": 11,
+  "groups": {
+    "identity": [
+      "users",
+      "auth_sessions"
+    ],
+    "knowledge": [
+      "subjects",
+      "concepts",
+      "concept_aliases",
+      "concept_prerequisites",
+      "learning_goals",
+      "goal_concepts"
+    ],
+    "world": [
+      "planets",
+      "gardens",
+      "plants",
+      "garden_knowledge_places",
+      "planet_layouts",
+      "planet_layout_items"
+    ],
+    "dialogue": [
+      "conversations",
+      "messages",
+      "message_concepts",
+      "message_terms",
+      "model_calls",
+      "concept_suggestions",
+      "memories",
+      "memory_controls",
+      "conversation_summaries"
+    ],
+    "materials": [
+      "materials",
+      "material_versions",
+      "material_chunks",
+      "material_concepts",
+      "material_chunk_concepts",
+      "material_chunk_embeddings",
+      "message_citations",
+      "notes"
+    ],
+    "practice": [
+      "tasks",
+      "task_concepts",
+      "task_versions",
+      "task_hints",
+      "attempts",
+      "hint_events",
+      "evaluations",
+      "learning_evidence",
+      "learning_states",
+      "growth_events"
+    ],
+    "collaboration": [
+      "classes",
+      "class_members",
+      "sharing_preferences",
+      "learning_intents",
+      "study_groups",
+      "study_group_members",
+      "contributions",
+      "knowledge_cards",
+      "card_versions",
+      "card_sources",
+      "card_publications",
+      "class_stats"
+    ],
+    "operations": [
+      "audit_log",
+      "outbox_events",
+      "cdc_consumed",
+      "cdc_offsets"
+    ]
+  },
+  "cross_domain_fk_counts": [
+    {
+      "from": "practice",
+      "to": "dialogue",
+      "count": 4
+    },
+    {
+      "from": "practice",
+      "to": "identity",
+      "count": 5
+    },
+    {
+      "from": "collaboration",
+      "to": "dialogue",
+      "count": 1
+    },
+    {
+      "from": "collaboration",
+      "to": "identity",
+      "count": 5
+    },
+    {
+      "from": "knowledge",
+      "to": "identity",
+      "count": 4
+    },
+    {
+      "from": "dialogue",
+      "to": "knowledge",
+      "count": 7
+    },
+    {
+      "from": "dialogue",
+      "to": "identity",
+      "count": 6
+    },
+    {
+      "from": "world",
+      "to": "knowledge",
+      "count": 3
+    },
+    {
+      "from": "world",
+      "to": "identity",
+      "count": 2
+    },
+    {
+      "from": "practice",
+      "to": "knowledge",
+      "count": 5
+    },
+    {
+      "from": "collaboration",
+      "to": "knowledge",
+      "count": 3
+    },
+    {
+      "from": "practice",
+      "to": "materials",
+      "count": 3
+    },
+    {
+      "from": "materials",
+      "to": "knowledge",
+      "count": 4
+    },
+    {
+      "from": "materials",
+      "to": "identity",
+      "count": 3
+    },
+    {
+      "from": "materials",
+      "to": "dialogue",
+      "count": 2
+    },
+    {
+      "from": "identity",
+      "to": "dialogue",
+      "count": 1
+    },
+    {
+      "from": "identity",
+      "to": "world",
+      "count": 1
+    }
+  ]
+}

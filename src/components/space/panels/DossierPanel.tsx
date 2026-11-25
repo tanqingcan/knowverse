@@ -87,6 +87,7 @@ export function DossierPanel() {
         <button className="btn btn-ghost btn-sm" onClick={() => open({ panel: "practice", conceptId: plant.conceptId })}>做练习</button>
         <button className="btn btn-ghost btn-sm" onClick={() => setNoteOpen(!noteOpen)}>写笔记</button>
         <button className="btn btn-ghost btn-sm" onClick={() => open({ panel: "history", conceptId: plant.conceptId })}>检索相关问答</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => open({ panel: "materials", conceptId: plant.conceptId })}>查教材出处</button>
         <button className="btn btn-ghost btn-sm" onClick={() => open({ panel: "cards", conceptId: plant.conceptId, draft: "1" })}>整理学习卡</button>
         <button className="btn btn-quiet btn-sm" onClick={selfReport} title="记录为自述理解，不推动阶段">我觉得我理解了</button>
       </div>

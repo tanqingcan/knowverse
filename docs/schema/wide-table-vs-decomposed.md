@@ -33,19 +33,19 @@ plants(id, garden_id, concept_id, species, color, lon, lat, nickname)  -- 某人
 learning_states(user_id, concept_id, stage, stage_reason, last_evidence_at, review_due_at)  -- 某人对某知识点的状态
 ```
 
-- `plants` 的候选键 `(garden_id, concept_id)`（一个花圃里一个知识点一株），所有非主属性完全依赖它 → BCNF；
-- `learning_states` 的候选键 `(user_id, concept_id)`，非主属性只依赖这个键 → BCNF；
-- `concepts` 的候选键 `id`，`name` 受 `(subject_id, name_norm)` 唯一约束保护 → BCNF。
+- `plants` 的数据库候选键有 `id` 与 `(garden_id, concept_id)`。在上述投影中，外观由具体植物决定。
+- `learning_states` 以 `(user_id, concept_id)` 为键。当前状态另存用于主页展示，证据变更在事务中触发重算。`stage_reason` 的全局依赖待复核。
+- `concepts` 的数据库候选键有 `id`。公共与个人知识点按各自范围控制名称唯一。名称规范化与条件唯一性的口径见 [函数依赖复核](normalization-analysis.md)。
 
-**无损连接**：分解的公共属性是 `concept_id`，它是 `concepts` 的键，按分解的无损连接判定（Chase 算法）可自然连接回原关系；同时 `plants` 与 `learning_states` 通过 `(user_id, concept_id)` 关联，信息不丢。
+简化关系 `P(user_id, concept_id, concept_name, stage)` 可以二元无损分解。两侧交集 `concept_id` 决定知识点投影的所有属性，`concept_id → concept_name` 也保留在该投影内。实际查询植物状态时，植物通过花圃和星球找到用户，再与知识点一起匹配状态。局部证明只覆盖简化关系。
 
-**依赖保持**：`concept_id → concept_name` 在 `concepts` 中保持；状态相关依赖在 `learning_states` 中保持；外观依赖在 `plants` 中保持。
+外观和状态在真实表中各有相应的键。考虑更多属性或关系时，需要重新列业务 FD，逐个判断分解与依赖保持条件。
 
 ## 3. 最终模式里的两处“有意冗余”
 
 | 位置 | 冗余内容 | 为什么保留 | 如何保证一致 |
 |---|---|---|---|
-| `messages.user_id` | 与 `conversations.user_id` 重复 | 历史检索的每条子查询都要按 user_id 过滤，省一次 JOIN | 复合外键 `(conversation_id, user_id) → conversations(id, user_id)` |
+| `messages.user_id` | 与 `conversations.user_id` 重复，违反 2NF | 按用户查询消息与行级权限可直接使用本表列 | 复合外键 `(conversation_id, user_id) → conversations(id, user_id)` |
 | `learning_states` | 阶段可由 `learning_evidence` 推导 | 首页/花圃一次查询就要阶段，不重算 | 只在证据写入的同一事务里重算；`fn_settle_attempt` 保证原子性 |
 
 ## 4. 应用方便性的权衡
@@ -53,7 +53,6 @@ learning_states(user_id, concept_id, stage, stage_reason, last_evidence_at, revi
 | 方案 | 规范化 | 查询便利 | 结论 |
 |---|---|---|---|
 | 一张宽表 | 1NF | 查询最简单 | ✘ 三类异常，且无法表达“课程目录” |
-| 完全按 3NF 拆到底 | 3NF/BCNF | 展示一次花圃要 5 次 JOIN | 拆到 `plants / learning_states / concepts` 为止 |
-| **当前模式** | **多数 BCNF，两处受控冗余** | 关键查询 1–2 次 JOIN | ✅ 采用 |
+| **当前模式** | 概念、外观和学习状态分别建模 | 通过业务键和外键联合展示 | 独立维护各类事实，读路径按需要连接 |
 
-结论：**先满足 BCNF，再为高频读路径保留可证明一致的冗余**；冗余必须有约束或事务保证，不能只靠“代码里记得同步”。
+以业务函数依赖判断规范化，按查询需求保留受控冗余，并为每项冗余明确约束或事务维护机制。

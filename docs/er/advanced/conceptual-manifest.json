@@ -1,0 +1,237 @@
+{
+  "notation": "Chen + ISA",
+  "entities": 13,
+  "relationships": 12,
+  "attributes": 21,
+  "isa": {
+    "supertype": "messages",
+    "subtypes": [
+      "user",
+      "assistant"
+    ],
+    "disjoint": true,
+    "total": true,
+    "physical_mapping": "single table messages.role"
+  },
+  "relationships_mapping": [
+    {
+      "name": "资料版本化",
+      "mapping": [
+        "material_versions",
+        "materials"
+      ],
+      "entity_roles": [
+        {
+          "entity": "materials",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "material_versions",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "版本分块",
+      "mapping": [
+        "material_chunks",
+        "material_versions"
+      ],
+      "entity_roles": [
+        {
+          "entity": "material_versions",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "material_chunks",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "会话组成",
+      "mapping": [
+        "messages",
+        "conversations"
+      ],
+      "entity_roles": [
+        {
+          "entity": "conversations",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "messages",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "引用",
+      "mapping": "message_citations",
+      "entity_roles": [
+        {
+          "entity": "messages",
+          "max": "M",
+          "total_participation": false
+        },
+        {
+          "entity": "material_chunks",
+          "max": "N",
+          "total_participation": false
+        }
+      ]
+    },
+    {
+      "name": "标注",
+      "mapping": "message_concepts",
+      "entity_roles": [
+        {
+          "entity": "messages",
+          "max": "M",
+          "total_participation": false
+        },
+        {
+          "entity": "concepts",
+          "max": "N",
+          "total_participation": false
+        }
+      ]
+    },
+    {
+      "name": "题目版本化",
+      "mapping": [
+        "task_versions",
+        "tasks"
+      ],
+      "entity_roles": [
+        {
+          "entity": "tasks",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "task_versions",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "作答对象",
+      "mapping": [
+        "attempts",
+        "task_versions"
+      ],
+      "entity_roles": [
+        {
+          "entity": "task_versions",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "attempts",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "作答评价",
+      "mapping": [
+        "evaluations",
+        "attempts"
+      ],
+      "entity_roles": [
+        {
+          "entity": "attempts",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "evaluations",
+          "max": "1",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "作答证据",
+      "mapping": [
+        "learning_evidence",
+        "attempts"
+      ],
+      "entity_roles": [
+        {
+          "entity": "attempts",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "learning_evidence",
+          "max": "N",
+          "total_participation": false
+        }
+      ]
+    },
+    {
+      "name": "证据主题",
+      "mapping": [
+        "learning_evidence",
+        "concepts"
+      ],
+      "entity_roles": [
+        {
+          "entity": "concepts",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "learning_evidence",
+          "max": "N",
+          "total_participation": true
+        }
+      ]
+    },
+    {
+      "name": "成长依据",
+      "mapping": [
+        "growth_events",
+        "learning_evidence"
+      ],
+      "entity_roles": [
+        {
+          "entity": "learning_evidence",
+          "max": "1",
+          "total_participation": false
+        },
+        {
+          "entity": "growth_events",
+          "max": "N",
+          "total_participation": false
+        }
+      ]
+    },
+    {
+      "name": "当前状态",
+      "mapping": "learning_states",
+      "entity_roles": [
+        {
+          "entity": "users",
+          "max": "M",
+          "total_participation": false
+        },
+        {
+          "entity": "concepts",
+          "max": "N",
+          "total_participation": false
+        }
+      ]
+    }
+  ]
+}

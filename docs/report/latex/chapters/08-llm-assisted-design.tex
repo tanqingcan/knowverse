@@ -1,0 +1,15 @@
+\section{大模型辅助设计与审查}\label{sec:llm-review}
+\ChapterOwner{A 汇总，每人提交实际案例}{全员}
+\subsection{使用范围与记录方法}
+\Writing{A}{列模型参与工作、输入、原始证据和事后整理的边界。旧文档模型名/日期/初始表数须成员核实，不伪造聊天、会议或人工签认。}
+\subsection{初始候选与设计迭代}
+\Writing{A}{选 3--5 个真实变化，展示候选、问题、改动和最终实现。历史 45 表与当前 55 表属于不同版本。}
+\subsection{采纳与调整的合理性}
+\Writing{A，各交一例}{版本拆分、M:N、复合 FK、幂等等，逐项分析语义、键、FD、约束和开发便利性，不只写模型建议合理。}
+\subsection{否决、反例与纠错}
+\Writing{A/C/D}{展示已撤回范式统计、错误引用 FD、覆盖索引负优化等真实案例，用合法反例或执行计划解释纠错。}
+\subsection{人工审阅与责任边界}
+\Writing{全员本人填写}{每人至少一例，记录姓名、时间、方法、结论、修改、证据及另一人的复核。未审阅不得代填通过或代签。}
+\subsection{辅助效果与局限}
+\Writing{A}{总结帮助与必须理解、验证之处。代码生成量不等于数据库设计质量；无法追溯的记录明确说明。}
+\Evidence{docs/llm-assisted-design.md; docs/schema/normalization-analysis.md; docs/sql/index-decisions.md}

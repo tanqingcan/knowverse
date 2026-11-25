@@ -11,9 +11,11 @@
 5. **可追溯**：资料、题目、学习卡都有版本；证据修正不删除，只写撤销原因；状态变化写入成长事件。
 6. **权限进入 SQL**：所有读取都带 `user_id = $1`（或“公共资料 / 本人资料”条件），不依赖前端过滤。
 
-统计（`drizzle/0000_init.sql` + `0001_constraints_triggers.sql`）：44 张表，91 个外键，35 个 CHECK 约束，99 个索引（含 4 个 pg_trgm GIN 索引、36 个唯一或部分唯一索引），3 个业务触发器。
+迁移 0032 后共有 57 张逻辑表（排除分区子表与视图）。键目录见 [候选键清单](schema/candidate-keys.md)，新增的片段知识点与持久向量见 [教材检索设计](retrieval.md)。其余早期设计说明需结合后续迁移阅读，范式结论以已确认的业务依赖为准。
 
 ## 2. 概念模型（E-R）
+
+迁移 0032 的系统目录生成了 57 个逻辑表、109 条外键的全库逻辑 ER 图及八个业务域的字段级分图。Chen 概念图用于解释业务实体与联系。[关系建模图册](er/advanced/README.md)
 
 教材风格（Chen 表示法）E-R 图位于 `docs/er/`：
 
@@ -90,7 +92,7 @@
 
 ## 4. 规范化分析
 
-以下各模式均以当前实现为准。记号：K 为候选键，F 为函数依赖集。
+以下展示核心模式和局部业务依赖。记号 K 为候选键，F 为函数依赖集。全库分析范围见 [函数依赖复核](schema/normalization-analysis.md)。
 
 ### 4.1 选课式反例：为什么 `plants` 与 `concepts`、`learning_states` 分开
 
@@ -107,16 +109,16 @@ F = { concept_id → concept_name, subject_id；(user_id, concept_id) → specie
 
 分解为：
 - concepts(concept_id, name, subject_id)　F₁ = { concept_id → name, subject_id }，K = concept_id，BCNF；
-- plants(plant_id, garden_id, concept_id, species, color, lon, lat)，K = plant_id 与 (garden_id, concept_id)，所有非平凡依赖的左部都是超键，BCNF；
-- learning_states(user_id, concept_id, stage, …)，K = (user_id, concept_id)，BCNF。
+- plants(plant_id, garden_id, concept_id, species, color, lon, lat)，K = plant_id 与 (garden_id, concept_id)，分别可定位一株植物；
+- learning_states(user_id, concept_id, stage, …)，K = (user_id, concept_id)，每人每知识点保存一份当前状态。
 
-**无损连接**：以 concepts 与“其余属性”分解为例，R₁ ∩ R₂ = {concept_id}，且 concept_id → R₁（concept_id 是 R₁ 的键），满足 Heath 定理条件，分解无损；依赖也全部保持在各自的模式中。
+**无损连接**：在简化关系 P(user_id, concept_id, concept_name, stage) 中，知识点投影与状态投影的交集是 concept_id，它决定知识点投影所有属性。该二元分解无损，并保留 concept_id → concept_name 和 (user_id, concept_id) → stage。
 
-### 4.2 `messages`：受控冗余的 user_id（3NF 的有意例外）
+### 4.2 `messages` 的受控冗余与部分依赖
 
 messages(id, conversation_id, user_id, seq, role, content, …)
 
-F 中有 id → conversation_id，conversation_id → user_id（会话属于一个用户），因此 id → user_id 是**传递依赖**，严格来说 messages 不满足 3NF（user_id 是非主属性且传递依赖于键）。
+候选键有 id 和 (conversation_id, seq)。同一会话只有一个所属用户，因此 conversation_id → user_id，非主属性 user_id 对复合候选键存在**部分依赖**。这张关系未达到 2NF。
 
 保留它的原因：历史检索的每个子查询都需要“本人”条件，`messages_user_created_idx (user_id, created_at)` 与三路关键词候选都直接以 `user_id = $1` 过滤；若不冗余，每次都要与 conversations 连接后才能过滤权限。
 
